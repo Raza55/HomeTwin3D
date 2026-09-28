@@ -1,0 +1,13 @@
+import { build } from 'esbuild';
+import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+await mkdir(new URL('../.qa/', import.meta.url), { recursive: true });
+await build({ entryPoints: [fileURLToPath(new URL('./data-performance.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/data-performance.test.mjs', import.meta.url)) });
+await import('../.qa/data-performance.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./shadow-transmission.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/shadow-transmission.test.mjs', import.meta.url)) });
+await import('../.qa/shadow-transmission.test.mjs');
+await import('./glb-performance.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./marker-occlusion.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/marker-occlusion.test.mjs', import.meta.url)) });
+await import('../.qa/marker-occlusion.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./it-render-performance.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/it-render-performance.test.mjs', import.meta.url)) });
+await import('../.qa/it-render-performance.test.mjs');

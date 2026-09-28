@@ -1,0 +1,49 @@
+name: Validate HomeTwin3D
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run privacy:check
+      - run: npm run test:privacy
+      - run: npm run typecheck
+      - run: npm run test:floorplan
+      - run: npm run test:balcony
+      - run: npm run test:coffee
+      - run: npm run test:it
+      - run: npm run test:echo
+      - run: npm run test:battery
+      - run: npm run test:tv-dial
+      - run: npm run test:media
+      - run: npm run test:lighting
+      - run: npm run test:performance
+      - run: npm run test:walkthrough
+      - run: npm run build
+      - run: npm run build -- --mode addon
+
+
+  screen-helper:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r tools/pc-screen/requirements.txt
+      - run: python -m unittest discover -s tools/pc-screen -p test_screen.py

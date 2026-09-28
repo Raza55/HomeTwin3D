@@ -1,0 +1,43 @@
+# Änderungsverlauf
+
+## 0.2.1 – Datenschutz (28.09.2026)
+
+- Öffentliche Beispiele, Dateinamen und Dokumentation von persönlichen Rechner-/Gerätenamen, LAN-Adressen, Wohnadresse und Standortkoordinaten bereinigt.
+- Zentrale private Defaults in eine ignorierte lokale Installationseinstellung ausgelagert; öffentliche Builds verwenden neutrale Werte. Echte HA-Entities und Browserzuordnungen bleiben unverändert.
+- PC-Screenshot mit persönlicher UI-Beschriftung entfernt; zwei neutrale QA-Beispielbilder bleiben erhalten.
+- Veröffentlichungsregeln in AGENTS.md und Datenschutz-Dokumentation ergänzt; lokale Pre-Push-Prüfung und CI-Prüfung eingeführt.
+- Beide öffentlichen Git-Historien einschließlich der Restore-Tags bereinigt und mit abgesicherten Force-Pushes ersetzt. Alte CI-Ausgaben lokal gesichert und entfernt. Externe Kopien und GitHub-Caches können weiterhin alte Daten enthalten.
+
+Validierung: 114 JS-/TS-Tests, 5 Python-Tests, Typprüfung und beide öffentlichen Builds erfolgreich. Lokale Installationswerte bleiben im Entwicklungsmodus verfügbar und sind aus den öffentlichen Builds ausgeschlossen.
+
+
+## 0.2.0 – 28.09.2026
+
+- Lüfter-/Dyson-Steuerung, Balkon-Rauchstatus, Echo-Geräte und Kaffeeprogramme ergänzt.
+- IT-Gruppen mit eigenem Zuordnungseditor, Status/Messwerten, bestätigten Systemaktionen und zustandsabhängigen PC-Materialien integriert.
+- Optionale HA-Kamera auf Modellmonitoren, Kamera-Proxy und separaten Windows-/MQTT-Screenshot-Helfer hinzugefügt.
+- TV Dial als Event-Anforderung an die bestehende HA-Schaltlogik ergänzt.
+- Räumliche Wasserleck- und gerätebezogene Batteriewarnungen hinzugefügt.
+- Marker-Verdeckung budgetiert, Marker-Vektoren wiederverwendet, unnötige Schattenkarten- und IT-Materialupdates reduziert; Sonnenschatten nachts deaktiviert.
+- Blender-/Importwerkzeuge für Modellstände v94–v100 aufgenommen; lokale Modelle bleiben außerhalb des Repositories.
+- Dokumentation um Gerätebedienung, Integrationsgrenzen und zwei QA-Beispielbilder erweitert.
+- Neue Testgruppen in npm/CI aufgenommen; Python-Helfertests laufen zusätzlich auf einem Windows-Runner.
+
+Validierung: 112 JS-/TS-Tests, 5 Python-Tests und TypeScript-Prüfung erfolgreich. Normaler Build und Add-on-Build erfolgreich. Verbleibende Hinweise: große Vite-Chunks und veraltete Browserslist-Daten. Keine echte Gerätesteuerung, Desktop-Aufnahme oder Add-on-Bereitstellung in diesem Synchronisierungslauf.
+
+## 0.1.0 – 27.09.2026
+
+Erster eigenständiger HomeTwin3D-Entwicklungsstand, basierend auf dem bisher unter `Raza55/3Dash_webapp`, Branch `featureaddon`, entwickelten Stand `afacdcc` (nach Datenschutzbereinigung).
+
+- Vollständige erreichbare Git-Historie und unveränderte Apache-2.0-Lizenz erhalten.
+- Eigene README, Herkunftsdokumentation und NOTICE ergänzt.
+- Eigenes Repository, Hauptbranch `main` und Paket-/Add-on-Version `0.1.0` eingerichtet.
+- Add-on baut jetzt aus `Raza55/HomeTwin3D`, Branch `main`; eigenständiger Slug `hometwin3d`.
+- Seitentitel, Begrüßung, Projektlink, PWA-Identität und Hosting-Pfad auf HomeTwin3D umgestellt.
+- PWA-Manifestpfade relativ gestaltet, damit sie sowohl unter `/HomeTwin3D/` als auch im Add-on funktionieren.
+- CI für Typprüfung, fünf Testgruppen und beide Frontend-Builds ergänzt; Pages-Veröffentlichung bleibt manuell.
+- Bestehende Speicher- und Blender-Manifestkennungen für Kompatibilität beibehalten.
+
+Funktionen und bisherige Messergebnisse: [PROJECT_STATUS.md](PROJECT_STATUS.md). Frühere Änderungen stehen in der Git-Historie und in [FORK_CHANGES.md](FORK_CHANGES.md).
+
+Validierung der Umstellung: TypeScript-Prüfung, alle 82 Tests und beide Frontend-Builds erfolgreich. Nach der letzten Proxy-/Linkkorrektur wurden Typprüfung, Medientests und beide Builds erneut erfolgreich ausgeführt. Dokumentationslinks, PWA-Pfade für Unterpfad und Root sowie die gebaute Seitenidentität wurden zusätzlich geprüft. Vite weist weiterhin auf große Chunks und Browserslist auf ältere Browserdaten hin. Ein Docker-/Supervisor-Deployment ist nicht Bestandteil der Repository-Erstellung.

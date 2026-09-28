@@ -1,0 +1,18 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Engine,Scene,ArcRotateCamera,Vector3} from '@babylonjs/core';
+import LightClusterMarkers from '../src/components/LightClusterMarkers';
+import {createLightMesh,type MeshMap} from '../src/babylon/LightMeshFactory';
+import type {AppConfig} from '../src/types';
+const config:AppConfig={location:{latitude:0,longitude:0},lights:[{entityId:'light.test',label:'Testlampe',type:'rgb',position:{x:0,y:1,z:0},interaction:{touchZone:true,showIcon:true}}]};
+function QA(){const canvas=useRef<HTMLCanvasElement>(null),opens=useRef(0);const [ready,setReady]=useState<{scene:Scene;meshes:MeshMap}|null>(null);const [report,setReport]=useState('Bereit');
+useEffect(()=>{const engine=new Engine(canvas.current!,true),scene=new Scene(engine);new ArcRotateCamera('camera',0,1,6,Vector3.Zero(),scene);const meshes={'light.test':createLightMesh(scene,config.lights[0],'test',{withPointLight:true})};setReady({scene,meshes});engine.runRenderLoop(()=>scene.render());return()=>engine.dispose();},[]);
+const run=()=>{try{const button=document.querySelector<HTMLButtonElement>('.cluster-map-marker')!,rect=button.getBoundingClientRect(),x=rect.x+rect.width/2,y=rect.y+rect.height/2;const check=(v:boolean,msg:string)=>{if(!v)throw Error(msg);};
+check(Math.abs(rect.width-26)<.1,'idle size');
+const touch=(type:string,px:number,py:number)=>document.dispatchEvent(new PointerEvent(type,{pointerType:'touch',clientX:px,clientY:py,bubbles:true}));
+touch('pointerdown',x-60,y);touch('pointermove',x,y);check(button.classList.contains('touch-active'),'touch enter');
+touch('pointermove',x+80,y);check(!button.classList.contains('touch-active'),'touch leave');touch('pointermove',x,y);touch('pointerup',x,y);check(!button.classList.contains('touch-active'),'touch release');button.click();check(opens.current===0,'swipe must not open');
+touch('pointerdown',x,y);touch('pointercancel',x,y);check(!button.classList.contains('touch-active'),'touch cancel');
+document.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true}));button.click();check(opens.current===1,'mouse click after swipe');setReport('PASS: 26 px, Touch-Eintritt/Austritt, Loslassen, Abbruch, Wischen ohne Öffnen, Mausklick danach');}catch(e){setReport('FAIL: '+String(e));}};
+return <><canvas ref={canvas} style={{width:'100vw',height:'90vh'}}/>{ready&&<LightClusterMarkers {...ready} config={config} states={{}} onOpen={()=>opens.current++} onLeave={()=>{}}/>}<button onClick={run}>Touch-Ablauf prüfen</button><p role="status">{report}</p></>;
+}createRoot(document.getElementById('root')!).render(<QA/>);

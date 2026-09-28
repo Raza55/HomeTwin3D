@@ -1,0 +1,16 @@
+# Regeln für Arbeiten an HomeTwin3D
+
+## Vor jeder Veröffentlichung verpflichtend
+
+Dieses Repository ist öffentlich. Lies [docs/PUBLICATION_PRIVACY.md](docs/PUBLICATION_PRIVACY.md), bevor du Änderungen synchronisierst, pushst oder neue Bilder/Beispieldaten veröffentlichst.
+
+- Persönliche Namen, Wohnadresse, reale Koordinaten, LAN-Adressen, private Hostnamen, Serien-/MAC-Adressen und konkrete private Gerätekennungen gehören nicht in Git-Dateien, Dateinamen, Commit-Nachrichten oder Bilder.
+- Echte lokale Werte bleiben in `.private/`, `.env.local` oder im Browser. Diese Daten niemals hochladen, in Toolausgaben ausgeben oder automatisch durch Beispiele ersetzen. Keine echten HA-Entities umbenennen, um Quelltext zu anonymisieren.
+- Vor JEDEM Push `npm run privacy:check` für den zu veröffentlichenden Commit ausführen. Der installierte Pre-Push-Hook prüft zusätzlich jeden neu übertragenen Commit; Fehler blockieren die Veröffentlichung. Den Hook nicht umgehen, `--no-verify` nicht verwenden.
+- Neue Entity-Beispiele und Binärdateien benötigen eine inhaltliche bzw. visuelle Prüfung. `public-data-policy.json` erst danach gezielt ergänzen; niemals aus einem ungeprüften Arbeitsbaum automatisch neu erzeugen, um einen Fehler zu unterdrücken.
+- Vor Screenshots Demo-/QA-Daten verwenden, sichtbare Beschriftungen prüfen und keine privaten Desktop-/Kamerabilder veröffentlichen. Persönliche Modellquellen bleiben außerhalb von Git.
+- Der normale Produktionsbuild verwendet neutrale Defaults. `HOMETWIN_PRIVATE_BUILD=1` ist ausschließlich für lokale private Bereitstellung und darf nicht für öffentliche Artefakte/Pages verwendet werden.
+- Wenn persönliche Daten schon in früheren öffentlichen Commits stehen: klar melden. Ein normaler Löschcommit entfernt keine Historie. Historie/Force-Push oder andere Repositories nur mit konkreter Benutzerautorisierung bereinigen.
+- Herkunft, ursprüngliche Lizenz und legitime öffentliche Autorenhinweise erhalten; keine fremden Beiträge umetikettieren.
+
+Diese Regeln gelten auch für kleine Dokumentationsänderungen und Folgeaufträge wie „neuesten Stand synchronisieren“.

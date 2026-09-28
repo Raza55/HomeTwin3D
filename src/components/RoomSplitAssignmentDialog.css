@@ -1,0 +1,169 @@
+.room-split-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 7, 16, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.room-split-dialog {
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background: var(--side-panel-bg);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+}
+
+.room-split-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-split-dialog-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.room-split-dialog-header p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.room-split-dialog-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.room-split-dialog-close:hover {
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.room-split-dialog-body {
+  overflow-y: auto;
+  padding: 4px 22px 14px;
+}
+
+.room-split-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(220px, 1.2fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-split-piece-label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.room-split-piece-swatch {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 3px;
+}
+
+.room-split-piece-points {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.room-split-assignment-row select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 34px 0 11px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 10px;
+}
+
+.room-split-dialog-warning {
+  margin-top: 14px;
+  padding: 10px 12px;
+  color: #f7c873;
+  background: rgba(197, 123, 16, 0.12);
+  border: 1px solid rgba(247, 200, 115, 0.28);
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.room-split-dialog-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  color: #ffb4b4;
+  background: rgba(190, 39, 50, 0.16);
+  border: 1px solid rgba(255, 126, 136, 0.38);
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.room-split-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 620px) {
+  .room-split-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .room-split-dialog-header,
+  .room-split-dialog-body,
+  .room-split-dialog-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .room-split-assignment-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 13px 0;
+  }
+}

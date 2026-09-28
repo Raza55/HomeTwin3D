@@ -1,0 +1,14 @@
+.cluster-members{display:flex;gap:5px;margin:12px 0 8px}.cluster-members button{flex:1;background:#ffffff0d;border-radius:7px;padding:6px 2px;font-size:11px}.cluster-members button:first-child{flex:2}.cluster-members button.active{background:#d7e6ff;color:#182434}
+.cluster-wheel{position:relative;width:160px;height:160px;margin:10px auto;border-radius:50%;background:radial-gradient(circle,#fff 0%,#ffffff00 66%),conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red);box-shadow:inset 0 0 0 8px #11182728;touch-action:none}.cluster-handle{position:absolute;width:25px;height:25px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid white!important;color:#17202e!important;box-shadow:0 1px 5px #0009;font-size:11px!important;font-weight:800!important;padding:0;touch-action:none}.cluster-handle.selected{outline:2px solid #131c2b;outline-offset:2px;z-index:2}.cluster-handle:disabled{background:#6b7280!important;opacity:.75!important}.cluster-gradient{height:6px;border-radius:5px;margin:7px 0 10px}.cluster-presets{display:flex;gap:7px}.cluster-presets button{flex:1;background:#ffffff0d;border-radius:6px;padding:6px 3px;font-size:10px}.cluster-hint{margin:7px 0 0;color:#a8b7ca;font-size:10px;text-align:center}
+
+.cluster-tabs{display:flex;gap:4px;margin:6px 0}.cluster-tabs button{flex:1;border-radius:6px;background:transparent;color:#a8b7ca;padding:4px;font-size:11px}.cluster-tabs button.active{background:#ffffff12;color:#fff}
+
+.cluster-map-marker{position:fixed;z-index:20;display:none;place-items:center;width:26px;height:26px;box-sizing:border-box;touch-action:none;transition:transform 140ms ease;transform:translate(-50%,-50%);border:2px solid currentColor;background:rgba(8,18,30,.72);border-radius:50%;padding:3px;cursor:pointer;box-shadow:0 2px 9px #0007}.cluster-map-marker svg{pointer-events:none}.cluster-map-marker:hover,.cluster-map-marker:focus-visible{outline:2px solid #d7e6ff;outline-offset:3px}
+
+.cluster-map-marker.model-hovered,.cluster-map-marker.touch-active,.cluster-map-marker:focus-visible{transform:translate(-50%,-50%) scale(1.4);z-index:21}
+@media(hover:hover){.cluster-map-marker:hover{transform:translate(-50%,-50%) scale(1.4);z-index:21}}
+@media(prefers-reduced-motion:reduce){.cluster-map-marker{transition:none}}
+
+.unassigned-lamp-marker{color:#c2a57d;border-style:dashed}.unassigned-lamp-marker span{position:absolute;right:-5px;top:-6px;border-radius:50%;width:13px;height:13px;background:#c2a57d;color:#17202e;font:700 11px/13px system-ui}
+.cluster-map-marker.hue-sync-locked{color:#f6b8d5;background:rgba(65,28,48,.9)}
+.hue-sync-lock{position:absolute;right:-6px;bottom:-4px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#f6b8d5;color:#402237;box-shadow:0 1px 4px #0008;pointer-events:none}

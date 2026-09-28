@@ -1,0 +1,28 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root='../blender/';
+function read(path){const b=fs.readFileSync(path),n=b.readUInt32LE(12);return {doc:JSON.parse(b.subarray(20,20+n)),bin:b.subarray(28+n)};}
+const {doc,bin}=read(root+'Wohnung_v83_3Dash_Bodenrand.glb'),part=read('.qa/v84-appliances.glb');
+assert.equal(part.doc.animations.length,2);
+assert.ok(!part.doc.textures?.length);
+const vo=doc.bufferViews.length,ao=doc.accessors.length,mo=doc.materials.length,meshOffset=doc.meshes.length,no=doc.nodes.length;
+doc.bufferViews.push(...part.doc.bufferViews.map(v=>({...v,buffer:0,byteOffset:(v.byteOffset??0)+bin.length})));
+doc.accessors.push(...part.doc.accessors.map(a=>{assert.equal(a.sparse,undefined);return {...a,bufferView:a.bufferView+vo};}));
+doc.materials.push(...part.doc.materials);
+doc.meshes.push(...part.doc.meshes.map(m=>({...m,primitives:m.primitives.map(p=>({...p,indices:p.indices+ao,material:p.material+mo,attributes:Object.fromEntries(Object.entries(p.attributes).map(([k,v])=>[k,v+ao]))}))})));
+doc.nodes.push(...part.doc.nodes.map(n=>({...n,...(n.mesh!==undefined?{mesh:n.mesh+meshOffset}:{}),...(n.children?{children:n.children.map(i=>i+no)}:{})})));
+doc.scenes[doc.scene??0].nodes.push(...part.doc.scenes[part.doc.scene??0].nodes.map(i=>i+no));
+doc.animations??=[];
+doc.animations.push(...part.doc.animations.map(a=>({...a,samplers:a.samplers.map(s=>({...s,input:s.input+ao,output:s.output+ao})),channels:a.channels.map(c=>({...c,target:{...c.target,node:c.target.node+no}}))})));
+doc.extensionsUsed=[...new Set([...(doc.extensionsUsed??[]),...(part.doc.extensionsUsed??[])])];
+const scene=doc.scenes[doc.scene??0],manifest=JSON.parse(scene.extras['3dash_manifest']);
+const additions=JSON.parse(fs.readFileSync('.qa/v84-appliances.json','utf8'));
+additions.forEach(o=>{o.position.z=Math.abs(o.position.z);o.appliance.runningStates=['on'];if(o.appliance.kind==='washer'){o.appliance.remainingEntityId='sensor.aeg_waschmaschine_timetoend_2';o.appliance.programEntityId='select.aeg_waschmaschine_userselections_programuid';}});
+manifest.source='Wohnung_v84_3Dash_Waesche.blend';manifest.objects.push(...additions);
+scene.extras['3dash_manifest']=JSON.stringify(manifest);
+const merged=Buffer.concat([bin,part.bin]);doc.buffers[0].byteLength=merged.length;
+let json=Buffer.from(JSON.stringify(doc));json=Buffer.concat([json,Buffer.alloc((4-json.length%4)%4,32)]);
+const h=Buffer.alloc(20);h.write('glTF');h.writeUInt32LE(2,4);h.writeUInt32LE(28+json.length+merged.length,8);h.writeUInt32LE(json.length,12);h.write('JSON',16);
+const bh=Buffer.alloc(8);bh.writeUInt32LE(merged.length);bh.write('BIN\0',4);
+const output=Buffer.concat([h,json,bh,merged]);fs.writeFileSync(root+'Wohnung_v84_3Dash_Waesche.glb',output);fs.writeFileSync('.qa/v84.glb',output);
+console.log(`Appended ${additions.length} appliances and ${part.doc.animations.length} animations; ${manifest.objects.length} objects total. Original binary data preserved.`);

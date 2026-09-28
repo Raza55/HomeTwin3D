@@ -1,0 +1,2 @@
+.water-leak-marker{position:fixed;z-index:35;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 10px;border:2px solid #ff625e;border-radius:10px;background:#611b22f5;color:#fff0ef;box-shadow:0 3px 14px #0008,0 0 12px #ff302c55;font:600 12px system-ui;white-space:nowrap;pointer-events:none}
+.water-leak-marker svg{color:#ff8881}.water-leak-marker span{font-size:11px;font-weight:400;color:#ffd2ce}

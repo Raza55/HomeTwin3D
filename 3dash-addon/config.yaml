@@ -1,0 +1,20 @@
+# Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
+name: "HomeTwin3D"
+version: "0.2.1"
+slug: "hometwin3d"
+description: "Independent 3D home dashboard for Home Assistant"
+url: "https://github.com/Raza55/HomeTwin3D"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+ingress: false
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: "Web interface"
+init: false
+startup: "application"
+boot: "auto"
+options: {}
+schema: {}

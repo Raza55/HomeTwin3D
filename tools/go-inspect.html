@@ -1,0 +1,1 @@
+<!doctype html><meta charset="utf-8"><pre id="out"></pre><script type="module">import {getConfig} from '../src/services/configApi';const c=getConfig();document.querySelector('#out').textContent=JSON.stringify({objects:c.model?.floorplan?.objects.filter(o=>/hue.?go/i.test(o.label)),lights:c.lights.filter(o=>/hue.?go/i.test(o.label)),groups:c.lightGroups},null,2);</script>

@@ -1,0 +1,20 @@
+node_modules/
+.qa/
+tools/__pycache__/
+dist/
+dist-server/
+*.log
+.DS_Store
+.claude/
+CLAUDE.md
+server/certs/
+tools/blender_install_result.json
+
+# Local environment overrides
+.env.local
+.env.*.local
+
+# Private installation data and local helper installations
+.private/
+**/.venv/
+**/__pycache__/

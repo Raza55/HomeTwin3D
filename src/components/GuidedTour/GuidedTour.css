@@ -1,0 +1,232 @@
+/* ── Overlay mask with spotlight cutout ── */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  pointer-events: none;
+}
+
+.tour-overlay-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
+/*
+ * When there is NO spotlight, overlay-bg provides the dark background.
+ * When there IS a spotlight, the spotlight's box-shadow handles darkness
+ * so overlay-bg must be transparent to not obscure the spotlight area.
+ */
+.tour-overlay:not(:has(.tour-spotlight)) .tour-overlay-bg {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.tour-overlay:has(.tour-spotlight) .tour-overlay-bg {
+  background: transparent;
+}
+
+/* Interactive mode: overlay-bg does not capture clicks */
+.tour-overlay.interactive .tour-overlay-bg {
+  pointer-events: none;
+}
+
+/* Passthrough mode: entire overlay is transparent to clicks, dim bg still visible */
+.tour-overlay.passthrough .tour-overlay-bg {
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Spotlight cutout via box-shadow on a positioned element */
+.tour-spotlight {
+  position: fixed;
+  border-radius: 6px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+  transition: all 0.35s ease;
+  pointer-events: none;
+  z-index: 151;
+}
+
+/* Interactive spotlight: allow clicks to pass through to elements below */
+.tour-spotlight.interactive {
+  pointer-events: none; /* stays none — clicks pass through to the canvas */
+}
+
+/* ── Tooltip ── */
+.tour-tooltip {
+  position: fixed;
+  z-index: 152;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px 20px;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  pointer-events: auto;
+  transition: all 0.35s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tour-tooltip-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.tour-tooltip-body {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.tour-tooltip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tour-tooltip-counter {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.tour-tooltip-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tour-tooltip-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tour-tooltip-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.tour-tooltip-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.tour-tooltip-btn.primary.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tour-tooltip-btn.primary:not(.disabled):hover {
+    filter: brightness(1.15);
+    color: var(--bg);
+  }
+}
+
+/* ── Arrow pointer ── */
+.tour-tooltip::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  transform: rotate(45deg);
+}
+
+.tour-tooltip.arrow-top::before {
+  top: -6px;
+  left: 24px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.tour-tooltip.arrow-bottom::before {
+  bottom: -6px;
+  left: 24px;
+  border-left: none;
+  border-top: none;
+}
+
+.tour-tooltip.arrow-left::before {
+  left: -6px;
+  top: 20px;
+  border-right: none;
+  border-top: none;
+}
+
+.tour-tooltip.arrow-right::before {
+  right: -6px;
+  top: 20px;
+  border-left: none;
+  border-bottom: none;
+}
+
+/* ── No-target mode (centered) ── */
+.tour-tooltip.centered {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+}
+
+.tour-tooltip.centered::before {
+  display: none;
+}
+
+/* ── Keyboard hint ── */
+.tour-kbd {
+  display: inline-block;
+  background: var(--border);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+  margin: 0 2px;
+}
+
+/* ── Shortcut list ── */
+.tour-shortcut-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tour-shortcut-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Wait / done hints ── */
+.tour-waiting-hint {
+  font-size: 10px;
+  color: var(--accent);
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+.tour-key-done {
+  font-size: 10px;
+  color: var(--accent);
+  margin-bottom: 10px;
+  font-weight: 500;
+}

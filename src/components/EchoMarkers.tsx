@@ -1,0 +1,100 @@
+import { useEffect, useRef, useState } from 'react';
+import { Pencil, X } from 'lucide-react';
+import EchoIcon from './EchoIcon';
+import { Vector3, type Scene } from '@babylonjs/core';
+import type { AppConfig, HAState } from '../types';
+import { floorplanId } from '../babylon/FloorplanBindings';
+import { getMarkerProjection, setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
+import { echoState, type EchoService } from '../services/echoState';
+import { getActiveHAConnection } from '../services/haWebSocket';
+import './EchoMarkers.css';
+
+export default function EchoMarkers({ scene, config, states, connected, open, onOpen, onAssign, onCommand }: {
+  scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
+  open: string | null; onOpen: (id: string | null) => void; onAssign: (id: string) => void;
+  onCommand?: (entityId: string, service: string, data?: Record<string, unknown>) => Promise<unknown>;
+}) {
+  const refs = useRef<Record<string, HTMLElement | null>>({});
+  const panel = useRef<HTMLElement>(null);
+  const pending = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<number | null>(null);
+  const objects = config.model?.floorplan?.objects.filter(o => o.echo) ?? [];
+  const current = objects.find(o => o.id === open && o.echo);
+  const state = current ? echoState(states[current.entityId], connected) : null;
+  useEffect(() => { setError(''); setDraft(null); }, [open, connected, state?.volume]);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (!panel.current?.contains(event.target as Node) && !Object.values(refs.current).some(el => el?.contains(event.target as Node))) onOpen(null);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') onOpen(null); };
+    document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [onOpen]);
+  useEffect(() => {
+    const targets = objects.map(o => ({ o, fallback: new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale ?? 1), meshes: scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0) }));
+    const center = Vector3.Zero();
+    const observer = scene.onAfterRenderObservable.add(() => {
+      const projection = getMarkerProjection(scene); if (!projection) return;
+      const { rect, width, height } = projection;
+      const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
+      for (const { o, meshes, fallback } of targets) {
+        const element = refs.current[o.id]; if (!element) continue;
+        markerCenterToRef(meshes, fallback, center);
+        const p = projection.project(center, element);
+        setMarkerStyle(element, 'display', p.z < 0 || p.z > 1 || p.x < 0 || p.x > width || p.y < 0 || p.y > height ? 'none' : 'flex');
+        const x = rect.left + p.x / width * rect.width;
+        let y = rect.top + p.y / height * rect.height;
+        const markerWidth = 28, markerHeight = 28;
+        for (const prior of placed) {
+          if (Math.abs(x - prior.x) < (markerWidth + prior.width) / 2 + 6 && Math.abs(y - prior.y) < (markerHeight + prior.height) / 2 + 6)
+            y = prior.y + (markerHeight + prior.height) / 2 + 6;
+        }
+        placed.push({ x, y, width: markerWidth, height: markerHeight });
+        setMarkerStyle(element, 'left', `${x}px`); setMarkerStyle(element, 'top', `${y}px`);
+        if (o.id === open && panel.current) {
+          setMarkerStyle(panel.current, 'left', `${Math.max(8, Math.min(window.innerWidth - panel.current.offsetWidth - 8, x + 30))}px`);
+          setMarkerStyle(panel.current, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.current.offsetHeight - 8, y - 60))}px`);
+        }
+      }
+    });
+    return () => { scene.onAfterRenderObservable.remove(observer); };
+  }, [scene, config, open]);
+
+  const send = async (service: EchoService, data?: Record<string, unknown>) => {
+    const ha = getActiveHAConnection();
+    if (!current || !state?.supports(service) || (!onCommand && !ha?.isConnected) || pending.current) return;
+    pending.current = true; setBusy(true); setError('');
+    try {
+      if (onCommand) await onCommand(current.entityId, service, data);
+      else await ha!.callService('media_player', service, current.entityId, data);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Echo konnte nicht gesteuert werden.'); }
+    finally { pending.current = false; setBusy(false); setDraft(null); }
+  };
+  return <>{objects.map(o => {
+    const value = echoState(states[o.entityId], connected);
+    return <button key={o.id} ref={el => { refs.current[o.id] = el; }}
+      className={`echo-map-marker ${!o.entityId ? 'is-unassigned' : !value.available ? 'is-unavailable' : value.active ? 'is-active' : value.value === 'paused' ? 'is-paused' : ''}`}
+      title={`${o.label} · ${!o.entityId ? 'Zuordnen' : value.label}${value.muted ? ' · Stumm' : ''}`}
+      aria-label={`${o.label} · ${!o.entityId ? 'Zuordnen' : value.label}`} aria-expanded={open === o.id} aria-haspopup="dialog"
+      onClick={() => o.entityId ? onOpen(open === o.id ? null : o.id) : onAssign(o.id)}>
+      <EchoIcon kind={o.echo!.kind}/>{!o.entityId && <span className="echo-badge">+</span>}
+      {o.entityId && (value.active || value.value === 'paused' || value.muted) && <span className="echo-badge">{value.muted ? '×' : value.value === 'paused' ? 'Ⅱ' : '▶'}</span>}
+    </button>;
+  })}{current && state && <section ref={panel} className="echo-popup" role="dialog" aria-label={`${current.label} steuern`}>
+    <header><EchoIcon kind={current.echo!.kind} size={20}/><strong>{current.label}</strong><button aria-label="Echo zuordnen" onClick={() => { onOpen(null); onAssign(current.id); }}><Pencil size={15}/></button><button aria-label="Echo-Steuerung schließen" onClick={() => onOpen(null)}><X size={18}/></button></header>
+    <p role="status">{state.label}{state.muted ? ' · Stumm' : ''}</p>
+    {state.title && <p className="echo-title">{state.title}</p>}
+    <div className="echo-actions">{([
+      ['turn_on', 'An'], ['turn_off', 'Aus'], ['media_play', 'Abspielen'], ['media_pause', 'Pause'],
+      ['media_stop', 'Stopp'], ['media_previous_track', 'Zurück'], ['media_next_track', 'Weiter'],
+    ] as const).filter(([service]) => state.supports(service)).map(([service, label]) => <button key={service} disabled={busy} onClick={() => void send(service)}>{label}</button>)}</div>
+    {state.supports('volume_set') && <label>Lautstärke <output>{draft ?? state.volume ?? '–'} %</output><input aria-label="Echo-Lautstärke" type="range" min={0} max={100} step={1} value={draft ?? state.volume ?? 0} disabled={busy}
+      onChange={e => setDraft(Number(e.target.value))} onPointerCancel={() => setDraft(null)}
+      onPointerUp={e => void send('volume_set', { volume_level: Number(e.currentTarget.value) / 100 })}
+      onKeyUp={e => { if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)) void send('volume_set', { volume_level: Number(e.currentTarget.value) / 100 }); }}/></label>}
+    {state.supports('volume_mute') && <button className="echo-mute" disabled={busy} aria-pressed={state.muted} onClick={() => void send('volume_mute', { is_volume_muted: !state.muted })}>{state.muted ? 'Ton an' : 'Stumm'}</button>}
+    {error && <p role="alert">{error}</p>}
+  </section>}</>;
+}

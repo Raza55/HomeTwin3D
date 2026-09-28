@@ -1,0 +1,15 @@
+HomeTwin3D
+Independent development maintained by Raza55, 2026.
+
+Originally based on 3Dash by Kdcius and the original contributors:
+https://github.com/Kdcius/3Dash_webapp
+
+Original contributions and their copyright and attribution notices remain
+with their respective authors. This repository starts from a sanitized source
+snapshot; its initial commit does not imply sole authorship of existing code.
+The earlier development history is retained in private local backups.
+HomeTwin3D modifications are documented in ORIGIN.md, CHANGELOG.md and Git.
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+This notice does not change the license or imply endorsement by the
+original project or its contributors.

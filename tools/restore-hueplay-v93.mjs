@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {readGlb,writeGlb} from './optimize-glb.mjs';
+const {json,bin}=readGlb(fs.readFileSync('../blender/Wohnung_v91_3Dash_Zimmertueren.glb'));
+const s=json.scenes[json.scene??0],m=JSON.parse(s.extras['3dash_manifest']);
+const a=m.objects.find(o=>o.id==='7bd84ba8-5d43-546c-a9db-9382b4490098');
+const b=m.objects.find(o=>o.id==='b249ce50-4a17-5b05-8d78-0710b43fa1be');
+assert(a&&b);a.label='Hue Play auf linkem Schrank';a.entityId='';b.label='Hue Play hinter Schrankdeko';b.entityId='light.hue_tv_right_top';b.room='Wohnzimmer';
+m.source='Wohnung_v93_3Dash_HuePlay_beide.blend';s.extras['3dash_manifest']=JSON.stringify(m);
+const output=writeGlb(json,bin);fs.writeFileSync('../blender/Wohnung_v93_3Dash_HuePlay_beide.glb',output);fs.writeFileSync('.qa/hueplay-v93.glb',output);
+console.log({objects:m.objects.length,restored:a.position,retained:b.position});

@@ -1,0 +1,115 @@
+import { useEffect, useRef, useState } from 'react';
+import { Coffee, Pencil, X } from 'lucide-react';
+import { Vector3, type Scene } from '@babylonjs/core';
+import type { AppConfig, HAState } from '../types';
+import { floorplanId } from '../babylon/FloorplanBindings';
+import { getMarkerProjection, setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
+import { coffeeState, coffeeProgram } from '../services/coffeeState';
+import { getActiveHAConnection } from '../services/haWebSocket';
+import './CoffeeMarkers.css';
+
+export default function CoffeeMarkers({ scene, config, states, connected, open, onOpen, onAssign, onCommand }: {
+  scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
+  open: string | null; onOpen: (id: string | null) => void; onAssign: (id: string) => void;
+  onCommand?: (domain: string, service: string, entityId: string, data?: Record<string, unknown>) => Promise<unknown>;
+}) {
+  const refs = useRef<Record<string, HTMLElement | null>>({});
+  const panel = useRef<HTMLElement>(null), pending = useRef(false);
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [selected, setSelected] = useState(''), [now, setNow] = useState(Date.now());
+  const objects = config.model?.floorplan?.objects.filter(o => o.coffee) ?? [];
+  const current = objects.find(o => o.id === open);
+  const value = current ? coffeeState(current, states, connected, now) : null;
+  const anyRunning = objects.some(o => coffeeState(o, states, connected, now).running);
+  useEffect(() => { setError(''); setSelected(''); }, [open]);
+  useEffect(() => {
+    setNow(Date.now());
+    if (!anyRunning) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [anyRunning]);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (!panel.current?.contains(event.target as Node) && !Object.values(refs.current).some(el => el?.contains(event.target as Node))) onOpen(null);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') onOpen(null); };
+    document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [onOpen]);
+  useEffect(() => {
+    const targets = objects.map(o => ({ o, fallback: new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale ?? 1), meshes: scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0) }));
+    const center = Vector3.Zero();
+    const observer = scene.onAfterRenderObservable.add(() => {
+      const projection = getMarkerProjection(scene); if (!projection) return;
+      const { rect, width, height } = projection;
+      const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
+      for (const { o, meshes, fallback } of targets) {
+        const element = refs.current[o.id]; if (!element) continue;
+        markerCenterToRef(meshes, fallback, center);
+        // The coffee machine is an always-visible control in the plan.
+        const p = projection.project(center);
+        setMarkerStyle(element, 'display', p.z < 0 || p.z > 1 || p.x < 0 || p.x > width || p.y < 0 || p.y > height ? 'none' : 'flex');
+        const x = rect.left + p.x / width * rect.width;
+        let y = rect.top + p.y / height * rect.height;
+        const markerWidth = 140, markerHeight = 72;
+        for (const prior of placed) {
+          if (Math.abs(x - prior.x) < (markerWidth + prior.width) / 2 + 6 && Math.abs(y - prior.y) < (markerHeight + prior.height) / 2 + 6)
+            y = prior.y + (markerHeight + prior.height) / 2 + 6;
+        }
+        placed.push({ x, y, width: markerWidth, height: markerHeight });
+        setMarkerStyle(element, 'left', `${x}px`); setMarkerStyle(element, 'top', `${y}px`);
+        if (o.id === open && panel.current) {
+          setMarkerStyle(panel.current, 'left', `${Math.max(8, Math.min(window.innerWidth - panel.current.offsetWidth - 8, x + 90))}px`);
+          setMarkerStyle(panel.current, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.current.offsetHeight - 8, y - 60))}px`);
+        }
+      }
+    });
+    return () => { scene.onAfterRenderObservable.remove(observer); };
+  }, [scene, config, open]);
+
+  const send = async (action: 'on' | 'off' | 'start' | 'stop') => {
+    const ha = getActiveHAConnection();
+    if (!current || !value || pending.current || (!onCommand && !ha?.isConnected)) return;
+    const c = current.coffee!;
+    if ((action === 'on' || action === 'off') && (!value.canPower || value.inProgress)) return;
+    if (action === 'start' && (!value.canStart || !value.options.includes(selected))) return;
+    if (action === 'stop' && !value.canStop) return;
+    const domain = action === 'start' ? 'select' : action === 'stop' ? 'button' : 'switch';
+    const service = action === 'start' ? 'select_option' : action === 'stop' ? 'press' : action === 'on' ? 'turn_on' : 'turn_off';
+    const entityId = action === 'start' ? c.activeProgramEntityId : action === 'stop' ? c.stopEntityId : current.entityId;
+    const data = action === 'start' ? { option: selected } : undefined;
+    pending.current = true; setBusy(true); setError('');
+    try {
+      if (onCommand) await onCommand(domain, service, entityId, data);
+      else await ha!.callService(domain, service, entityId, data);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Befehl fehlgeschlagen.'); }
+    finally { pending.current = false; setBusy(false); }
+  };
+  return <>{objects.map(o => {
+    const state = coffeeState(o, states, connected, now);
+    const time = state.remaining ? `Noch ${state.remaining}` : state.elapsed ? `Seit ${state.elapsed}` : '';
+    return <button key={o.id} ref={el => { refs.current[o.id] = el; }}
+      className={`coffee-marker ${state.running ? 'is-running' : ''} ${state.inProgress && !state.running ? 'needs-attention' : ''}`}
+      title={`${o.label} · ${state.label}`} aria-label={`${o.label} steuern`} aria-expanded={open === o.id} aria-haspopup="dialog"
+      onClick={() => o.entityId ? onOpen(open === o.id ? null : o.id) : onAssign(o.id)}>
+      <Coffee size={20}/>{!o.entityId && <span>+</span>}
+      {state.inProgress && <span className="coffee-caption">{state.program || state.label}{time && <small>{time}</small>}</span>}
+    </button>;
+  })}{current && value && <section ref={panel} className="coffee-popup" role="dialog" aria-label={`${current.label} steuern`}>
+    <header><Coffee size={20}/><strong>{current.label}</strong><button aria-label="Kaffeemaschine zuordnen" onClick={() => { onOpen(null); onAssign(current.id); }}><Pencil size={16}/></button><button aria-label="Kaffeesteuerung schließen" onClick={() => onOpen(null)}><X size={18}/></button></header>
+    <small>Siemens TI9558X1DE · {current.room}</small>
+    <p className={value.running ? 'coffee-running' : ''} role="status">{value.label}</p>
+    {value.inProgress && <dl><dt>Programm</dt><dd>{value.program || 'Nicht gemeldet'}</dd>
+      <dt>Restzeit</dt><dd>{value.remaining || 'Nicht gemeldet'}</dd>
+      {value.elapsed && <><dt>Läuft seit</dt><dd>{value.elapsed}</dd></>}
+    </dl>}
+    {value.progress !== null && <label className="coffee-progress">Fortschritt {Math.round(value.progress)} %<progress max={100} value={value.progress}/></label>}
+    <div className="coffee-actions"><button disabled={busy || !value.canPower || value.inProgress || value.on} onClick={() => void send('on')}>Einschalten</button><button disabled={busy || !value.canPower || value.inProgress || !value.on} onClick={() => void send('off')}>Ausschalten</button></div>
+    {!value.inProgress && <><label className="coffee-program">Getränk<select aria-label="Kaffeeprogramm" value={value.options.includes(selected) ? selected : ''} disabled={busy || !value.available || !value.options.length} onChange={e => setSelected(e.target.value)}>
+      <option value="">Programm wählen</option>{value.options.map(option => <option key={option} value={option}>{coffeeProgram(option)}</option>)}
+    </select></label><button className="coffee-start" disabled={busy || !value.canStart || !value.options.includes(selected)} onClick={() => void send('start')}>Getränk starten</button>
+    {value.startHint && <p className="coffee-hint">{value.startHint}</p>}</>}
+    {value.inProgress && <button className="coffee-stop" disabled={busy || !value.canStop} onClick={() => void send('stop')}>Programm stoppen</button>}
+    {busy && <p role="status">Befehl wird gesendet …</p>}{error && <p role="alert">{error}</p>}
+  </section>}</>;
+}

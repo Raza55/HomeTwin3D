@@ -1,0 +1,61 @@
+{
+  "name": "hometwin3d",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node tools/generate-icon-loaders.mjs",
+    "prebuild": "node tools/generate-icon-loaders.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:floorplan": "node --test tools/floorplan.test.mjs tools/floorplan-matching.test.mjs tools/light-clusters.test.mjs tools/hue-sync.test.mjs",
+    "test:media": "node --test tools/tv-media.test.mjs",
+    "test:balcony": "node --test tools/balcony.test.mjs",
+    "test:coffee": "node --test tools/coffee.test.mjs",
+    "test:it": "node --test tools/it.test.mjs",
+    "test:echo": "node --test tools/echo.test.mjs",
+    "test:lighting": "node tools/run-lighting-tests.mjs",
+    "test:performance": "node tools/run-performance-tests.mjs",
+    "test:walkthrough": "node tools/run-walkthrough-tests.mjs",
+    "audit:high": "npm audit --audit-level=high",
+    "test:battery": "node --test tools/battery-warning.test.mjs",
+    "test:tv-dial": "node --test tools/tv-dial.test.mjs",
+    "privacy:check": "node tools/check-public-data.mjs",
+    "privacy:install": "node tools/install-public-hook.mjs",
+    "test:privacy": "node --test tools/public-data.test.mjs"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.37.2",
+    "@babylonjs/loaders": "^7.37.2",
+    "@babylonjs/materials": "^7.54.3",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.577.0",
+    "polygon-clipping": "^0.15.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-grid-layout": "^2.2.3",
+    "react-router-dom": "^6.30.4"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.4.1",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "description": "Independent 3D home dashboard, originally based on 3Dash (see ORIGIN.md).",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Raza55/HomeTwin3D.git"
+  }
+}

@@ -1,0 +1,11 @@
+import { build } from 'esbuild';
+import { mkdir } from 'node:fs/promises';
+await mkdir(new URL('../.qa/',import.meta.url),{recursive:true});
+await build({entryPoints:[new URL('./floorplan-lighting.test.ts',import.meta.url).pathname.replace(/^\/(.:)/,'$1')],bundle:true,platform:'node',format:'esm',packages:'external',outfile:new URL('../.qa/floorplan-lighting.test.mjs',import.meta.url).pathname.replace(/^\/(.:)/,'$1')});
+await build({entryPoints:[new URL('./floorplan-persistence.test.ts',import.meta.url).pathname.replace(/^\/(.:)/,'$1')],bundle:true,platform:'node',format:'esm',packages:'external',define:{'import.meta.env.BASE_URL':'"/"'},outfile:new URL('../.qa/floorplan-persistence.test.mjs',import.meta.url).pathname.replace(/^\/(.:)/,'$1')});
+Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null, setItem: () => {}, removeItem: () => {} } });
+await build({entryPoints:[new URL('./door-state.test.ts',import.meta.url).pathname.replace(/^\/(.:)/,'$1')],bundle:true,platform:'node',format:'esm',packages:'external',outfile:new URL('../.qa/door-state.test.mjs',import.meta.url).pathname.replace(/^\/(.:)/,'$1')});
+await import('../.qa/door-state.test.mjs');
+await build({entryPoints:[new URL('./render-performance.test.ts',import.meta.url).pathname.replace(/^\/(.:)/,'$1')],bundle:true,platform:'node',format:'esm',packages:'external',outfile:new URL('../.qa/render-performance.test.mjs',import.meta.url).pathname.replace(/^\/(.:)/,'$1')});
+await import('../.qa/render-performance.test.mjs');
+await Promise.all([import('../.qa/floorplan-lighting.test.mjs'), import('../.qa/floorplan-persistence.test.mjs')]);

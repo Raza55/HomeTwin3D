@@ -1,4 +1,4 @@
-import { HighlightLayer, Mesh, Vector3, type AbstractMesh, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
+import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, VertexData, type AbstractMesh, type Material, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
 
 /**
  * Render-only batches for static model geometry.
@@ -14,12 +14,18 @@ import { HighlightLayer, Mesh, Vector3, type AbstractMesh, type Matrix, type Lig
  * budget) is temporarily drawn as individual sources, so lighting never changes.
  * A source that changes (material, visibility, transform, highlight) dissolves
  * its batch for good.
+ *
+ * Most untextured surfaces have a material of their own that differs from others
+ * only in its base color. Those are merged across materials: the proxy carries
+ * each source's base color as vertex color and draws with a white-based copy of
+ * the shared material. Base color and vertex color multiply, so the result is
+ * identical; a later base-color change dissolves the batch like a material swap.
  */
 
 interface RenderBatch {
   proxy: Mesh;
   sources: Mesh[];
-  snapshots: Array<{ material: unknown; matrix: Matrix; receiveShadows: boolean }>;
+  snapshots: Array<{ material: unknown; matrix: Matrix; receiveShadows: boolean; color: Color3 | null }>;
   /** Proxy drawn (true) or sources drawn individually (false). */
   active: boolean;
   lights: Map<Mesh, Light[]>;
@@ -40,6 +46,22 @@ export interface RenderBatchSet {
 }
 
 const MIN_BATCH_SIZE = 2;
+
+function baseColor(material: Material | null): Color3 | null {
+  return material instanceof PBRMaterial ? material.albedoColor : material instanceof StandardMaterial ? material.diffuseColor : null;
+}
+
+/** Everything but the base color, for materials whose surfaces can share one vertex-colored proxy; null otherwise. */
+function colorMergeKey(material: Material): string | null {
+  const color = baseColor(material);
+  if (!color || material.alpha !== 1 || material.getAlphaTestTexture()) return null;
+  const emissive = (material as PBRMaterial | StandardMaterial).emissiveColor;
+  if (emissive.r > 0 || emissive.g > 0 || emissive.b > 0) return null;
+  const serialized = material.serialize() as Record<string, unknown>;
+  for (const [key, value] of Object.entries(serialized)) if (value && typeof value === 'object' && /texture/i.test(key)) return null;
+  for (const key of ['name', 'id', 'uniqueId', 'albedo', 'diffuse', 'metadata', 'tags']) delete serialized[key];
+  return JSON.stringify(serialized);
+}
 /** Grid size (scene units, metres at scale 1) for grouping leftover meshes by area. */
 const AREA_CELL = 4;
 export const DYNAMIC_EXTRAS = ['ha_id', 'ha_door', 'ha_room_door', 'ha_appliance', 'ha_cutaway'] as const;
@@ -178,6 +200,7 @@ class RenderBatchSetImpl implements RenderBatchSet {
     // Pass 1: same reachable lights ⇒ the per-surface budget picks the same lights for all members.
     const byReach = new Map<string, Mesh[]>();
     const renderKeys = new Map<Mesh, string>();
+    const colorKeys = new Map<Material, string | null>();
     for (const mesh of new Set(meshes)) {
       if (!this.eligible(mesh, animated)) continue;
       mesh.computeWorldMatrix(true);
@@ -187,8 +210,11 @@ class RenderBatchSetImpl implements RenderBatchSet {
         Vector3.ClampToRef(position, box.minimumWorld, box.maximumWorld, nearest);
         if (Vector3.DistanceSquared(position, nearest) <= rangeSquared) reach.push(source.uniqueId);
       }
+      const material = mesh.material!;
+      if (!colorKeys.has(material)) colorKeys.set(material, colorMergeKey(material));
+      const colorKey = colorKeys.get(material);
       const renderKey = [
-        mesh.material!.uniqueId, mesh.getVerticesDataKinds().sort().join(','),
+        colorKey ? `color:${colorKey}` : material.uniqueId, mesh.getVerticesDataKinds().sort().join(','),
         mesh.sideOrientation, mesh.overrideMaterialSideOrientation, mesh.getWorldMatrix().determinant() < 0,
         mesh.receiveShadows, mesh.renderingGroupId, mesh.useVertexColors, mesh.hasVertexAlpha,
       ].join('|');
@@ -206,19 +232,20 @@ class RenderBatchSetImpl implements RenderBatchSet {
     }
     for (const sources of [...byReach.values(), ...byArea.values()]) {
       if (sources.length < MIN_BATCH_SIZE) continue;
-      const proxy = Mesh.MergeMeshes(sources, false, true, undefined, false, false);
+      const shared = sources.every(source => source.material === sources[0].material);
+      const proxy = shared ? Mesh.MergeMeshes(sources, false, true, undefined, false, false) : this.mergeWithColors(sources);
       if (!proxy) continue;
       proxy.name = `render-batch:${this.batches.length}`;
-      proxy.material = sources[0].material;
+      if (shared) proxy.material = sources[0].material;
       proxy.sideOrientation = sources[0].sideOrientation;
       proxy.overrideMaterialSideOrientation = sources[0].overrideMaterialSideOrientation;
       proxy.receiveShadows = sources[0].receiveShadows;
       proxy.renderingGroupId = sources[0].renderingGroupId;
-      proxy.useVertexColors = sources[0].useVertexColors;
+      proxy.useVertexColors = shared ? sources[0].useVertexColors : true;
       proxy.hasVertexAlpha = sources[0].hasVertexAlpha;
       proxy.isPickable = false;
       proxy.checkCollisions = false;
-      proxy.metadata = { renderBatch: true };
+      proxy.metadata = { renderBatch: true, ownMaterial: !shared };
       // Not frozen: Babylon 9 computes shadows on meshes with a frozen world
       // matrix incorrectly (black/white surfaces). A few dozen static proxies cost nothing.
       proxy.computeWorldMatrix(true);
@@ -228,6 +255,7 @@ class RenderBatchSetImpl implements RenderBatchSet {
           material: source.material,
           matrix: source.getWorldMatrix().clone(),
           receiveShadows: source.receiveShadows,
+          color: shared ? null : baseColor(source.material)!.clone(),
         })),
       };
       this.batches.push(batch);
@@ -235,6 +263,26 @@ class RenderBatchSetImpl implements RenderBatchSet {
       for (const source of sources) this.sourceToBatch.set(source, batch);
     }
     this.markChanged();
+  }
+
+  /** Proxy for sources whose materials differ only in base color (see colorMergeKey). */
+  private mergeWithColors(sources: Mesh[]): Mesh | null {
+    const parts = sources.map(source => {
+      const data = VertexData.ExtractFromMesh(source, true, true), color = baseColor(source.material)!;
+      const count = data.positions!.length / 3, colors = new Float32Array(count * 4);
+      for (let i = 0; i < count; i++) { colors[i * 4] = color.r; colors[i * 4 + 1] = color.g; colors[i * 4 + 2] = color.b; colors[i * 4 + 3] = 1; }
+      data.colors = colors;
+      data.transform(source.computeWorldMatrix(true));
+      return data;
+    });
+    const merged = parts[0];
+    merged.merge(parts.slice(1), true);
+    const proxy = new Mesh('render-batch', this.scene);
+    merged.applyToMesh(proxy, false);
+    const material = sources[0].material!.clone(`${sources[0].material!.name}:vertex-color`)!;
+    baseColor(material)!.set(1, 1, 1);
+    proxy.material = material;
+    return proxy;
   }
 
   private eligible(mesh: AbstractMesh, animated: Set<unknown>): mesh is Mesh {
@@ -281,6 +329,7 @@ class RenderBatchSetImpl implements RenderBatchSet {
     if (source.isDisposed()) return 'disposed';
     if (!source.isVisible || source.visibility !== 1 || !source.isEnabled()) return 'visibility';
     if (source.material !== snapshot.material) return 'material';
+    if (snapshot.color && !baseColor(source.material)?.equals(snapshot.color)) return 'color';
     if (source.layerMask !== 0x0FFFFFFF) return 'layerMask';
     if (source.edgesRenderer || source.renderOutline || source.renderOverlay) return 'outline';
     if (source.receiveShadows !== snapshot.receiveShadows) return 'shadows';
@@ -298,7 +347,9 @@ class RenderBatchSetImpl implements RenderBatchSet {
     this.batches.splice(index, 1);
     for (const source of batch.sources) this.sourceToBatch.delete(source);
     this.proxyToBatch.delete(batch.proxy);
+    const material = batch.proxy.metadata?.ownMaterial ? batch.proxy.material : null;
     batch.proxy.dispose(false, false);
+    material?.dispose(false, false);
     if (notify) this.markChanged();
   }
 }

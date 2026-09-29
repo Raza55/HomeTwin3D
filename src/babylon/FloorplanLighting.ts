@@ -293,3 +293,46 @@ export function createLightVariantPrewarmer(scene: Scene, rigs: FloorplanLightRi
     return true;
   };
 }
+
+/**
+ * A lamp's first activation renders its shadow map in that frame (six faces for
+ * point emitters). This renders the maps of switched-off lamps ahead of time,
+ * one per call, between two frames - the same way the scene renders a shadow
+ * target. Afterwards the map counts as rendered, so switching the lamp on only
+ * re-renders it if geometry or the light moved meanwhile. Returns false when done.
+ */
+export function createShadowMapPrewarmer(scene: Scene, rigs: FloorplanLightRig[]): () => boolean {
+  const queue = rigs.flatMap(rig => rig.shadows);
+  const attempts = new Map<ShadowGenerator, number>();
+  type Target = { _shouldRender(): boolean; render(useCameraPostProcess?: boolean): void; isReadyForRendering(): boolean };
+  type SceneInternals = { _intermediateRendering: boolean };
+  return () => {
+    while (queue.length) {
+      const shadow = queue.shift()!, light = shadow.getLight();
+      const map = shadow.getShadowMap() as unknown as Target | null;
+      // Enabled lights render their own map; disposed generators are skipped.
+      if (!map || light.isEnabled(false) || light.isDisposed() || light.getShadowGenerator() !== shadow) continue;
+      if (!map.isReadyForRendering()) {
+        // Shaders may still compile; give up on a map after a few tries (it renders on activation).
+        const tries = (attempts.get(shadow) ?? 0) + 1;
+        attempts.set(shadow, tries);
+        if (tries < 5) queue.push(shadow);
+        return true;
+      }
+      const internals = scene as unknown as SceneInternals;
+      internals._intermediateRendering = true;
+      try {
+        // _shouldRender() is true only while the map was never rendered or marked stale.
+        if (map._shouldRender()) {
+          scene.incrementRenderId();
+          map.render(false);
+        }
+      } finally {
+        internals._intermediateRendering = false;
+      }
+      activationPoses.set(light, poseKey(light));
+      return true;
+    }
+    return false;
+  };
+}

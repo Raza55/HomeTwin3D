@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ArcRotateCamera, MeshBuilder, NullEngine, PointLight, RenderTargetTexture, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
+import { Color3, ArcRotateCamera, MeshBuilder, NullEngine, PointLight, RenderTargetTexture, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
 import { batchStaticRendering } from '../src/babylon/RenderBatch';
 import { refreshGlowOnChange } from '../src/babylon/GlowRefresh';
 import { SceneChangeMonitor } from '../src/babylon/SceneChangeMonitor';
@@ -10,13 +10,41 @@ function candidates(scene: Scene) {
   return list.data.slice(0, list.length);
 }
 
+test('materials differing only in base color merge with per-vertex colors', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const colors = [new Color3(1, 0, 0), new Color3(0, .5, 1)];
+    const boxes = colors.map((color, i) => {
+      const material = new StandardMaterial(`paint${i}`, scene); material.diffuseColor = color;
+      const box = MeshBuilder.CreateBox(`box${i}`, {}, scene); box.position.x = i * 2; box.material = material; return box;
+    });
+    const set = batchStaticRendering(scene, boxes, []);
+    assert.deepEqual(set.stats, { batches: 1, sources: 2 });
+    const proxy = scene.meshes.find(m => m.metadata?.renderBatch)!;
+    const proxyMaterial = proxy.material as StandardMaterial;
+    assert.ok(proxyMaterial !== boxes[0].material && proxyMaterial.diffuseColor.equals(Color3.White()));
+    const vertexColors = proxy.getVerticesData('color')!;
+    assert.deepEqual([...vertexColors.slice(0, 4)], [1, 0, 0, 1]);
+    assert.deepEqual([...vertexColors.slice(-4)], [0, .5, 1, 1]);
+    // Recoloring a source dissolves the batch; the batch-owned material goes with it.
+    (boxes[1].material as StandardMaterial).diffuseColor = new Color3(0, 1, 0);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.equal(set.stats.batches, 0);
+    assert.ok(proxyMaterial.isFrozen === false && !scene.materials.includes(proxyMaterial));
+    set.dispose();
+  } finally { scene.dispose(); engine.dispose(); }
+});
+
 test('static meshes with one material merge into a proxy that replaces them for the camera only', () => {
   const engine = new NullEngine(); const scene = new Scene(engine);
   try {
     new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
     const material = new StandardMaterial('wall', scene);
     const walls = [0, 1, 2].map(i => { const m = MeshBuilder.CreateBox(`wall${i}`, {}, scene); m.position.x = i * 2; m.material = material; return m; });
-    const other = MeshBuilder.CreateBox('chair', {}, scene); other.material = new StandardMaterial('chair', scene);
+    // A different shading input (not just the base color) keeps the chair out of the batch.
+    const chair = new StandardMaterial('chair', scene); chair.specularPower = 12;
+    const other = MeshBuilder.CreateBox('chair', {}, scene); other.material = chair;
     const set = batchStaticRendering(scene, [...walls, other], []);
     assert.deepEqual(set.stats, { batches: 1, sources: 3 });
     const proxy = scene.meshes.find(m => m.metadata?.renderBatch)!;

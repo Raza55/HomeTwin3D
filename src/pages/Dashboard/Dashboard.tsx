@@ -57,7 +57,7 @@ import {
 import { createSmartDeviceMesh, removeSmartDeviceMesh, updateSmartDeviceState, type SmartDeviceMeshMap } from '../../babylon/SmartDeviceMeshFactory';
 import { getConfig, updateConfig, getModelBlob, getModelObjectBlob } from '../../services/configApi';
 import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
-import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
+import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
 import { getEntityCache, setEntityCache } from '../../services/entityCache';
 import type { HAEntityOption } from '../../components/EntityPicker';
 import { getSetting, updateSettings, type HomeViewPose } from '../../services/settingsStore';
@@ -1152,9 +1152,11 @@ export default function Dashboard() {
         // A step may hold one frame briefly; that is better than a stall while a
         // user switches the lamp. Running animations (RGB) do not block it.
         const prewarmNextCircuit = createLightVariantPrewarmer(ctx.scene, floorplanRigs);
+        const prewarmNextShadowMap = createShadowMapPrewarmer(ctx.scene, floorplanRigs);
         const prewarmTimer = window.setInterval(() => {
           if (disposed || !ctx.isStatic(10_000, true)) return;
-          if (!prewarmNextCircuit()) window.clearInterval(prewarmTimer);
+          // Shader variants first, then the shadow maps of switched-off lamps.
+          if (!prewarmNextCircuit() && !prewarmNextShadowMap()) window.clearInterval(prewarmTimer);
         }, 3000);
         prewarmTimerRef = prewarmTimer;
 

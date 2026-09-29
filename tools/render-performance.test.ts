@@ -296,3 +296,33 @@ test('glow pass draws emissive and moving meshes plus merged static occluders on
     assert.equal(texture.getCustomRenderList, null);
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+test('shadow maps of switched-off lamps are rendered ahead of their first activation', async () => {
+  const { createShadowMapPrewarmer } = await import('../src/babylon/FloorplanLighting');
+  const engine = new NullEngine(), scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const mesh = MeshBuilder.CreateBox('surface', {}, scene);
+    const config: LightConfig = { entityId: 'light.test', type: 'rgb', position: { x: 0, y: 2, z: 0 },
+      emitters: [{ kind: 'point', position: { x: 0, y: 2, z: 0 }, lumens: 1000, range: 8 }] };
+    const rig = createFloorplanLightRig(scene, config, [mesh], 1, 512);
+    const off = { entity_id: config.entityId, state: 'off', attributes: {} };
+    applyFloorplanLightState(rig, config, off);
+    const map = rig.shadows[0].getShadowMap()!;
+    let renders = 0;
+    map.onBeforeRenderObservable.add(() => { renders++; });
+    // NullEngine never compiles shaders; treat the map as ready.
+    map.isReadyForRendering = () => true;
+    const prewarm = createShadowMapPrewarmer(scene, [rig]);
+    // A map whose shaders are still compiling is retried on a later call.
+    let steps = 0;
+    while (prewarm() && steps < 20) steps++;
+    assert.ok(steps < 20, 'the prewarmer finishes');
+    assert.ok(renders > 0, 'the switched-off lamp map was rendered');
+    let invalidations = 0;
+    const reset = map.resetRefreshCounter.bind(map);
+    map.resetRefreshCounter = () => { invalidations++; reset(); };
+    applyFloorplanLightState(rig, config, { ...off, state: 'on', attributes: { brightness: 255 } });
+    assert.equal(invalidations, 0, 'first activation reuses the prepared map');
+  } finally { scene.dispose(); engine.dispose(); }
+});

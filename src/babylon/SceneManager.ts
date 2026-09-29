@@ -20,6 +20,7 @@ import { batchStaticSunShadows } from './ShadowCasterBatch';
 import { refreshGlowOnChange } from './GlowRefresh';
 import { createPerfOverlay } from './PerfOverlay';
 import { SceneChangeMonitor } from './SceneChangeMonitor';
+import { installUniformNameCache } from './UniformNameCache';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -68,6 +69,14 @@ const IDLE_AFTER_MS = 1500;
  * changes (a sensor label, a light) only need a few follow-up frames.
  */
 const CHANGE_HOLD_MS = 300;
+/**
+ * A change found by the scene monitor is already visible in the frame that
+ * produced it (glow and shadow maps refresh within that frame). Two follow-up
+ * frames cover anything settling one frame later; holding the full 300 ms
+ * rendered ~9 identical frames for every ambient step (e.g. the RGB cycle).
+ * Explicit requestRender() calls (HA updates, loading textures) keep the hold.
+ */
+const CHANGE_FOLLOW_UP_FRAMES = 2;
 /** While nothing changes, render this often so a missed change shows up quickly. */
 const STATIC_FRAME_INTERVAL_MS = 500;
 
@@ -167,6 +176,7 @@ export function createScene(
   // Suppress Draco normalized-flag warnings
   Logger.LogLevels = Logger.ErrorLogLevel;
   shareIdenticalShaderVariants();
+  installUniformNameCache();
 
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const maxDevicePixelRatio = options?.maxDevicePixelRatio ?? (coarsePointer ? 1.5 : 2);
@@ -259,9 +269,11 @@ export function createScene(
   const idleFrameInterval = idleFrameRate > 0 ? 1000 / idleFrameRate : 0;
   let lastActivity = performance.now();
   let lastChange = performance.now();
+  let lastRequest = performance.now();
+  let followUpFrames = 0;
   let lastRender = 0;
   const changeMonitor = new SceneChangeMonitor(scene);
-  const requestRender = () => { lastChange = performance.now(); };
+  const requestRender = () => { lastChange = lastRequest = performance.now(); };
   const isStatic = (quietMs = 3000, ignoreChanges = false) => {
     const now = performance.now();
     return !document.hidden && now - lastActivity > quietMs && (ignoreChanges || now - lastChange > quietMs);
@@ -281,7 +293,7 @@ export function createScene(
       // HA updates), otherwise only a low floor rate. Frames that would be
       // identical are skipped. A little jitter allowance lets a 60 Hz display
       // settle at every 2nd frame for 30 fps.
-      const interval = now - lastChange < CHANGE_HOLD_MS ? idleFrameInterval : STATIC_FRAME_INTERVAL_MS;
+      const interval = followUpFrames > 0 || now - lastRequest < CHANGE_HOLD_MS ? idleFrameInterval : STATIC_FRAME_INTERVAL_MS;
       if (now - lastRender < interval - 4) return;
     }
     lastRender = now;
@@ -303,7 +315,8 @@ export function createScene(
       for (let i = 0; i < 16; i++) if (view[i] !== lastView[i]) { moved = true; lastView[i] = view[i]; }
       if (moved) lastActivity = now;
     }
-    if (changeMonitor.check()) lastChange = now;
+    if (followUpFrames > 0) followUpFrames--;
+    if (changeMonitor.check()) { lastChange = now; followUpFrames = CHANGE_FOLLOW_UP_FRAMES; }
   };
   let renderLoopRunning = false;
   const startRenderLoop = () => {

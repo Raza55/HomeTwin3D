@@ -32,19 +32,36 @@ type ShadedMaterial = Material & {
 
 const color = (c: ColorLike) => (c ? `${c.r},${c.g},${c.b}` : '-');
 
-/** Material inputs that change the image without changing a mesh (colors, textures, alpha). */
-export function materialKey(material: Material | null): string {
-  if (!material) return '';
+/** Number of values readMaterialState() writes. */
+export const MATERIAL_STATE_SIZE = 14;
+
+/**
+ * Material inputs that change the image without changing a mesh (colors,
+ * textures, alpha), written as numbers. Comparing these arrays replaces a
+ * string key per material and frame (no allocation on the render path).
+ */
+export function readMaterialState(material: Material, out: Float64Array): void {
   const m = material as ShadedMaterial;
-  return `${material.uniqueId}/${color(m.emissiveColor)}/${m.emissiveIntensity ?? 1}/${m.emissiveTexture?.uniqueId ?? 0}:${m.emissiveTexture?.level ?? 0}`
-    + `/${color(m.diffuseColor ?? m.albedoColor)}/${(m.diffuseTexture ?? m.albedoTexture)?.uniqueId ?? 0}/${m.alpha}`
-    + `/${m.getAlphaTestTexture?.()?.uniqueId ?? 0}/${m.backFaceCulling}`;
+  const e = m.emissiveColor, d = m.diffuseColor ?? m.albedoColor;
+  out[0] = e ? e.r : -1; out[1] = e ? e.g : -1; out[2] = e ? e.b : -1;
+  out[3] = m.emissiveIntensity ?? 1;
+  out[4] = m.emissiveTexture?.uniqueId ?? 0; out[5] = m.emissiveTexture?.level ?? 0;
+  out[6] = d ? d.r : -1; out[7] = d ? d.g : -1; out[8] = d ? d.b : -1;
+  out[9] = (m.diffuseTexture ?? m.albedoTexture)?.uniqueId ?? 0;
+  out[10] = m.alpha;
+  out[11] = m.getAlphaTestTexture?.()?.uniqueId ?? 0;
+  out[12] = m.backFaceCulling ? 1 : 0;
+  out[13] = material.uniqueId;
 }
 
-interface MeshState { matrix: Float64Array; visible: boolean; material: string }
+interface MeshState { matrix: Float64Array; visible: boolean; material: Material | null }
+interface MaterialState { values: Float64Array; stamp: number }
 
 export class SceneChangeMonitor {
   private meshes = new Map<AbstractMesh, MeshState>();
+  private materials = new WeakMap<Material, MaterialState>();
+  private scratch = new Float64Array(MATERIAL_STATE_SIZE);
+  private stamp = 0;
   private lastActive: AbstractMesh[] = [];
   private lights: number[] = [];
   private dynamicVersion = -1;
@@ -52,10 +69,29 @@ export class SceneChangeMonitor {
 
   constructor(private scene: Scene) {}
 
+  /** True when a material's inputs differ from the last check (each material compared once per check). */
+  private materialChanged(material: Material): boolean {
+    let state = this.materials.get(material);
+    if (!state) {
+      state = { values: new Float64Array(MATERIAL_STATE_SIZE), stamp: this.stamp };
+      readMaterialState(material, state.values);
+      this.materials.set(material, state);
+      return true;
+    }
+    if (state.stamp === this.stamp) return false;
+    state.stamp = this.stamp;
+    readMaterialState(material, this.scratch);
+    let changed = false;
+    for (let k = 0; k < MATERIAL_STATE_SIZE; k++) if (this.scratch[k] !== state.values[k]) { changed = true; break; }
+    if (changed) state.values.set(this.scratch);
+    return changed;
+  }
+
   /** True when anything visible differs from the previous call. Call after a render. */
   check(): boolean {
     const scene = this.scene;
     let changed = false;
+    this.stamp++;
 
     const version = getDynamicTextureVersion();
     if (version !== this.dynamicVersion) { this.dynamicVersion = version; changed = true; }
@@ -72,22 +108,20 @@ export class SceneChangeMonitor {
 
     const active = scene.getActiveMeshes();
     if (active.length !== this.lastActive.length) changed = true;
-    const materialKeys = new Map<Material, string>();
     for (let i = 0; i < active.length; i++) {
       const mesh = active.data[i];
       if (this.lastActive[i] !== mesh) { this.lastActive[i] = mesh; changed = true; }
       const material = mesh.material;
-      let key = material ? materialKeys.get(material) : '';
-      if (key === undefined) { key = materialKey(material); materialKeys.set(material!, key); }
+      if (material && this.materialChanged(material)) changed = true;
       const matrix = mesh.getWorldMatrix().m;
       const visible = mesh.isVisible && mesh.visibility === 1;
       const state = this.meshes.get(mesh);
       if (!state) {
-        this.meshes.set(mesh, { matrix: Float64Array.from(matrix), visible, material: key });
+        this.meshes.set(mesh, { matrix: Float64Array.from(matrix), visible, material });
         changed = true;
         continue;
       }
-      if (state.visible !== visible || state.material !== key) { state.visible = visible; state.material = key; changed = true; }
+      if (state.visible !== visible || state.material !== material) { state.visible = visible; state.material = material; changed = true; }
       for (let k = 0; k < 16; k++) if (matrix[k] !== state.matrix[k]) { state.matrix.set(matrix); changed = true; break; }
       if ((mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances) changed = true;
     }

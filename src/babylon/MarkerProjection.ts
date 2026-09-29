@@ -72,9 +72,31 @@ export function getMarkerProjection(scene: Scene): MarkerProjection | null {
 
 type MarkerStyle = 'left' | 'top' | 'display' | 'visibility';
 const styles = new WeakMap<HTMLElement, Partial<Record<MarkerStyle, { requested: string; serialized: string }>>>();
+/** Screen position per marker, applied through the compositor-only `translate` property. */
+const positions = new WeakMap<HTMLElement, { x: string; y: string; applied: string }>();
 
-/** Avoid dirtying layout, including when CSSOM rounds fractional pixel strings. */
+/**
+ * Avoid dirtying layout, including when CSSOM rounds fractional pixel strings.
+ * Positions no longer move `left`/`top` (layout on every camera frame, costly on
+ * iPad): markers are anchored at 0/0 once and moved with CSS `translate`, which
+ * the browser composites on the GPU. It combines with centering transforms in CSS.
+ */
 export function setMarkerStyle(element: HTMLElement, property: MarkerStyle, value: string): void {
+  if (property === 'left' || property === 'top') {
+    let position = positions.get(element);
+    if (!position) {
+      position = { x: '0px', y: '0px', applied: '' };
+      positions.set(element, position);
+      element.style.left = '0px';
+      element.style.top = '0px';
+    }
+    if (property === 'left') position.x = value; else position.y = value;
+    const translate = `${position.x} ${position.y}`;
+    if (translate === position.applied) return;
+    position.applied = translate;
+    element.style.translate = translate;
+    return;
+  }
   const current = element.style[property];
   if (current === value) return;
   let cached = styles.get(element);

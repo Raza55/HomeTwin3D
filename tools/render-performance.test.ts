@@ -170,7 +170,7 @@ for (const halfZRange of [false, true]) test(`overlays share one measurement and
 
 test('stationary markers do not rewrite their layout styles', () => {
   let writes = 0;
-  const style = new Proxy({ left: '', top: '', display: '', visibility: '' }, {
+  const style = new Proxy({ left: '', top: '', translate: '', display: '', visibility: '' }, {
     set(target, property, value) { writes++; Reflect.set(target, property, value); return true; },
   });
   const element = { style } as unknown as HTMLElement;
@@ -179,10 +179,14 @@ test('stationary markers do not rewrite their layout styles', () => {
     setMarkerStyle(element, 'top', '25px');
     setMarkerStyle(element, 'display', 'grid');
   }
-  assert.equal(writes, 3);
+  // One-time anchor (left/top 0), two translate updates while x then y arrive, display once.
+  assert.equal(writes, 5);
+  assert.equal((style as { translate: string }).translate, '12px 25px');
+  assert.equal(style.left, '0px');
   setMarkerStyle(element, 'left', '13px');
   setMarkerStyle(element, 'display', 'none');
-  assert.equal(writes, 5);
+  assert.equal(writes, 7, 'a moved marker writes only its translate');
+  assert.equal((style as { translate: string }).translate, '13px 25px');
 });
 
 test('particle interpolation retains its destination and matches positions along bends and endpoints', () => {

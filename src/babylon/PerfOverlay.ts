@@ -1,4 +1,4 @@
-import { SceneInstrumentation, type AbstractEngine, type Engine, type Scene } from '@babylonjs/core';
+import { EngineInstrumentation, SceneInstrumentation, type AbstractEngine, type Engine, type Scene } from '@babylonjs/core';
 
 /**
  * Read-only performance readout, enabled with `?perf` in the page URL.
@@ -9,6 +9,13 @@ import { SceneInstrumentation, type AbstractEngine, type Engine, type Scene } fr
 export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => void {
   const instrumentation = new SceneInstrumentation(scene);
   instrumentation.captureFrameTime = true;
+  // Breakdown of the CPU time: visibility, shadow/glow/other targets, main pass, shader compiles.
+  instrumentation.captureActiveMeshesEvaluationTime = true;
+  instrumentation.captureRenderTargetsRenderTime = true;
+  instrumentation.captureCameraRenderTime = true;
+  const engineInstrumentation = new EngineInstrumentation(engine);
+  engineInstrumentation.captureShaderCompilationTime = true;
+  let evaluation = 0, targets = 0, camera = 0, compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;
 
   const panel = document.createElement('div');
   panel.setAttribute('aria-hidden', 'true');
@@ -39,6 +46,9 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     last = now;
     frames++;
     cpu += instrumentation.frameTimeCounter.current;
+    evaluation += instrumentation.activeMeshesEvaluationTimeCounter.current;
+    targets += instrumentation.renderTargetsRenderTimeCounter.current;
+    camera += instrumentation.cameraRenderTimeCounter.current;
     draws += instrumentation.drawCallsCounter.current;
   });
 
@@ -47,19 +57,23 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     const now = performance.now();
     const seconds = (now - windowStart) / 1000;
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+    const per = (total: number) => (frames ? total / frames : 0).toFixed(1);
     panel.textContent = [
       `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   worst ${worstGap.toFixed(0)} ms`,
       `draws ${frames ? Math.round(draws / frames) : 0}   JS heap ${memory ? `${Math.round(memory.usedJSHeapSize / 1e6)} MB` : 'n/a'}`,
       `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
+      `eval ${per(evaluation)}  targets ${per(targets)}  main ${per(camera)}  other ${per(cpu - camera - evaluation)}  shaders ${(engineInstrumentation.shaderCompilationTimeCounter.total - compileStart).toFixed(0)} ms`,
       renderer,
     ].join('\n');
-    frames = 0; cpu = 0; draws = 0; worstGap = 0; windowStart = now;
+    compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;
+    frames = 0; cpu = 0; draws = 0; worstGap = 0; evaluation = 0; targets = 0; camera = 0; windowStart = now;
   }, 2000);
 
   return () => {
     window.clearInterval(timer);
     scene.onAfterRenderObservable.remove(onFrame);
     instrumentation.dispose();
+    engineInstrumentation.dispose();
     panel.remove();
   };
 }

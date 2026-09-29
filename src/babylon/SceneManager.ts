@@ -22,6 +22,7 @@ import { createPerfOverlay } from './PerfOverlay';
 import { SceneChangeMonitor } from './SceneChangeMonitor';
 import { installUniformNameCache } from './UniformNameCache';
 import { installShaderFixes } from './ShaderFixes';
+import { debugDevicePixelRatio } from './DebugFlags';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -181,7 +182,7 @@ export function createScene(
   installShaderFixes();
 
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-  const maxDevicePixelRatio = options?.maxDevicePixelRatio ?? (coarsePointer ? 1.5 : 2);
+  const maxDevicePixelRatio = debugDevicePixelRatio() ?? options?.maxDevicePixelRatio ?? (coarsePointer ? 1.5 : 2);
 
   const engine = existingEngine ?? new Engine(canvas, true, {
     preserveDrawingBuffer: options?.preserveDrawingBuffer ?? false,

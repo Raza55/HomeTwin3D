@@ -25,6 +25,7 @@ import { createParkEnvironment } from '../../babylon/ParkEnvironment';
 import { findFrontFacade } from '../../babylon/SiteLayout';
 import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, type SceneContext } from '../../babylon/SceneManager';
 import { batchStaticRendering } from '../../babylon/RenderBatch';
+import { isDisabledForDebug } from '../../babylon/DebugFlags';
 import { setupGlowOccluders } from '../../babylon/GlowOccluder';
 import { invalidateShadowsNear } from '../../babylon/ShadowRange';
 import { batchStaticSunShadows } from '../../babylon/ShadowCasterBatch';
@@ -921,13 +922,14 @@ export default function Dashboard() {
     let weatherIntervalRef: ReturnType<typeof setInterval> | null = null;
     let prewarmTimerRef: ReturnType<typeof setInterval> | null = null;
     // WebGL starts synchronously as before; WebGPU (opt-in) needs an async engine start.
-    const sceneOptions = { enableGlow: true };
+    const sceneOptions = { enableGlow: !isDisabledForDebug('glow') };
     let ctx: SceneContext;
     let ctxPromise: Promise<SceneContext>;
     if (prefersWebGPU()) {
       ctxPromise = createSceneAsync(canvas, sceneOptions);
     } else {
       ctx = createScene(canvas, sceneOptions);
+      if (isDisabledForDebug('shadows')) ctx.scene.shadowsEnabled = false;
       sceneCtxRef.current = ctx;
       ctxPromise = Promise.resolve(ctx);
     }
@@ -1073,7 +1075,7 @@ export default function Dashboard() {
         // Create invisible shadow wall meshes from config
         const wallMeshes = createShadowWalls(ctx.scene, configRef.current?.shadowWalls || [], entityScaleRootRef.current ?? undefined);
         const facadeCovers=configRef.current?.model?.floorplan?.objects.filter(o=>o.domain==='cover')??[];
-        createParkEnvironment(ctx.scene,result.center,result.size,facadeCovers.length?Math.min(...facadeCovers.map(o=>o.position.x))*modelScale-.12*modelScale:undefined,findFrontFacade(facadeCovers,modelScale));
+        if (!isDisabledForDebug('exterior')) createParkEnvironment(ctx.scene,result.center,result.size,facadeCovers.length?Math.min(...facadeCovers.map(o=>o.position.x))*modelScale-.12*modelScale:undefined,findFrontFacade(facadeCovers,modelScale));
         const modelCasters = [...result.shadowCasters, ...importedShadowCasters];
         const allCasters = [...modelCasters, ...wallMeshes];
 
@@ -1164,7 +1166,7 @@ export default function Dashboard() {
 
         // Merge static model meshes into render-only batches (fewer draw calls).
         // Runs last so display/TV material swaps above are already in place.
-        batchStaticRendering(ctx.scene, result.meshes,
+        if (!isDisabledForDebug('batches')) batchStaticRendering(ctx.scene, result.meshes,
           Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
         // Glow pass: emissive meshes plus merged static occluders instead of the whole scene.
         if (ctx.glowLayer) setupGlowOccluders(ctx.scene, ctx.glowLayer, result.meshes, modelScale);

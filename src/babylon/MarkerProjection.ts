@@ -1,5 +1,6 @@
 import { Matrix, Vector3, Viewport, type Scene, type AbstractMesh } from '@babylonjs/core';
 import { getMarkerOcclusion, type MarkerOcclusion } from './MarkerOcclusion';
+import { isDisabledForDebug } from './DebugFlags';
 
 /** Shared by overlay observers: measure the canvas once, before their DOM writes. */
 class MarkerProjection {
@@ -36,6 +37,8 @@ class MarkerProjection {
 }
 
 const projections = new WeakMap<Scene, MarkerProjection>();
+/** `?off=markers`: overlays stop positioning (diagnostics only). */
+const markersOff = isDisabledForDebug('markers');
 
 /** Preserve the mean of live world bounds without allocating per mesh/frame. */
 export function markerCenterToRef(meshes: readonly AbstractMesh[], fallback: Vector3, result: Vector3): Vector3 {
@@ -46,6 +49,7 @@ export function markerCenterToRef(meshes: readonly AbstractMesh[], fallback: Vec
 }
 
 export function getMarkerProjection(scene: Scene): MarkerProjection | null {
+  if (markersOff) return null;
   const camera = scene.activeCamera;
   const engine = scene.getEngine();
   const canvas = engine.getRenderingCanvas();
@@ -73,7 +77,7 @@ export function getMarkerProjection(scene: Scene): MarkerProjection | null {
 type MarkerStyle = 'left' | 'top' | 'display' | 'visibility';
 const styles = new WeakMap<HTMLElement, Partial<Record<MarkerStyle, { requested: string; serialized: string }>>>();
 /** Screen position per marker, applied through the compositor-only `translate` property. */
-const positions = new WeakMap<HTMLElement, { x: string; y: string; applied: string }>();
+const positions = new WeakMap<HTMLElement, { x: string; y: string; applied: string; serialized: string }>();
 
 /**
  * Avoid dirtying layout, including when CSSOM rounds fractional pixel strings.
@@ -85,16 +89,18 @@ export function setMarkerStyle(element: HTMLElement, property: MarkerStyle, valu
   if (property === 'left' || property === 'top') {
     let position = positions.get(element);
     if (!position) {
-      position = { x: '0px', y: '0px', applied: '' };
+      position = { x: '0px', y: '0px', applied: '', serialized: '' };
       positions.set(element, position);
       element.style.left = '0px';
       element.style.top = '0px';
     }
     if (property === 'left') position.x = value; else position.y = value;
     const translate = `${position.x} ${position.y}`;
-    if (translate === position.applied) return;
+    // CSSOM may round the stored value; an external write shows up as a different serialization.
+    if (translate === position.applied && element.style.translate === position.serialized) return;
     position.applied = translate;
     element.style.translate = translate;
+    position.serialized = element.style.translate;
     return;
   }
   const current = element.style[property];

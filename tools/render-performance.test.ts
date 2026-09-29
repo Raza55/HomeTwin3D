@@ -214,17 +214,19 @@ test('particle interpolation retains its destination and matches positions along
 });
 
 test('fractional marker coordinates tolerate CSS serialization and external style changes', () => {
-  let writes = 0, left = '';
+  let writes = 0, translate = '';
+  const round = (part: string) => `${Number.parseFloat(part).toFixed(3)}px`;
   const element = { style: {
-    get left() { return left; },
-    set left(value: string) { writes++; left = `${Number.parseFloat(value).toFixed(3)}px`; },
-  } } as HTMLElement;
-  for (let i = 0; i < 60; i++) setMarkerStyle(element, 'left', '123.123456789px');
-  assert.equal(writes, 1);
-  element.style.left = '0px';
+    left: '', top: '',
+    get translate() { return translate; },
+    set translate(value: string) { writes++; translate = value.split(' ').map(round).join(' '); },
+  } } as unknown as HTMLElement;
+  for (let i = 0; i < 60; i++) { setMarkerStyle(element, 'left', '123.123456789px'); setMarkerStyle(element, 'top', '7.5px'); }
+  assert.equal(writes, 2, 'x then y, no rewrites despite CSS rounding');
+  (element.style as unknown as { translate: string }).translate = '0px 0px';
   setMarkerStyle(element, 'left', '123.123456789px');
-  assert.equal(writes, 3);
-  assert.equal(element.style.left, '123.123px');
+  assert.equal(writes, 4, 'an external change is corrected on the next update');
+  assert.equal((element.style as unknown as { translate: string }).translate, '123.123px 7.500px');
 });
 import { DirectionalLight, HemisphericLight, ShadowGenerator } from '@babylonjs/core';
 import { getSunPosition, updateSunPosition } from '../src/babylon/SunController';

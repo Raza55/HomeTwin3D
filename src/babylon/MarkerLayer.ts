@@ -524,6 +524,8 @@ class MarkerInput {
     event.stopPropagation();
     this.pressed = { marker, pointerId: event.pointerId };
     this.place(marker);
+    // Touch has no hover: the pressed marker grows instead, as a mouse-hovered one does.
+    if (event.pointerType === 'touch') this.setAttribute(marker, 'hover');
     this.forward(marker, 'pointerdown', event);
     this.layer.requestRender();
   }
@@ -556,6 +558,7 @@ class MarkerInput {
     this.pressed = null;
     const { marker } = pressed;
     this.forward(marker, event.type, event);
+    if (event.pointerType === 'touch' && marker !== this.hovered) this.setAttribute(marker, 'proxy');
     if (event.type === 'pointerup' && this.hit(event) === marker && marker.element) {
       this.dispatch(marker.element, new MouseEvent('click', {
         bubbles: true, cancelable: true, composed: true, detail: 1,
@@ -575,7 +578,7 @@ class MarkerInput {
     if (!element || !this.canvas) return;
     this.hovered = marker;
     this.place(marker);
-    element.setAttribute(PROXY_ATTRIBUTE, 'hover');
+    this.setAttribute(marker, 'hover');
     this.cursor = this.canvas.style.cursor;
     this.title = this.canvas.title;
     this.canvas.style.cursor = getComputedStyle(element).cursor || 'pointer';
@@ -590,12 +593,21 @@ class MarkerInput {
     this.hovered = null;
     const element = marker.element;
     if (element) {
-      if (element.hasAttribute(PROXY_ATTRIBUTE)) element.setAttribute(PROXY_ATTRIBUTE, 'proxy');
+      this.setAttribute(marker, 'proxy');
       if (event) this.forward(marker, 'pointerout', event, { relatedTarget: this.canvas });
       else this.dispatch(element, new PointerEvent('pointerout', { bubbles: true, relatedTarget: this.canvas }));
     }
     if (this.canvas) { this.canvas.style.cursor = this.cursor; this.canvas.title = this.title; }
     this.unplace(marker);
+    this.layer.requestRender();
+  }
+
+  /** Hover state on the proxy; a changed state re-rasterizes it (size, captions). */
+  private setAttribute(marker: Marker, state: 'proxy' | 'hover'): void {
+    const element = marker.element;
+    if (!element?.hasAttribute(PROXY_ATTRIBUTE) || element.getAttribute(PROXY_ATTRIBUTE) === state) return;
+    element.setAttribute(PROXY_ATTRIBUTE, state);
+    marker.dirty = true;
     this.layer.requestRender();
   }
 

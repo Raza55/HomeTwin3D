@@ -1,6 +1,10 @@
 /* WebGL marker layer: the marker elements stay in the DOM as invisible sources
    of appearance, state and accessibility (see src/babylon/MarkerLayer.ts). */
 [data-map-marker]{clip-path:inset(50%)!important;pointer-events:none!important;transition:none!important}
-/* Mouse hover is forwarded from the canvas as an attribute; mirrors the :hover rules. */
-.cluster-map-marker[data-map-marker=hover]{transform:translate(-50%,-50%) scale(1.4);z-index:21}
+/* Hover (mouse) and press (touch) are forwarded from the canvas as an attribute:
+   every interactive marker grows and comes to the front, lamps and blinds a bit more. */
+[data-map-marker=hover]{transform:translate(-50%,-50%) scale(1.25)!important;z-index:45!important}
+.cluster-map-marker[data-map-marker=hover]{transform:translate(-50%,-50%) scale(1.4)!important}
 .blind-map-marker[data-map-marker=hover] .blind-marker-caption{display:block}
+/* Same hover growth for the DOM fallback (?markers=dom). */
+@media(hover:hover){.door-marker:hover,.fan-map-marker:hover,.coffee-marker:hover,.it-marker:hover,.echo-map-marker:hover,.appliance-marker:hover,.battery-warning-marker:hover{transform:translate(-50%,-50%) scale(1.25);z-index:45}}

@@ -21,6 +21,7 @@ import { refreshGlowOnChange } from './GlowRefresh';
 import { createPerfOverlay } from './PerfOverlay';
 import { SceneChangeMonitor } from './SceneChangeMonitor';
 import { installUniformNameCache } from './UniformNameCache';
+import { installShaderFixes } from './ShaderFixes';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -177,6 +178,7 @@ export function createScene(
   Logger.LogLevels = Logger.ErrorLogLevel;
   shareIdenticalShaderVariants();
   installUniformNameCache();
+  installShaderFixes();
 
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const maxDevicePixelRatio = options?.maxDevicePixelRatio ?? (coarsePointer ? 1.5 : 2);

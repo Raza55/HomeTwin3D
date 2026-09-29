@@ -126,3 +126,28 @@ test('scene change monitor reports only visible changes', () => {
     assert.equal(monitor.check(), false);
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+test('color batches keep every source in place, including mirrored ones', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const boxes = [0, 1, 2].map(i => {
+      const material = new StandardMaterial(`tone${i}`, scene); material.diffuseColor = new Color3(i / 2, .5, 1 - i / 2);
+      const box = MeshBuilder.CreateBox(`part${i}`, { width: 1 + i, height: 1, depth: 1 }, scene);
+      box.position.set(i * 3, i, -i); box.material = material;
+      return box;
+    });
+    // Two mirrored parts share a batch key (same winding); mirroring must not move them.
+    boxes[1].scaling.x = -1; boxes[2].scaling.x = -1; boxes[2].rotation.y = .7;
+    const set = batchStaticRendering(scene, boxes.slice(1), []);
+    assert.equal(set.stats.batches, 1);
+    const proxy = scene.meshes.find(m => m.metadata?.renderBatch)!;
+    proxy.computeWorldMatrix(true);
+    let min = new Vector3(Infinity, Infinity, Infinity), max = new Vector3(-Infinity, -Infinity, -Infinity);
+    for (const box of boxes.slice(1)) { box.computeWorldMatrix(true); const b = box.getBoundingInfo().boundingBox; min = Vector3.Minimize(min, b.minimumWorld); max = Vector3.Maximize(max, b.maximumWorld); }
+    const box = proxy.getBoundingInfo().boundingBox;
+    assert.ok(Vector3.Distance(box.minimumWorld, min) < 1e-4 && Vector3.Distance(box.maximumWorld, max) < 1e-4, 'proxy covers exactly its sources');
+    assert.equal(proxy.getVerticesData('color')!.length / 4, proxy.getTotalVertices());
+    set.dispose();
+  } finally { scene.dispose(); engine.dispose(); }
+});

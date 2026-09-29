@@ -133,7 +133,14 @@ export class SceneChangeMonitor {
     return changed;
   }
 
-  private lightsChanged(lights: Light[]): boolean {
+  private lightsChanged(sceneLights: Light[]): boolean {
+    // Clustered emitters leave scene.lights; their container lists them.
+    const lights: Light[] = [];
+    for (const light of sceneLights) {
+      lights.push(light);
+      const children = (light as Light & { lights?: Light[] }).lights;
+      if (Array.isArray(children)) lights.push(...children);
+    }
     const values = this.lights;
     let index = 0, changed = values.length !== lights.length * 12;
     const push = (value: number) => { if (values[index] !== value) { values[index] = value; changed = true; } index++; };

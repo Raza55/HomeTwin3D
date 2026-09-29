@@ -57,7 +57,7 @@ import {
 import { createSmartDeviceMesh, removeSmartDeviceMesh, updateSmartDeviceState, type SmartDeviceMeshMap } from '../../babylon/SmartDeviceMeshFactory';
 import { getConfig, updateConfig, getModelBlob, getModelObjectBlob } from '../../services/configApi';
 import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
-import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
+import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, enableClusteredFloorplanLights, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
 import { getEntityCache, setEntityCache } from '../../services/entityCache';
 import type { HAEntityOption } from '../../components/EntityPicker';
 import { getSetting, updateSettings, type HomeViewPose } from '../../services/settingsStore';
@@ -1112,6 +1112,8 @@ export default function Dashboard() {
           smartDeviceMeshMapRef.current[configDevice.id] = createSmartDeviceMesh(ctx.scene, configDevice, entityScaleRootRef.current ?? undefined);
         }
         bindFloorplanMeshes(ctx.scene, result.meshes, config, meshMapRef.current);
+        // Multi-emitter fixtures share one clustered light (GPU-binned); single lamps keep shadows.
+        enableClusteredFloorplanLights(ctx.scene, Object.values(meshMapRef.current).flatMap(e => e.floorplanRig ? [e.floorplanRig] : []));
         configureFloorplanLightInfluence(ctx.scene, Object.values(meshMapRef.current).flatMap(e => e.floorplanRig ? [e.floorplanRig] : []), [...allCasters, ...coverCasters]);
 
         // Freeze PointLight shadow maps after first render (static geometry)
@@ -1897,6 +1899,7 @@ export default function Dashboard() {
     });
 
     // Re-apply current HA states
+    enableClusteredFloorplanLights(ctx.scene, Object.values(meshMapRef.current).flatMap(e => e.floorplanRig ? [e.floorplanRig] : []));
     configureFloorplanLightInfluence(ctx.scene, Object.values(meshMapRef.current).flatMap(e => e.floorplanRig ? [e.floorplanRig] : []), casters);
     for (const entityId of Object.keys(lastStatesRef.current)) {
       if (meshMapRef.current[entityId]) {

@@ -1,4 +1,4 @@
-import { Color3, Light, PointLight, SpotLight, ShadowGenerator, Vector3, PBRMaterial, StandardMaterial, type AbstractMesh, type Scene } from '@babylonjs/core';
+import { ClusteredLightContainer, Color3, Light, PointLight, SpotLight, ShadowGenerator, Vector3, PBRMaterial, StandardMaterial, type AbstractMesh, type Scene } from '@babylonjs/core';
 import type { FloorplanEmitter, HAState, LightConfig } from '../types';
 import { kelvinToRGB } from '../utils/color';
 import { getRenderBatchSet } from './RenderBatch';
@@ -8,6 +8,8 @@ export interface FloorplanLightRig {
   lights: Array<PointLight | SpotLight>;
   sources: FloorplanEmitter[];
   shadows: ShadowGenerator[];
+  /** Emitters shaded by the scene's clustered light container (no shadows, no per-surface budget). */
+  clustered?: Set<Light>;
 }
 
 export function createFloorplanLightRig(scene: Scene, config: LightConfig, casters: AbstractMesh[], scale: number, resolution: number): FloorplanLightRig {
@@ -36,6 +38,7 @@ export function configureFloorplanShadows(rig: FloorplanLightRig, casters: Abstr
   rig.shadows = [];
   if (!casters.length) return;
   for (const light of rig.lights) {
+    if (rig.clustered?.has(light)) continue;
     // Each spot uses one face; point emitters need six. Bound memory per source.
     const shadow = new ShadowGenerator(Math.max(256, Math.min(resolution || 256, 512)), light);
     shadow.usePercentageCloserFiltering = true;
@@ -60,9 +63,24 @@ export function invalidateFloorplanShadows(rig?: FloorplanLightRig): void {
  * disabling occlusion on the remaining lights when the GPU sampler budget is full.
  * Emissive fixture surfaces remain visible even outside the direct-light budget.
  */
-export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLightRig[], meshes: AbstractMesh[]): void {
-  const lights = rigs.flatMap(r => r.lights);
-  const budget = 6; // Reserve samplers for material textures and daylight shadows.
+/**
+ * Lamps per surface. Every bound light costs a set of uniform uploads per draw;
+ * on WebKit (iPad) these dominate the frame (~100 ms at six lamps with many lights
+ * on). Touch devices keep the two strongest lamps per surface (plus sun and
+ * ambient), which also keeps more render batches merged. `?lights=0..6` overrides.
+ */
+export function floorplanLightBudget(): number {
+  const requested = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('lights');
+  if (requested !== null && /^\d$/.test(requested)) return Math.min(6, Number(requested));
+  const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  return coarse ? 2 : 6;
+}
+
+export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLightRig[], meshes: AbstractMesh[], budget = floorplanLightBudget()): void {
+  // Clustered emitters are shaded by the container, which counts as one light per surface.
+  const lights = rigs.flatMap(r => r.lights.filter(light => !r.clustered?.has(light)));
+  const container = getClusteredContainer(scene);
+  // Reserve samplers for material textures and daylight shadows (max. six lamps).
   const previous = scene.metadata?.floorplanInfluenceObserver;
   if (previous) scene.onBeforeRenderObservable.remove(previous);
   const previousStates = lights.map(() => ({ enabled: false, intensity: NaN, shadow: false }));
@@ -110,11 +128,18 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
     }
     // Merged render proxies receive exactly the lights all their sources receive;
     // batches whose sources would differ are drawn per source instead.
+    const proxies: AbstractMesh[] = [];
     if (batches) {
       for (const [proxy, proxyLights] of batches.resolveLights()) {
+        proxies.push(proxy);
         for (const light of proxyLights) selected.get(light as PointLight | SpotLight)?.push(proxy);
       }
       batchVersion = batches.version;
+    }
+    // The container lights the apartment like the individual emitters did, never the exterior.
+    if (container) {
+      const included = [...meshes, ...proxies], previous = container.includedOnlyMeshes;
+      if (previous.length !== included.length || previous.some((mesh, i) => mesh !== included[i])) container.includedOnlyMeshes = included;
     }
     for (const light of lights) {
       const included = selected.get(light)!;
@@ -130,7 +155,7 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
   scene.metadata = { ...scene.metadata, floorplanInfluenceObserver: scene.onBeforeRenderObservable.add(update) };
   update();
   for (const mat of scene.materials) {
-    if (mat instanceof PBRMaterial || mat instanceof StandardMaterial) mat.maxSimultaneousLights = budget + 2;
+    if (mat instanceof PBRMaterial || mat instanceof StandardMaterial) mat.maxSimultaneousLights = budget + (container ? 3 : 2);
   }
 }
 
@@ -182,7 +207,7 @@ export function applyFloorplanLightState(rig: FloorplanLightRig, config: LightCo
       const pose = poseKey(light);
       if (activationPoses.get(light) !== pose) {
         activationPoses.set(light, pose);
-        rig.shadows[i]?.getShadowMap()?.resetRefreshCounter();
+        light.getShadowGenerator()?.getShadowMap()?.resetRefreshCounter();
       }
     }
     light.diffuse.copyFrom(color);
@@ -335,4 +360,49 @@ export function createShadowMapPrewarmer(scene: Scene, rigs: FloorplanLightRig[]
     }
     return false;
   };
+}
+
+/** The clustered light container of a scene, if clustered lighting is active. */
+export function getClusteredContainer(scene: Scene): ClusteredLightContainer | null {
+  const container = scene.metadata?.floorplanClusteredLights as ClusteredLightContainer | undefined;
+  return container && !container.isDisposed() ? container : null;
+}
+
+/** `?cluster=0` keeps every emitter as an individual light (for comparisons). */
+function clusteredLightingRequested(): boolean {
+  return typeof location === 'undefined' || new URLSearchParams(location.search).get('cluster') !== '0';
+}
+
+/**
+ * Multi-emitter fixtures (LED strips, TV gradients, panels with several spots)
+ * move into one ClusteredLightContainer: the GPU bins them into screen tiles and
+ * each surface binds the container as a single light, instead of up to six
+ * emitters with their uniforms per draw. Clustered emitters cast no shadows (a
+ * Babylon limitation); single-emitter lamps keep theirs and stay individual.
+ * Returns the container, or null when the engine lacks support (then nothing changes).
+ */
+export function enableClusteredFloorplanLights(scene: Scene, rigs: FloorplanLightRig[]): ClusteredLightContainer | null {
+  getClusteredContainer(scene)?.dispose();
+  if (!clusteredLightingRequested()) return null;
+  const candidates = rigs.filter(rig => rig.lights.length > 1);
+  if (!candidates.length) return null;
+  const container = new ClusteredLightContainer('floorplan-clustered-lights', [], scene);
+  if (!container.isSupported) { container.dispose(); return null; }
+  for (const rig of candidates) {
+    rig.clustered = new Set();
+    for (const light of rig.lights) {
+      const shadow = light.getShadowGenerator();
+      if (shadow) { rig.shadows = rig.shadows.filter(s => s !== shadow); shadow.dispose(); }
+      light.shadowEnabled = false;
+      // PBR's default falloff is the physical one; the container accepts only the default.
+      light.falloffType = Light.FALLOFF_DEFAULT;
+      light.includedOnlyMeshes = [];
+      light.includeOnlyWithLayerMask = 0;
+      if (!ClusteredLightContainer.IsLightSupported(light)) continue;
+      container.addLight(light);
+      rig.clustered.add(light);
+    }
+  }
+  scene.metadata = { ...scene.metadata, floorplanClusteredLights: container };
+  return container;
 }

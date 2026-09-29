@@ -1,4 +1,4 @@
-import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, VertexData, type AbstractMesh, type Material, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
+import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, type AbstractMesh, type Material, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
 
 /**
  * Render-only batches for static model geometry.
@@ -58,7 +58,7 @@ function colorMergeKey(material: Material): string | null {
   const emissive = (material as PBRMaterial | StandardMaterial).emissiveColor;
   if (emissive.r > 0 || emissive.g > 0 || emissive.b > 0) return null;
   const serialized = material.serialize() as Record<string, unknown>;
-  for (const [key, value] of Object.entries(serialized)) if (value && typeof value === 'object' && /texture/i.test(key)) return null;
+  for (const [key, value] of Object.entries(serialized)) if (value && typeof value === 'object' && !Array.isArray(value) && /texture/i.test(key)) return null;
   for (const key of ['name', 'id', 'uniqueId', 'albedo', 'diffuse', 'metadata', 'tags']) delete serialized[key];
   return JSON.stringify(serialized);
 }
@@ -267,18 +267,19 @@ class RenderBatchSetImpl implements RenderBatchSet {
 
   /** Proxy for sources whose materials differ only in base color (see colorMergeKey). */
   private mergeWithColors(sources: Mesh[]): Mesh | null {
-    const parts = sources.map(source => {
-      const data = VertexData.ExtractFromMesh(source, true, true), color = baseColor(source.material)!;
-      const count = data.positions!.length / 3, colors = new Float32Array(count * 4);
-      for (let i = 0; i < count; i++) { colors[i * 4] = color.r; colors[i * 4 + 1] = color.g; colors[i * 4 + 2] = color.b; colors[i * 4 + 3] = 1; }
-      data.colors = colors;
-      data.transform(source.computeWorldMatrix(true));
-      return data;
-    });
-    const merged = parts[0];
-    merged.merge(parts.slice(1), true);
-    const proxy = new Mesh('render-batch', this.scene);
-    merged.applyToMesh(proxy, false);
+    // Babylon's MergeMeshes handles world transforms (incl. mirrored parts) exactly
+    // like the single-material batches; it appends sources in order, so the base
+    // colors follow as one run of vertices per source.
+    const proxy = Mesh.MergeMeshes(sources, false, true, undefined, false, false);
+    if (!proxy) return null;
+    const colors = new Float32Array(proxy.getTotalVertices() * 4);
+    let offset = 0;
+    for (const source of sources) {
+      const color = baseColor(source.material)!, count = source.getTotalVertices();
+      for (let i = 0; i < count; i++, offset += 4) { colors[offset] = color.r; colors[offset + 1] = color.g; colors[offset + 2] = color.b; colors[offset + 3] = 1; }
+    }
+    if (offset !== colors.length) { proxy.dispose(false, false); return null; }
+    proxy.setVerticesData('color', colors, false, 4);
     const material = sources[0].material!.clone(`${sources[0].material!.name}:vertex-color`)!;
     baseColor(material)!.set(1, 1, 1);
     proxy.material = material;

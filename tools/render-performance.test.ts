@@ -326,3 +326,14 @@ test('shadow maps of switched-off lamps are rendered ahead of their first activa
     assert.equal(invalidations, 0, 'first activation reuses the prepared map');
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+test('clustered PBR lighting compiles for sheen materials (Babylon include fix)', async () => {
+  const { ShaderStore } = await import('@babylonjs/core');
+  const { installShaderFixes } = await import('../src/babylon/ShaderFixes');
+  installShaderFixes();
+  for (const store of [ShaderStore.IncludesShadersStore, ShaderStore.IncludesShadersStoreWGSL]) {
+    const source = store.pbrClusteredLightingFunctions;
+    assert.equal(typeof source, 'string');
+    assert.ok(!source.includes('computeSheenLighting(preInfo,normalW,'), 'sheen uses the function normal');
+  }
+});

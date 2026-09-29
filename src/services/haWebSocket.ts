@@ -44,6 +44,12 @@ export class HAConnection {
   private callbacks: HACallbacks;
   private options: HAConnectOptions;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * HA rejected the token. Retrying with the same token only adds failed logins,
+   * and HA bans the device's IP after a few of them (http: login_attempts_threshold).
+   * A new token creates a new connection, so this instance stays stopped.
+   */
+  private authRejected = false;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
@@ -99,6 +105,7 @@ export class HAConnection {
       }
 
       if (msg.type === 'auth_invalid') {
+        this.authRejected = true;
         this.callbacks.onStatusChanged?.('auth_error');
         return;
       }
@@ -138,6 +145,7 @@ export class HAConnection {
       this.stopHeartbeat();
       this.failPendingResults(new Error('Connection closed'));
       if (this.disposed) return;
+      if (this.authRejected) { this.callbacks.onStatusChanged?.('auth_error'); return; }
       this.callbacks.onStatusChanged?.('disconnected');
       this.reconnectTimer = setTimeout(() => this.connect(), 5000);
     };
@@ -149,7 +157,7 @@ export class HAConnection {
    * have killed the TCP connection while leaving the WebSocket reporting OPEN.
    */
   forceReconnect(): void {
-    if (this.disposed) return;
+    if (this.disposed || this.authRejected) return;
     this.stopHeartbeat();
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     if (this.ws) {

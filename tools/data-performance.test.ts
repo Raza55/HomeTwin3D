@@ -109,3 +109,34 @@ test('exterior instances share geometry/material but keep independent transforms
     root.dispose(); assert.equal(instance.isDisposed(), true);
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+test('a rejected token is not retried: HA bans the device after repeated failed logins', async () => {
+  const { HAConnection } = await import('../src/services/haWebSocket');
+  const sockets: FakeSocket[] = [];
+  class FakeSocket {
+    onopen: (() => void) | null = null; onmessage: ((ev: { data: string }) => void) | null = null;
+    onerror: (() => void) | null = null; onclose: (() => void) | null = null;
+    sent: string[] = [];
+    constructor(public url: string) { sockets.push(this); }
+    send(data: string) { this.sent.push(data); }
+    close() { this.onclose?.(); }
+    receive(msg: object) { this.onmessage?.({ data: JSON.stringify(msg) }); }
+  }
+  const originals = { WebSocket: globalThis.WebSocket, window: (globalThis as { window?: unknown }).window };
+  Object.assign(globalThis, { WebSocket: FakeSocket, window: { location: { protocol: 'http:' } } });
+  const statuses: string[] = [];
+  const connection = new HAConnection({ url: '192.0.2.10', port: 8123, token: 'wrong' }, { onStatusChanged: s => statuses.push(s) } as never);
+  try {
+    connection.connect();
+    sockets[0].receive({ type: 'auth_required' });
+    sockets[0].receive({ type: 'auth_invalid' });
+    sockets[0].close(); // HA closes the socket after rejecting the token
+    connection.forceReconnect(); // returning to the foreground must not retry either
+    await new Promise(resolve => setTimeout(resolve, 5300));
+    assert.equal(sockets.length, 1, 'no further login attempt with the rejected token');
+    assert.equal(statuses.at(-1), 'auth_error');
+  } finally {
+    connection.dispose();
+    Object.assign(globalThis, originals);
+  }
+});

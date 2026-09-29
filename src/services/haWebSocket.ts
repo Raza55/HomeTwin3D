@@ -39,6 +39,8 @@ export function buildWsUrl(url: string, port: number): string {
 export class HAConnection {
   private ws: WebSocket | null = null;
   private msgId = 1;
+  /** Id of the pending get_states request; other array results are not entity states. */
+  private statesRequestId: number | null = null;
   private callbacks: HACallbacks;
   private options: HAConnectOptions;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -89,6 +91,7 @@ export class HAConnection {
         // Subscribe to state changes
         this.send({ id: this.msgId++, type: 'subscribe_events', event_type: 'state_changed' });
         // Fetch initial states
+        this.statesRequestId = this.msgId;
         this.send({ id: this.msgId++, type: 'get_states' });
         // Start pinging so a silently-dropped (zombie) socket is detected
         this.startHeartbeat();
@@ -119,7 +122,8 @@ export class HAConnection {
           this.pendingResults.delete(msg.id);
           clearTimeout(pending.timer);
           msg.success ? pending.resolve(msg.result) : pending.reject(new Error(msg.error?.message ?? 'Service call failed'));
-        } else if (Array.isArray(msg.result)) {
+        } else if (msg.id === this.statesRequestId && Array.isArray(msg.result)) {
+          this.statesRequestId = null;
           this.callbacks.onInitialStates?.(msg.result);
         }
         return;

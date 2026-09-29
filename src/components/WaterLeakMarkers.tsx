@@ -20,10 +20,15 @@ export default function WaterLeakMarkers({ scene, config, states, connected }: {
     // The sink is part of the static kitchen mesh; its sponge provides a local anchor.
     let sink = scene.meshes.find(mesh => /^Spuelschwamm(?:\.|$)/.test(mesh.name) && mesh.getTotalVertices() > 0);
     const point = Vector3.Zero();
+    let nextSinkLookup = 0;
     const observer = scene.onAfterRenderObservable.add(() => {
       const projection = getMarkerProjection(scene); if (!projection) return;
       const { rect, width, height } = projection;
-      if (!sink || sink.isDisposed()) sink = scene.meshes.find(mesh => /^Spuelschwamm(?:\.|$)/.test(mesh.name) && mesh.getTotalVertices() > 0);
+      // A missing anchor mesh is looked up at most once per second, not on every frame.
+      if ((!sink || sink.isDisposed()) && performance.now() >= nextSinkLookup) {
+        nextSinkLookup = performance.now() + 1000;
+        sink = scene.meshes.find(mesh => /^Spuelschwamm(?:\.|$)/.test(mesh.name) && mesh.getTotalVertices() > 0);
+      }
       for (const sensor of WATER_LEAK_SENSORS) {
         const element = refs.current[sensor.entityId]; if (!element) continue;
         if (sensor.anchor === 'washer' && washerPoint) point.copyFrom(washerPoint);

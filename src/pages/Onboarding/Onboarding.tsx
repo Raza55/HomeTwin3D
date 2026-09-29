@@ -95,7 +95,7 @@ export default function Onboarding() {
     if (isImportMode) {
       // Import already loaded config + model, just finish
       updateConfig({ onboarding: { completed: true } });
-      window.location.href = '/';
+      window.location.href = import.meta.env.BASE_URL;
       return;
     }
     goTo(3); // Model upload
@@ -167,7 +167,7 @@ export default function Onboarding() {
     if (importReport?.haStatus === 'success') {
       // HA works — go straight to dashboard
       updateConfig({ onboarding: { completed: true } });
-      window.location.href = '/';
+      window.location.href = import.meta.env.BASE_URL;
     } else {
       // HA failed or missing — go to HA setup
       goTo(2);
@@ -182,7 +182,7 @@ export default function Onboarding() {
     }
     localStorage.setItem('showTour', 'true');
     // Full reload so AppRoutes re-fetches config with onboarding.completed = true
-    window.location.href = '/';
+    window.location.href = import.meta.env.BASE_URL;
   }, []);
 
   const slideClass = (index: number) => {
@@ -246,7 +246,12 @@ export default function Onboarding() {
         </div>
 
         <div className={slideClass(2)}>
-          <HASetupStep onComplete={handleHAComplete} initialHA={importedHA ?? undefined} />
+          {/* Remount after an import so the form picks up the restored URL/port. */}
+          <HASetupStep
+            key={importedHA ? `${importedHA.url}:${importedHA.port}` : 'empty'}
+            onComplete={handleHAComplete}
+            initialHA={importedHA ?? undefined}
+          />
         </div>
 
         <div className={slideClass(3)}>

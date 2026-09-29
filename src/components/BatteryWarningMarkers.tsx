@@ -43,12 +43,15 @@ export default function BatteryWarningMarkers({ scene, config, states, connected
       const point = rig ? doorMarkerAnchor(scene, rig) : object ? new Vector3(object.position.x, warning.water ? .12 : object.position.y + object.size.height / 2 + .12, object.position.z).scale(scale) : null;
       return { ...warning, point };
     });
+    let nextSinkLookup = 0;
     const observer = scene.onAfterRenderObservable.add(() => {
       const projection = getMarkerProjection(scene); if (!projection) return;
       const { rect, width, height } = projection;
       for (const anchor of anchors) {
         const element = refs.current[anchor.id]; if (!element) continue;
-        if (!anchor.point && anchor.water === 'sink') {
+        // A missing anchor mesh is looked up at most once per second, not on every frame.
+        if (!anchor.point && anchor.water === 'sink' && performance.now() >= nextSinkLookup) {
+          nextSinkLookup = performance.now() + 1000;
           const sink = scene.meshes.find(mesh => /^Spuelschwamm(?:\.|$)/.test(mesh.name) && mesh.getTotalVertices() > 0);
           if (sink) { anchor.point = sink.getBoundingInfo().boundingBox.centerWorld.clone(); anchor.point.y = .12 * scale; }
         }

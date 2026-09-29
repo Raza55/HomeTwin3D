@@ -7,6 +7,8 @@ import {
   GeometryBufferRenderer,
   type DepthRenderer,
   Constants,
+  ShaderLanguage,
+  ShaderStore,
 } from '@babylonjs/core';
 
 const SHADER_NAME = 'edgeOutline';
@@ -126,8 +128,79 @@ void main(void) {
 }
 `;
 
-// Register the shader once
+// WGSL port for the WebGPU engine (same math). textureSampleLevel is required
+// because the early exits depend on texture values (non-uniform control flow);
+// the G-buffer and depth targets have no mip levels, so level 0 is identical.
+const FRAGMENT_SHADER_WGSL = `
+varying vUV: vec2f;
+var textureSamplerSampler: sampler;
+var textureSampler: texture_2d<f32>;
+var normalSamplerSampler: sampler;
+var normalSampler: texture_2d<f32>;
+var depthSamplerSampler: sampler;
+var depthSampler: texture_2d<f32>;
+var sceneDepthSamplerSampler: sampler;
+var sceneDepthSampler: texture_2d<f32>;
+uniform texelSize: vec2f;
+uniform normalThreshold: f32;
+uniform cameraNear: f32;
+uniform cameraFar: f32;
+uniform edgeColor: vec4f;
+
+fn sampleNormal(uv: vec2f) -> vec3f {
+  return textureSampleLevel(normalSampler, normalSamplerSampler, uv, 0.0).rgb;
+}
+
+fn sampleGbrDepth(uv: vec2f) -> f32 {
+  return textureSampleLevel(depthSampler, depthSamplerSampler, uv, 0.0).r;
+}
+
+fn sampleSceneDepth(uv: vec2f) -> f32 {
+  let d = textureSampleLevel(sceneDepthSampler, sceneDepthSamplerSampler, uv, 0.0).r;
+  return uniforms.cameraNear + d * (uniforms.cameraFar - uniforms.cameraNear);
+}
+
+fn neighbourEdge(nc: vec3f, dc: f32, uv: vec2f, threshold: f32) -> f32 {
+  let n = sampleNormal(uv);
+  if (dot(n, n) < 0.0001) { return 1.0; }
+  let dn = sampleGbrDepth(uv);
+  return max(1.0 - smoothstep(threshold - 0.15, threshold, dot(nc, normalize(n))), smoothstep(0.015, 0.06, abs(dc - dn)));
+}
+
+fn detectEdge(uv: vec2f, stepSize: vec2f, threshold: f32) -> f32 {
+  var nc = sampleNormal(uv);
+  if (dot(nc, nc) < 0.0001) { return 0.0; }
+  nc = normalize(nc);
+  let dc = sampleGbrDepth(uv);
+  var maxEdge = neighbourEdge(nc, dc, uv + vec2f(0.0, stepSize.y), threshold);
+  maxEdge = max(maxEdge, neighbourEdge(nc, dc, uv + vec2f(0.0, -stepSize.y), threshold));
+  maxEdge = max(maxEdge, neighbourEdge(nc, dc, uv + vec2f(-stepSize.x, 0.0), threshold));
+  maxEdge = max(maxEdge, neighbourEdge(nc, dc, uv + vec2f(stepSize.x, 0.0), threshold));
+  return maxEdge;
+}
+
+@fragment
+fn main(input: FragmentInputs) -> FragmentOutputs {
+  let baseColor = textureSampleLevel(textureSampler, textureSamplerSampler, input.vUV, 0.0);
+  var color = baseColor;
+  let nc = sampleNormal(input.vUV);
+  if (dot(nc, nc) >= 0.0001 && sampleSceneDepth(input.vUV) >= sampleGbrDepth(input.vUV) * 0.95) {
+    let texel = uniforms.texelSize;
+    let edge = (
+      detectEdge(input.vUV + vec2f(0.125, 0.375) * texel, texel, uniforms.normalThreshold) +
+      detectEdge(input.vUV + vec2f(-0.375, 0.125) * texel, texel, uniforms.normalThreshold) +
+      detectEdge(input.vUV + vec2f(0.375, -0.125) * texel, texel, uniforms.normalThreshold) +
+      detectEdge(input.vUV + vec2f(-0.125, -0.375) * texel, texel, uniforms.normalThreshold)
+    ) * 0.25;
+    color = mix(baseColor, uniforms.edgeColor, edge * uniforms.edgeColor.a);
+  }
+  fragmentOutputs.color = color;
+}
+`;
+
+// Register the shaders once
 Effect.ShadersStore[SHADER_NAME + 'FragmentShader'] = FRAGMENT_SHADER;
+ShaderStore.ShadersStoreWGSL[SHADER_NAME + 'FragmentShader'] = FRAGMENT_SHADER_WGSL;
 
 export interface EdgeOutlineOptions {
   /** Avoid allocating auxiliary render targets when the effect starts hidden. */
@@ -193,6 +266,8 @@ export function createEdgeOutline(
     camera,
     Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
     scene.getEngine(),
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    scene.getEngine().isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
   );
   if (!enabled) camera.detachPostProcess(postProcess);
 

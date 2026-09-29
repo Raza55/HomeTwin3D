@@ -16,14 +16,16 @@ import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, ImageOff } from 'lucide-react';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
-import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, ShadowGenerator, Tools, Vector3, type AbstractMesh, type Mesh, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
+import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
 import { findFrontFacade } from '../../babylon/SiteLayout';
-import { CAMERA_CONTROL_SENSITIVITY, createScene, setupSunShadows, type SceneContext } from '../../babylon/SceneManager';
+import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, type SceneContext } from '../../babylon/SceneManager';
+import { batchStaticRendering } from '../../babylon/RenderBatch';
+import { invalidateShadowsNear } from '../../babylon/ShadowRange';
 import { batchStaticSunShadows } from '../../babylon/ShadowCasterBatch';
 import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance } from '../../babylon/ModelLoader';
 import { disposeImportedObject, loadImportedObject, type ImportedObjectLoadResult } from '../../babylon/ImportedObjectLoader';
@@ -54,7 +56,7 @@ import {
 import { createSmartDeviceMesh, removeSmartDeviceMesh, updateSmartDeviceState, type SmartDeviceMeshMap } from '../../babylon/SmartDeviceMeshFactory';
 import { getConfig, updateConfig, getModelBlob, getModelObjectBlob } from '../../services/configApi';
 import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
-import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, invalidateFloorplanShadows } from '../../babylon/FloorplanLighting';
+import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
 import { getEntityCache, setEntityCache } from '../../services/entityCache';
 import type { HAEntityOption } from '../../components/EntityPicker';
 import { getSetting, updateSettings, type HomeViewPose } from '../../services/settingsStore';
@@ -78,7 +80,6 @@ import LightModal from '../../components/LightModal';
 import LightQuickControls from '../../components/LightQuickControls';
 import LightClusterControls from '../../components/LightClusterControls';
 import LightClusterMarkers from '../../components/LightClusterMarkers';
-import VisualMatchingGuide from '../../components/VisualMatchingGuide';
 import { quickLightCluster, lightMappingTargets, isEnsis } from '../../services/lightClusters';
 import RemoteModal from '../../components/RemoteModal';
 import BlindModal from '../../components/BlindQuickControls';
@@ -86,13 +87,16 @@ import BlindMarkers from '../../components/BlindMarkers';
 import DisplayModal from '../../components/DisplayModal';
 import DebugPanel from '../../components/DebugPanel';
 import SidePanel from '../../components/SidePanel/SidePanel';
-import SettingsModal from '../../components/SettingsModal';
-import GuidedTour from '../../components/GuidedTour/GuidedTour';
 import { dashboardTourSteps } from '../../components/GuidedTour/tourSteps';
-import CardPropertiesPanel from '../../components/SidePanel/CardPropertiesPanel';
 import { SIMULATION_CONFIG, SIMULATION_MODEL_URL } from '../../data/simulationData';
 import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, LightSceneOption, CardLayout, SidePanelCard } from '../../types';
 import './Dashboard.css';
+
+// Rarely used dialogs load on demand to keep the dashboard chunk small.
+const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
+const SettingsModal = lazy(() => import('../../components/SettingsModal'));
+const GuidedTour = lazy(() => import('../../components/GuidedTour/GuidedTour'));
+const CardPropertiesPanel = lazy(() => import('../../components/SidePanel/CardPropertiesPanel'));
 
 const LONG_PRESS_MS = 500;
 const LIGHT_INTENSITY_BASE = 0.8;
@@ -133,6 +137,18 @@ function hsToColor3(hue: number, saturation: number): Color3 {
   return new Color3(r + m, g + m, b + m);
 }
 
+/** Every entity id string anywhere in the configuration (lights, displays, tubes, floorplan bindings...). */
+function collectEntityIds(config: AppConfig | null): Set<string> {
+  const ids = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (typeof value === 'string') { if (/^[a-z_]+\.[a-z0-9_]+$/.test(value)) ids.add(value); }
+    else if (Array.isArray(value)) value.forEach(visit);
+    else if (value && typeof value === 'object') Object.values(value).forEach(visit);
+  };
+  visit(config);
+  return ids;
+}
+
 export default function Dashboard() {
   const { demoMode } = useDemoMode();
   const { simulationMode, setSimulationMode } = useSimulationMode();
@@ -148,6 +164,8 @@ export default function Dashboard() {
   const displayMeshMapRef = useRef<DisplayMeshMap>({});
   const tubeMapRef = useRef<TubeMap>({});
   const panelEntityIdsRef = useRef<Set<string>>(new Set());
+  /** Entities referenced by the 3D configuration; only their events need a new frame. */
+  const sceneEntityIdsRef = useRef<Set<string>>(new Set());
   const displayIdsByEntityRef = useRef<Map<string, string[]>>(new Map());
   const tubeIdsBySensorRef = useRef<Map<string, string[]>>(new Map());
   const entityScaleRootRef = useRef<TransformNode | null>(null);
@@ -278,9 +296,30 @@ export default function Dashboard() {
     [cardPanelOpen],
   );
   const [sidePanelConfig, setSidePanelConfig] = useState<import('../../types').SidePanelConfig | undefined>(undefined);
+  const [settingsMounted, setSettingsMounted] = useState(false);
+  useEffect(() => { if (settingsOpen) setSettingsMounted(true); }, [settingsOpen]);
   const [showTour, setShowTour] = useState(
     () => localStorage.getItem('showTour') === 'true',
   );
+
+  // Entities shown by floorplan status/Echo/IT/coffee markers, rebuilt only when the object list changes.
+  const floorplanMarkerIdsRef = useRef<{ objects?: unknown; ids: Set<string> }>({ ids: new Set() });
+  const floorplanMarkerEntityIds = () => {
+    const objects = configRef.current?.model?.floorplan?.objects;
+    const cache = floorplanMarkerIdsRef.current;
+    if (cache.objects === objects) return cache.ids;
+    const ids = new Set<string>();
+    for (const o of objects ?? []) {
+      if ((o.statusIndicator || o.echo) && o.entityId) ids.add(o.entityId);
+      if (o.it) itEntityIds(o.it).forEach(id => ids.add(id));
+      if (o.coffee) {
+        if (o.entityId) ids.add(o.entityId);
+        Object.values(o.coffee).forEach(id => { if (typeof id === 'string') ids.add(id); });
+      }
+    }
+    floorplanMarkerIdsRef.current = { objects, ids };
+    return ids;
+  };
 
   const rebuildEntityIndexes = useCallback((config: AppConfig | null) => {
     const panelEntityIds = new Set<string>();
@@ -314,6 +353,7 @@ export default function Dashboard() {
     }
 
     panelEntityIdsRef.current = panelEntityIds;
+    sceneEntityIdsRef.current = collectEntityIds(config);
     displayIdsByEntityRef.current = displayIdsByEntity;
     tubeIdsBySensorRef.current = tubeIdsBySensor;
   }, []);
@@ -573,6 +613,14 @@ export default function Dashboard() {
     }, 400);
   }, [sunLiveMode, sliderValue]);
 
+  /** Re-merge static meshes after their materials or edge renderers changed. */
+  const rebuildRenderBatches = useCallback(() => {
+    const scene = sceneCtxRef.current?.scene;
+    if (!scene || !modelMeshesRef.current.length) return;
+    batchStaticRendering(scene, modelMeshesRef.current,
+      Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
+  }, []);
+
   const handleEdgeModeChange = useCallback((mode: 'classic' | 'enhanced') => {
     setEdgeMode(mode);
     updateSettings('render', { edgeMode: mode });
@@ -587,7 +635,8 @@ export default function Dashboard() {
         }
       }
     }
-  }, [edgeWidth, showTextures]);
+    rebuildRenderBatches();
+  }, [edgeWidth, showTextures, rebuildRenderBatches]);
 
   const handleEdgeWidthChange = useCallback((width: number) => {
     setEdgeWidth(width);
@@ -604,7 +653,8 @@ export default function Dashboard() {
     if (!scene) return;
     setTexturesEnabled(scene, modelMeshesRef.current, enabled, edgeWidth, edgeMode === 'classic');
     edgeOutlineRef.current?.setEnabled(!enabled && edgeMode === 'enhanced');
-  }, [edgeWidth, edgeMode]);
+    rebuildRenderBatches();
+  }, [edgeWidth, edgeMode, rebuildRenderBatches]);
 
   const handleSketchColorChange = useCallback((color: string) => {
     setSketchColor(color);
@@ -868,8 +918,18 @@ export default function Dashboard() {
 
     let disposed = false;
     let weatherIntervalRef: ReturnType<typeof setInterval> | null = null;
-    const ctx = createScene(canvas, { enableGlow: true });
-    sceneCtxRef.current = ctx;
+    let prewarmTimerRef: ReturnType<typeof setInterval> | null = null;
+    // WebGL starts synchronously as before; WebGPU (opt-in) needs an async engine start.
+    const sceneOptions = { enableGlow: true };
+    let ctx: SceneContext;
+    let ctxPromise: Promise<SceneContext>;
+    if (prefersWebGPU()) {
+      ctxPromise = createSceneAsync(canvas, sceneOptions);
+    } else {
+      ctx = createScene(canvas, sceneOptions);
+      sceneCtxRef.current = ctx;
+      ctxPromise = Promise.resolve(ctx);
+    }
 
     let pressTimer: ReturnType<typeof setTimeout> | null = null;
     let pressedEntity: string | null = null;
@@ -880,6 +940,11 @@ export default function Dashboard() {
 
 
     async function init() {
+      if (sceneCtxRef.current !== ctx) {
+        ctx = await ctxPromise;
+        if (disposed) return;
+        sceneCtxRef.current = ctx;
+      }
       // Load config
       if (simulationMode) {
         configRef.current = SIMULATION_CONFIG;
@@ -1079,6 +1144,24 @@ export default function Dashboard() {
           tubeMapRef.current[tc.id] = createTubeMeshes(ctx.scene, tc, ctx.glowLayer, entityScaleRootRef.current ?? undefined);
         }
 
+        // Compile lamp shadow shaders in the background so switching a lamp on does not stall.
+        const floorplanRigs = Object.values(meshMapRef.current).flatMap(e => e.floorplanRig ? [e.floorplanRig] : []);
+        void prewarmFloorplanShadowShaders(floorplanRigs, () => disposed);
+        // Prepare lighting shader variants one circuit at a time while nobody interacts.
+        // A step may hold one frame briefly; that is better than a stall while a
+        // user switches the lamp. Running animations (RGB) do not block it.
+        const prewarmNextCircuit = createLightVariantPrewarmer(ctx.scene, floorplanRigs);
+        const prewarmTimer = window.setInterval(() => {
+          if (disposed || !ctx.isStatic(10_000, true)) return;
+          if (!prewarmNextCircuit()) window.clearInterval(prewarmTimer);
+        }, 3000);
+        prewarmTimerRef = prewarmTimer;
+
+        // Merge static model meshes into render-only batches (fewer draw calls).
+        // Runs last so display/TV material swaps above are already in place.
+        batchStaticRendering(ctx.scene, result.meshes,
+          Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
+
         // Weather effects (rain/snow particles + cloud cover)
         weatherRef.current = createWeatherEffects(ctx.scene, sunShadowGen ?? undefined);
         const pollWeather = async () => {
@@ -1240,7 +1323,42 @@ export default function Dashboard() {
         pressedEntity = null;
       };
 
-      ctx.scene.onPointerMove = (_evt, pickResult) => {
+      // Babylon would ray-pick the whole model on every pointermove event (~1.7 ms
+      // each, often several per frame). Hover only needs the latest position, so
+      // it is picked at most once per rendered frame with Babylon's own predicate.
+      ctx.scene.skipPointerMovePicking = true;
+      let pendingHover: IPointerEvent | null = null;
+      const hoverPredicate = (mesh: AbstractMesh) => mesh.isPickable && mesh.isVisible && mesh.isReady() && mesh.isEnabled();
+      const updateHover = (evt: IPointerEvent, pickResult: PickingInfo) => {
+        const meshMeta = pickResult.pickedMesh?.metadata as { entityId?: string; unassignedFloorplanId?: string; displayId?: string; blindId?: string; tubeId?: string; smartDeviceId?: string } | null;
+        const nextHoveredLight = (!evt.buttons || evt.pointerType === 'touch') && pickResult.hit && meshMeta?.entityId && meshMapRef.current[meshMeta.entityId] && !meshMeta.blindId && !meshMeta.smartDeviceId ? meshMeta.entityId : null;
+        if (nextHoveredLight !== hoveredLightEntityId) {
+          if (hoveredLightEntityId) {
+            const previous = meshMapRef.current[hoveredLightEntityId];
+            if (previous) setLightTouchZoneHovered(previous, false);
+          }
+          hoveredLightEntityId = nextHoveredLight;
+          if (nextHoveredLight && evt.pointerType !== 'touch') showQuick(nextHoveredLight, evt.clientX, evt.clientY, false);
+          else leaveQuick();
+        }
+        if (nextHoveredLight) setLightTouchZoneHovered(meshMapRef.current[nextHoveredLight], true);
+        if (pickResult.hit && (meshMeta?.unassignedFloorplanId || meshMeta?.entityId || meshMeta?.displayId || meshMeta?.blindId || meshMeta?.tubeId || meshMeta?.smartDeviceId)) {
+          canvas!.style.cursor = 'pointer';
+        } else {
+          canvas!.style.cursor = 'default';
+        }
+      };
+      ctx.scene.onBeforeRenderObservable.add(() => {
+        if (!pendingHover) return;
+        const evt = pendingHover;
+        pendingHover = null;
+        if (walkthroughRef.current?.mode !== 'normal' && walkthroughRef.current) return;
+        if (matchingRef.current) return;
+        const pick = ctx.scene.pick(ctx.scene.pointerX, ctx.scene.pointerY, hoverPredicate, false);
+        if (pick) updateHover(evt, pick);
+      });
+
+      ctx.scene.onPointerMove = (_evt, _pickResult) => {
         if (walkthroughRef.current?.mode !== 'normal' && walkthroughRef.current) return;
         if (matchingRef.current) return;
         if (pressedSmartDeviceId) {
@@ -1278,23 +1396,8 @@ export default function Dashboard() {
             pressedEntity = null;
           }
         }
-        const meshMeta = pickResult.pickedMesh?.metadata as { entityId?: string; unassignedFloorplanId?: string; displayId?: string; blindId?: string; tubeId?: string; smartDeviceId?: string } | null;
-        const nextHoveredLight = (!_evt.buttons || _evt.pointerType === 'touch') && pickResult.hit && meshMeta?.entityId && meshMapRef.current[meshMeta.entityId] && !meshMeta.blindId && !meshMeta.smartDeviceId ? meshMeta.entityId : null;
-        if (nextHoveredLight !== hoveredLightEntityId) {
-          if (hoveredLightEntityId) {
-            const previous = meshMapRef.current[hoveredLightEntityId];
-            if (previous) setLightTouchZoneHovered(previous, false);
-          }
-          hoveredLightEntityId = nextHoveredLight;
-          if (nextHoveredLight && _evt.pointerType !== 'touch') showQuick(nextHoveredLight, _evt.clientX, _evt.clientY, false);
-          else leaveQuick();
-        }
-        if (nextHoveredLight) setLightTouchZoneHovered(meshMapRef.current[nextHoveredLight], true);
-        if (pickResult.hit && (meshMeta?.unassignedFloorplanId || meshMeta?.entityId || meshMeta?.displayId || meshMeta?.blindId || meshMeta?.tubeId || meshMeta?.smartDeviceId)) {
-          canvas!.style.cursor = 'pointer';
-        } else {
-          canvas!.style.cursor = 'default';
-        }
+        // Hover picking is deferred to the next frame (see below).
+        pendingHover = _evt;
       };
 
       if (disposed) return;
@@ -1336,10 +1439,11 @@ export default function Dashboard() {
       }
       importedObjectResultsRef.current = {};
       if (weatherIntervalRef) clearInterval(weatherIntervalRef);
+      if (prewarmTimerRef) clearInterval(prewarmTimerRef);
       weatherRef.current?.dispose();
       weatherRef.current = null;
       disposeGroundGrid();
-      ctx.dispose();
+      void ctxPromise.then(scene => scene.dispose());
     };
   }, [modelReloadVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1393,6 +1497,11 @@ export default function Dashboard() {
         }
       },
       onStateChanged: (entityId: string, state: HAState) => {
+        // Scene-bound entities render promptly instead of at the static floor rate;
+        // other sensors only affect DOM overlays or the side panel.
+        if (sceneEntityIdsRef.current.has(entityId) || /^(light|cover|fan|media_player)\./.test(entityId) || isHueSyncControl(entityId)) {
+          sceneCtxRef.current?.requestRender();
+        }
         stopPendingFeedback(entityId);
         const wasBattery = lastStatesRef.current[entityId] && isBatteryState(lastStatesRef.current[entityId]);
         lastStatesRef.current[entityId] = state;
@@ -1404,18 +1513,16 @@ export default function Dashboard() {
             if (cached) applyLightState(id, cached);
           }
         }
-        if (entityId.startsWith('fan.') || configRef.current?.model?.floorplan?.objects.some(o => ((o.statusIndicator || o.echo) && o.entityId === entityId) || (o.it && itEntityIds(o.it).includes(entityId)) || (o.coffee && (o.entityId === entityId || Object.values(o.coffee).includes(entityId))))) refreshQuickStates(n=>n+1);
+        if (entityId.startsWith('fan.') || floorplanMarkerEntityIds().has(entityId)) refreshQuickStates(n=>n+1);
         if (entityId.startsWith('light.') || isHueSyncControl(entityId) || ['automation.tv_dial_hdmi1','media_player.living_room_receiver','media_player.living_room_tv'].includes(entityId)) refreshQuickStates(n=>n+1);
         if (entityId.startsWith('scene.')) {
           setLightSceneOptions(buildSceneOptions(Object.values(lastStatesRef.current)));
         }
         if (meshMapRef.current[entityId]) applyLightState(entityId, state);
         if (blindMeshMapRef.current[entityId]) {
-          const moved = updateBlindState(blindMeshMapRef.current[entityId], state);
-          if (moved) Object.values(meshMapRef.current).forEach(e => {
-            invalidateFloorplanShadows(e.floorplanRig);
-            e.shadowGen?.getShadowMap()?.resetRefreshCounter();
-          });
+          const blind = blindMeshMapRef.current[entityId];
+          // The frame spans every position the panel can take, old and new.
+          if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
         }
         for (const entry of Object.values(smartDeviceMeshMapRef.current)) {
           if (entry.config.entityId === entityId) updateSmartDeviceState(entry, state);
@@ -1456,6 +1563,7 @@ export default function Dashboard() {
         });
       },
       onInitialStates: (states: HAState[]) => {
+        sceneCtxRef.current?.requestRender();
         setEntityCache(
           states
             .map(s => ({ entity_id: s.entity_id, friendly_name: s.attributes.friendly_name as string | undefined }))
@@ -1471,11 +1579,8 @@ export default function Dashboard() {
           if (state.entity_id === modalEntityIdRef.current) setModalState(state);
           if (meshMapRef.current[state.entity_id]) applyLightState(state.entity_id, state);
           if (blindMeshMapRef.current[state.entity_id]) {
-            const moved = updateBlindState(blindMeshMapRef.current[state.entity_id], state);
-            if (moved) Object.values(meshMapRef.current).forEach(e => {
-              invalidateFloorplanShadows(e.floorplanRig);
-              e.shadowGen?.getShadowMap()?.resetRefreshCounter();
-            });
+            const blind = blindMeshMapRef.current[state.entity_id];
+            if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
           }
           for (const entry of Object.values(smartDeviceMeshMapRef.current)) {
             if (entry.config.entityId === state.entity_id) updateSmartDeviceState(entry, state);
@@ -1634,6 +1739,8 @@ export default function Dashboard() {
   const handleDisplayModalClose = useCallback(() => {
     setDisplayModalVisible(false);
     setDisplayModalConfig(null);
+    // An empty map lets onStateChanged skip the per-event copy while the modal is closed.
+    setDisplayModalStates({});
   }, []);
 
   const handleRemoteModalClose = useCallback(() => {
@@ -2141,22 +2248,24 @@ export default function Dashboard() {
         } : undefined}
       />
       {cardPanelOpen && (
-        <CardPropertiesPanel
-          card={editingCard}
-          haEntities={cardPanelEntities}
-          onSave={handleCardSave}
-          onCancel={() => { setCardPanelOpen(false); setEditingCard(null); }}
-          onPreview={handleCardPreview}
-        />
+        <Suspense fallback={null}>
+          <CardPropertiesPanel
+            card={editingCard}
+            haEntities={cardPanelEntities}
+            onSave={handleCardSave}
+            onCancel={() => { setCardPanelOpen(false); setEditingCard(null); }}
+            onPreview={handleCardPreview}
+          />
+        </Suspense>
       )}
       <div className="dashboard">
         <canvas ref={canvasRef} tabIndex={0} aria-label="3D-Wohnung" onPointerLeave={leaveQuick} onWheel={closeQuick} />
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <LightClusterMarkers scene={sceneCtxRef.current.scene} config={configRef.current} meshes={meshMapRef.current} states={lastStatesRef.current} onOpen={showQuick} onLeave={leaveQuick} onAssign={id=>{closeQuick();setMatchingCategory(configRef.current?.model?.floorplan?.objects.find(o=>o.id===id)?.domain==='light'?'light':'other');setMatchingObjectId(id);setMatchingOpen(true);}}/>}
 
 
-        {matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <VisualMatchingGuide scene={sceneCtxRef.current.scene} initialConfig={configRef.current} objectId={matchingObjectId} objectIds={matchingObjectIds} category={matchingCategory}
+        {matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <Suspense fallback={null}><VisualMatchingGuide scene={sceneCtxRef.current.scene} initialConfig={configRef.current} objectId={matchingObjectId} objectIds={matchingObjectIds} category={matchingCategory}
           onSave={next => { updateConfig(next); matchingChanged.current = true; }}
-          onClose={() => { setMatchingOpen(false); setMatchingObjectIds(undefined); if (matchingChanged.current) { matchingChanged.current = false; handleReloadModel(); } }} />}
+          onClose={() => { setMatchingOpen(false); setMatchingObjectIds(undefined); if (matchingChanged.current) { matchingChanged.current = false; handleReloadModel(); } }} /></Suspense>}
 
         <HUD
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}
@@ -2330,52 +2439,57 @@ export default function Dashboard() {
           onToggle={handleToggle}
         />
 
-        <SettingsModal
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          sliderValue={sliderValue}
-          scrubberTime={scrubberTime}
-          sunLiveMode={sunLiveMode}
-          onSliderChange={handleSliderChange}
-          onLiveClick={handleLiveClick}
-          northOffset={northOffset}
-          onNorthOffsetChange={handleNorthOffsetChange}
-          edgeWidth={edgeWidth}
-          onEdgeWidthChange={handleEdgeWidthChange}
-          edgeMode={edgeMode}
-          onEdgeModeChange={handleEdgeModeChange}
-          groundGrid={groundGrid}
-          onGroundGridChange={handleGroundGridChange}
-          weatherEnabled={weatherEnabled}
-          onWeatherEnabledChange={handleWeatherEnabledChange}
-          perspective={perspective}
-          onPerspectiveChange={handlePerspectiveChange}
-          sunShadowRes={sunShadowRes}
-          onSunShadowResChange={handleSunShadowResChange}
-          pointShadowRes={pointShadowRes}
-          onPointShadowResChange={handlePointShadowResChange}
-          showTextures={showTextures}
-          onShowTexturesChange={handleShowTexturesChange}
-          onRecenterView={recenterModelView}
-          sketchColor={sketchColor}
-          onSketchColorChange={handleSketchColorChange}
-          sketchSpecular={sketchSpecular}
-          onSketchSpecularChange={handleSketchSpecularChange}
-          onDebugToggle={() => setDebugOpen((v) => !v)}
-          onEditGrid={() => setGridEditMode(true)}
-          onChangeHomeView={() => { changeNavigationMode('normal'); setHomeViewSetting(true); }}
-          haSettings={getSetting('connection').haSettings}
-          onHASettingsSave={(settings) => {
-            updateSettings('connection', { haSettings: settings });
-            setHaSettingsVersion(v => v + 1);
-          }}
-          lightsOnCount={lightsOnCount}
-          haStatus={haStatus}
-          modelStatus={modelStatus}
-          modelStatusColor={modelStatusColor}
-          onStartVisualMatching={(category='light') => { closeQuick(); setSettingsOpen(false); setMatchingCategory(category); setMatchingObjectId(undefined); setMatchingOpen(true); }}
-          onReloadModel={handleReloadModel}
-        />
+        {/* Mounted on first open and kept, so its state behaves as before. */}
+        {(settingsMounted || settingsOpen) && (
+          <Suspense fallback={null}>
+            <SettingsModal
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              sliderValue={sliderValue}
+              scrubberTime={scrubberTime}
+              sunLiveMode={sunLiveMode}
+              onSliderChange={handleSliderChange}
+              onLiveClick={handleLiveClick}
+              northOffset={northOffset}
+              onNorthOffsetChange={handleNorthOffsetChange}
+              edgeWidth={edgeWidth}
+              onEdgeWidthChange={handleEdgeWidthChange}
+              edgeMode={edgeMode}
+              onEdgeModeChange={handleEdgeModeChange}
+              groundGrid={groundGrid}
+              onGroundGridChange={handleGroundGridChange}
+              weatherEnabled={weatherEnabled}
+              onWeatherEnabledChange={handleWeatherEnabledChange}
+              perspective={perspective}
+              onPerspectiveChange={handlePerspectiveChange}
+              sunShadowRes={sunShadowRes}
+              onSunShadowResChange={handleSunShadowResChange}
+              pointShadowRes={pointShadowRes}
+              onPointShadowResChange={handlePointShadowResChange}
+              showTextures={showTextures}
+              onShowTexturesChange={handleShowTexturesChange}
+              onRecenterView={recenterModelView}
+              sketchColor={sketchColor}
+              onSketchColorChange={handleSketchColorChange}
+              sketchSpecular={sketchSpecular}
+              onSketchSpecularChange={handleSketchSpecularChange}
+              onDebugToggle={() => setDebugOpen((v) => !v)}
+              onEditGrid={() => setGridEditMode(true)}
+              onChangeHomeView={() => { changeNavigationMode('normal'); setHomeViewSetting(true); }}
+              haSettings={getSetting('connection').haSettings}
+              onHASettingsSave={(settings) => {
+                updateSettings('connection', { haSettings: settings });
+                setHaSettingsVersion(v => v + 1);
+              }}
+              lightsOnCount={lightsOnCount}
+              haStatus={haStatus}
+              modelStatus={modelStatus}
+              modelStatusColor={modelStatusColor}
+              onStartVisualMatching={(category='light') => { closeQuick(); setSettingsOpen(false); setMatchingCategory(category); setMatchingObjectId(undefined); setMatchingOpen(true); }}
+              onReloadModel={handleReloadModel}
+            />
+          </Suspense>
+        )}
 
         {homeViewSetting && (
           <div className="home-view-overlay">
@@ -2393,13 +2507,15 @@ export default function Dashboard() {
         )}
 
         {showTour && (
-          <GuidedTour
-            steps={dashboardTourSteps}
-            onComplete={() => {
-              setShowTour(false);
-              navigate('/editor?guided=true');
-            }}
-          />
+          <Suspense fallback={null}>
+            <GuidedTour
+              steps={dashboardTourSteps}
+              onComplete={() => {
+                setShowTour(false);
+                navigate('/editor?guided=true');
+              }}
+            />
+          </Suspense>
         )}
 
       </div>

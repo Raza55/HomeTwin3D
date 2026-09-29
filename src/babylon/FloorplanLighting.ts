@@ -1,6 +1,8 @@
 import { Color3, Light, PointLight, SpotLight, ShadowGenerator, Vector3, PBRMaterial, StandardMaterial, type AbstractMesh, type Scene } from '@babylonjs/core';
 import type { FloorplanEmitter, HAState, LightConfig } from '../types';
 import { kelvinToRGB } from '../utils/color';
+import { getRenderBatchSet } from './RenderBatch';
+import { limitShadowCastersToRange } from './ShadowRange';
 
 export interface FloorplanLightRig {
   lights: Array<PointLight | SpotLight>;
@@ -45,6 +47,7 @@ export function configureFloorplanShadows(rig: FloorplanLightRig, casters: Abstr
     for (const mesh of casters) if (mesh.isEnabled()) shadow.addShadowCaster(mesh, false);
     const map = shadow.getShadowMap();
     if (map) map.refreshRate = 0; // Recomputed on state/geometry changes, never permanently frozen.
+    limitShadowCastersToRange(shadow);
     rig.shadows.push(shadow);
   }
 }
@@ -65,8 +68,10 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
   const previousStates = lights.map(() => ({ enabled: false, intensity: NaN, shadow: false }));
   const nearest = Vector3.Zero();
   let initialized = false;
+  let batchVersion = -1;
   const update = () => {
-    let changed = !initialized;
+    const batches = getRenderBatchSet(scene);
+    let changed = !initialized || (batches?.version ?? -1) !== batchVersion;
     for (let i = 0; i < lights.length; i++) {
       const light = lights[i], previous = previousStates[i];
       const enabled = light.isEnabled(), shadow = !!light.getShadowGenerator();
@@ -101,6 +106,15 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
         if (candidates.length > budget) candidates.pop();
       }
       candidates.forEach(c => selected.get(c.light)!.push(mesh));
+      if (batches?.isBatchedSource(mesh)) batches.recordLights(mesh, candidates.map(c => c.light));
+    }
+    // Merged render proxies receive exactly the lights all their sources receive;
+    // batches whose sources would differ are drawn per source instead.
+    if (batches) {
+      for (const [proxy, proxyLights] of batches.resolveLights()) {
+        for (const light of proxyLights) selected.get(light as PointLight | SpotLight)?.push(proxy);
+      }
+      batchVersion = batches.version;
     }
     for (const light of lights) {
       const included = selected.get(light)!;
@@ -162,4 +176,105 @@ export function applyFloorplanLightState(rig: FloorplanLightRig, config: LightCo
   // Refresh on activation in case geometry changed while the light was off.
   if (activated) invalidateFloorplanShadows(rig);
   return color.scale(factor); // No artificial minimum brightness for imported fixtures.
+}
+
+/**
+ * Render-once shadow maps compile their depth shaders synchronously on first
+ * use, which stalls the frame in which a lamp is switched on. Depth shader
+ * variants depend on the light type and caster, not on the individual lamp,
+ * so compiling them once per type in the background covers every lamp.
+ *
+ * Babylon's forceCompilationAsync() prepares effects in the *current* render
+ * pass, which outside a shadow render is the main pass, and would overwrite
+ * the materials' main-pass defines. The shadow map's own pass id is set here.
+ */
+export async function prewarmFloorplanShadowShaders(rigs: FloorplanLightRig[], isCancelled: () => boolean = () => false): Promise<void> {
+  const byType = new Map<string, ShadowGenerator>();
+  for (const rig of rigs) for (const shadow of rig.shadows) {
+    const type = shadow.getLight().getClassName();
+    if (!byType.has(type)) byType.set(type, shadow);
+  }
+  for (const shadow of byType.values()) {
+    const map = shadow.getShadowMap();
+    if (!map?.renderList) continue;
+    const engine = map.getScene()!.getEngine();
+    const passId = map.renderPassIds?.[0] ?? map.renderPassId;
+    const subMeshes = map.renderList.flatMap(mesh => mesh.isDisposed() ? [] : mesh.subMeshes ?? []);
+    const deadline = performance.now() + 60_000;
+    let index = 0;
+    while (index < subMeshes.length && performance.now() < deadline) {
+      if (isCancelled() || shadow.getShadowMap() !== map) return;
+      const slice = performance.now();
+      while (index < subMeshes.length && performance.now() - slice < 4) {
+        const subMesh = subMeshes[index];
+        const previous = engine.currentRenderPassId;
+        engine.currentRenderPassId = passId;
+        let ready: boolean;
+        try {
+          ready = subMesh.getMesh().isDisposed()
+            || shadow.isReady(subMesh, false, subMesh.getMaterial()?.needAlphaBlendingForMesh(subMesh.getMesh()) ?? false);
+        } finally {
+          engine.currentRenderPassId = previous;
+        }
+        if (!ready) break; // Compiling in parallel: retry this sub-mesh next slice.
+        index++;
+      }
+      await new Promise(resolve => setTimeout(resolve, 16));
+    }
+  }
+}
+
+/**
+ * Switching a lamp on or off changes how many lights reach each surface, which
+ * needs new shader variants. Their JS-side preparation is synchronous and stalls
+ * the frame (100-400 ms the first time). This prepares the variants for one
+ * currently-off circuit per call, entirely between two frames: lights on, main
+ * pass materials checked (effects created and cached), lights off again. No
+ * frame renders in between, so nothing visible changes. Returns false when done.
+ */
+export function createLightVariantPrewarmer(scene: Scene, rigs: FloorplanLightRig[]): () => boolean {
+  const queue = rigs.filter(rig => rig.lights.length);
+  return () => {
+    const influence = scene.metadata?.floorplanInfluenceObserver as { callback: (scene: Scene) => void } | undefined;
+    if (!influence) return false;
+    let rig: FloorplanLightRig | undefined;
+    while ((rig = queue.shift()) && rig.lights.some(light => light.isEnabled(false))) { /* already on: variants exist */ }
+    if (!rig) return false;
+    const saved = rig.lights.map(light => light.intensity);
+    rig.lights.forEach((light, i) => { light.intensity = Math.max(1, rig!.sources[i]?.lumens ?? 1); light.setEnabled(true); });
+    influence.callback(scene);
+    // Materials cache their readiness per render id; a new id forces the check.
+    scene.incrementRenderId();
+    const meshes = new Set(rig.lights.flatMap(light => light.includedOnlyMeshes));
+    const prepare = (candidates: Iterable<AbstractMesh>) => {
+      for (const mesh of candidates) {
+        if (mesh.isDisposed()) continue;
+        const instanced = !!((mesh as AbstractMesh & { instances?: unknown[] }).instances?.length || (mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances);
+        for (const subMesh of mesh.subMeshes ?? []) subMesh.getMaterial()?.isReadyForSubMesh(mesh, subMesh, instanced);
+      }
+    };
+    prepare(meshes);
+    // The glass (transmission) pass renders the same materials in linear space
+    // with image processing deferred, which are separate shader variants. It
+    // is prepared the way RenderTargetTexture renders it: own pass id, flag set
+    // without marking materials dirty.
+    const opaque = (scene as Scene & { _transmissionHelper?: { getOpaqueTarget(): { renderPassId: number; renderList: AbstractMesh[] | null } | null } })
+      ._transmissionHelper?.getOpaqueTarget();
+    if (opaque?.renderList) {
+      const engine = scene.getEngine(), imageProcessing = scene.imageProcessingConfiguration as typeof scene.imageProcessingConfiguration & { _applyByPostProcess: boolean };
+      const previousPass = engine.currentRenderPassId, previousApply = imageProcessing._applyByPostProcess;
+      engine.currentRenderPassId = opaque.renderPassId;
+      imageProcessing._applyByPostProcess = true;
+      try {
+        prepare(opaque.renderList.filter(mesh => meshes.has(mesh)));
+      } finally {
+        engine.currentRenderPassId = previousPass;
+        imageProcessing._applyByPostProcess = previousApply;
+      }
+    }
+    rig.lights.forEach((light, i) => { light.setEnabled(false); light.intensity = saved[i]; });
+    influence.callback(scene);
+    scene.incrementRenderId();
+    return true;
+  };
 }

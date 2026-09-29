@@ -1,0 +1,65 @@
+import { SceneInstrumentation, type AbstractEngine, type Engine, type Scene } from '@babylonjs/core';
+
+/**
+ * Read-only performance readout, enabled with `?perf` in the page URL.
+ * Meant for devices without developer tools at hand (e.g. an iPad on the wall):
+ * FPS, CPU time per rendered frame, the worst frame gap (stutter), draw calls,
+ * JS memory where the browser exposes it, and the active rendering options.
+ */
+export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => void {
+  const instrumentation = new SceneInstrumentation(scene);
+  instrumentation.captureFrameTime = true;
+
+  const panel = document.createElement('div');
+  panel.setAttribute('aria-hidden', 'true');
+  Object.assign(panel.style, {
+    position: 'fixed', left: '8px', bottom: '8px', zIndex: '99999', pointerEvents: 'none',
+    font: '12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'pre',
+    color: '#e2e8f0', background: 'rgba(2, 6, 23, 0.78)', padding: '6px 8px', borderRadius: '6px',
+  } satisfies Partial<CSSStyleDeclaration>);
+  document.body.appendChild(panel);
+
+  let renderer: string;
+  if (engine.isWebGPU) {
+    const info = (engine as unknown as { _adapterInfo?: { vendor?: string; architecture?: string; description?: string } })._adapterInfo;
+    renderer = `WebGPU ${info?.description || [info?.vendor, info?.architecture].filter(Boolean).join(' ') || ''}`.trim();
+  } else {
+    const gl = (engine as Engine)._gl as WebGL2RenderingContext | null;
+    const debugInfo = gl?.getExtension('WEBGL_debug_renderer_info');
+    renderer = `WebGL ${String((debugInfo && gl?.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)) ?? gl?.getParameter(gl.RENDERER) ?? '?')
+      .replace(/^ANGLE \((.*)\)$/, '$1')}`;
+  }
+  renderer = renderer.slice(0, 64);
+  const browserEngine = 'userAgentData' in navigator ? 'Chromium' : /AppleWebKit/.test(navigator.userAgent) ? 'WebKit' : 'other';
+
+  let frames = 0, cpu = 0, draws = 0, worstGap = 0, last = performance.now();
+  const onFrame = scene.onAfterRenderObservable.add(() => {
+    const now = performance.now();
+    worstGap = Math.max(worstGap, now - last);
+    last = now;
+    frames++;
+    cpu += instrumentation.frameTimeCounter.current;
+    draws += instrumentation.drawCallsCounter.current;
+  });
+
+  let windowStart = performance.now();
+  const timer = window.setInterval(() => {
+    const now = performance.now();
+    const seconds = (now - windowStart) / 1000;
+    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+    panel.textContent = [
+      `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   worst ${worstGap.toFixed(0)} ms`,
+      `draws ${frames ? Math.round(draws / frames) : 0}   JS heap ${memory ? `${Math.round(memory.usedJSHeapSize / 1e6)} MB` : 'n/a'}`,
+      `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
+      renderer,
+    ].join('\n');
+    frames = 0; cpu = 0; draws = 0; worstGap = 0; windowStart = now;
+  }, 2000);
+
+  return () => {
+    window.clearInterval(timer);
+    scene.onAfterRenderObservable.remove(onFrame);
+    instrumentation.dispose();
+    panel.remove();
+  };
+}

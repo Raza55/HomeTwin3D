@@ -111,8 +111,12 @@ export default defineConfig(({ mode, command }) => {
       },
     },
     server: {
+      port: 5187,
+      strictPort: true,
       fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.private/**'] },
       host: true,
+      // QA output, private data and build artifacts are large and change outside the source tree.
+      watch: { ignored: ['**/.qa/**', '**/.private/**', '**/dist/**', '**/dist-server/**'] },
       proxy: {
         '^/HomeTwin3D/ha-camera/camera\\.[a-z0-9_]+(?:\\?|$)': {
           target: mediaProxyTarget,

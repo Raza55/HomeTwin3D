@@ -47,7 +47,7 @@ npm ci
 npm run dev
 ```
 
-Öffne die von Vite angezeigte Adresse unter `/HomeTwin3D/`, üblicherweise **http://localhost:5173/HomeTwin3D/**. Starte mit dem Demo-Modus oder verbinde im Einrichtungsassistenten deine Home-Assistant-Instanz und importiere ein eigenes GLB.
+Öffne **http://127.0.0.1:5187/HomeTwin3D/**. Der Entwicklungsserver verwendet fest Port 5187 und weicht bei einem belegten Port nicht automatisch aus. Modell und Gerätezuordnungen werden pro Browser und Adresse gespeichert: Ein anderer Port oder `localhost` statt `127.0.0.1` verwendet einen separaten Datenbestand. Starte bei einer neuen Installation mit dem Demo-Modus oder verbinde im Einrichtungsassistenten deine Home-Assistant-Instanz und importiere ein eigenes GLB.
 
 Das Repository enthält ein Simulationsmodell. Die persönliche Wohnung samt Blender-Quellen ist nicht enthalten. Einige historische Blender-Skripte setzen lokale Dateien und Pfade voraus; sie sind Beispiele der bisherigen Modellarbeit und keine universellen Installationsschritte.
 

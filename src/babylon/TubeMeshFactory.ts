@@ -560,8 +560,13 @@ export function createTubeMeshes(
   // Register per-frame particle animation
   let particleObserver: Observer<Scene> | null = null;
   if (particles.length > 0) {
+    // Wall-clock time: the render loop may skip frames while idle, so the
+    // engine's per-frame delta would slow particles down.
+    let last = performance.now();
     particleObserver = scene.onBeforeRenderObservable.add(() => {
-      const dt = scene.getEngine().getDeltaTime() / 1000; // seconds
+      const now = performance.now();
+      const dt = Math.min(now - last, 250) / 1000; // seconds
+      last = now;
       for (const pe of particles) {
         if (pe.speed <= 0) continue;
         const baseAdvance = (pe.speed * dt * pe.direction) / pe.totalLength;

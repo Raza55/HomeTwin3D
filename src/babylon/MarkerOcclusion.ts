@@ -1,6 +1,9 @@
 import { Camera, Matrix, Ray, Vector3, type AbstractMesh, type Scene } from '@babylonjs/core';
 
 type Entry = { point: Vector3; visible: boolean; checked: number; seen: number; revision: number };
+/** Everything that decides whether a mesh can occlude a marker. */
+type MeshState = { disposed: boolean; enabled: boolean; visible: boolean; visibility: number; layerMask: number;
+  material: number | undefined; alpha: number | undefined; transparencyMode: number | null | undefined; refraction: boolean | undefined; glass: unknown };
 
 /** Shared, round-robin CPU visibility checks for DOM overlays. No GPU readback. */
 export class MarkerOcclusion {
@@ -13,7 +16,7 @@ export class MarkerOcclusion {
   private view = Matrix.Zero();
   private cameraMask = -1;
   private cameraMode = -1;
-  private meshStates = new Map<AbstractMesh, string>();
+  private meshStates = new Map<AbstractMesh, MeshState>();
   private meshTransforms = new Map<AbstractMesh, Matrix>();
   private nextMeshScan = -Infinity;
   private overview = false;
@@ -58,9 +61,21 @@ export class MarkerOcclusion {
         // Babylon may recompute an identical matrix; updateFlag alone is not a change.
         if (!previous) { this.meshTransforms.set(mesh, world.clone()); changed = true; }
         else if (!previous.equals(world)) { previous.copyFrom(world); changed = true; }
+        // Field comparison instead of a state string: no allocations on the 10 Hz scan.
         const material = mesh.metadata?.originalMaterial ?? mesh.material;
-        const state = `${mesh.isDisposed()}/${mesh.isEnabled()}/${mesh.isVisible}/${mesh.visibility}/${mesh.layerMask}/${material?.uniqueId}/${material?.alpha}/${material?.transparencyMode}/${material?.subSurface?.isRefractionEnabled}/${mesh.metadata?.windowGlass}`;
-        if (this.meshStates.get(mesh) !== state) { this.meshStates.set(mesh, state); changed = true; }
+        const disposed = mesh.isDisposed(), enabled = mesh.isEnabled(), visible = mesh.isVisible, visibility = mesh.visibility;
+        const materialId = material?.uniqueId, alpha = material?.alpha, transparencyMode = material?.transparencyMode;
+        const refraction = material?.subSurface?.isRefractionEnabled, glass = mesh.metadata?.windowGlass;
+        const state = this.meshStates.get(mesh);
+        if (!state) {
+          this.meshStates.set(mesh, { disposed, enabled, visible, visibility, layerMask: mesh.layerMask, material: materialId, alpha, transparencyMode, refraction, glass });
+          changed = true;
+        } else if (state.disposed !== disposed || state.enabled !== enabled || state.visible !== visible || state.visibility !== visibility
+          || state.layerMask !== mesh.layerMask || state.material !== materialId || state.alpha !== alpha
+          || state.transparencyMode !== transparencyMode || state.refraction !== refraction || state.glass !== glass) {
+          Object.assign(state, { disposed, enabled, visible, visibility, layerMask: mesh.layerMask, material: materialId, alpha, transparencyMode, refraction, glass });
+          changed = true;
+        }
       }
     }
     if (changed) this.revision++;

@@ -1,4 +1,4 @@
-import {MeshBuilder,Mesh,StandardMaterial,ShaderMaterial,Color3,Vector3,VertexData,Curve3,Scene,type AbstractMesh} from '@babylonjs/core';
+import {MeshBuilder,Mesh,StandardMaterial,ShaderMaterial,ShaderLanguage,Color3,Vector3,VertexData,Curve3,Scene,type AbstractMesh} from '@babylonjs/core';
 import {mapToModel,hostBuildingLayout,SITE_SCALE,type FrontFacade} from './SiteLayout';
 import {createResidentialFacadeTexture} from './ResidentialFacade';
 import {referenceBuildings,referencePaths,referenceRoundabouts,referenceTransform,triangulateFootprint} from './SiteReference';
@@ -126,7 +126,12 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  scene.metadata={...scene.metadata,courtyard,siteReference:{north:fromReference([285,45]),south:fromReference([285,940])}};
  const sky=MeshBuilder.CreateSphere('park-sky',{diameter:600,segments:16,sideOrientation:Mesh.BACKSIDE},scene);
  sky.position.copyFrom(center);sky.scaling.setAll(SITE_SCALE);sky.isPickable=false;sky.infiniteDistance=true;sky.applyFog=false;
- const skyMat=new ShaderMaterial('park-sky-gradient',scene,{vertexSource:'precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;varying float height;void main(){height=position.y/300.;gl_Position=worldViewProjection*vec4(position,1.);}',fragmentSource:'precision highp float;varying float height;uniform vec3 zenith;uniform vec3 horizon;void main(){gl_FragColor=vec4(mix(horizon,zenith,smoothstep(-0.1,0.85,height)),1.);}'},{attributes:['position'],uniforms:['worldViewProjection','zenith','horizon']});
+ // WebGPU needs WGSL; both variants compute the same gradient.
+ const webgpu=scene.getEngine().isWebGPU;
+ const skyMat=new ShaderMaterial('park-sky-gradient',scene,webgpu
+  ?{vertexSource:'attribute position: vec3f;uniform worldViewProjection: mat4x4f;varying height: f32;@vertex fn main(input: VertexInputs)->FragmentInputs{vertexOutputs.height=input.position.y/300.0;vertexOutputs.position=uniforms.worldViewProjection*vec4f(input.position,1.0);}',fragmentSource:'varying height: f32;uniform zenith: vec3f;uniform horizon: vec3f;@fragment fn main(input: FragmentInputs)->FragmentOutputs{fragmentOutputs.color=vec4f(mix(uniforms.horizon,uniforms.zenith,smoothstep(-0.1,0.85,input.height)),1.0);}'}
+  :{vertexSource:'precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;varying float height;void main(){height=position.y/300.;gl_Position=worldViewProjection*vec4(position,1.);}',fragmentSource:'precision highp float;varying float height;uniform vec3 zenith;uniform vec3 horizon;void main(){gl_FragColor=vec4(mix(horizon,zenith,smoothstep(-0.1,0.85,height)),1.);}'},
+  {attributes:['position'],uniforms:['worldViewProjection','zenith','horizon'],shaderLanguage:webgpu?ShaderLanguage.WGSL:ShaderLanguage.GLSL});
  skyMat.backFaceCulling=false;skyMat.disableDepthWrite=true;sky.material=skyMat;
  const observer=scene.onBeforeRenderObservable.add(createParkAtmosphereUpdater(scene,skyMat,materials,[grass,path,road]));
  return {dispose:()=>{scene.onBeforeRenderObservable.remove(observer);root.dispose();hostRoot.dispose();courtyard.dispose();sky.dispose();skyMat.dispose();facadeTexture.dispose();materials.forEach(m=>m.dispose());}};

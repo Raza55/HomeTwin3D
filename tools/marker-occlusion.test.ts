@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { Camera, FreeCamera, MeshBuilder, NullEngine, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
 import { MarkerOcclusion } from '../src/babylon/MarkerOcclusion';
 
-function setup() {
+// Handedness is a scene setting fixed before cameras exist (Babylon 9 cameras keep it from construction).
+function setup(rightHanded = false) {
   const engine = new NullEngine(), scene = new Scene(engine);
+  scene.useRightHandedSystem = rightHanded;
   const camera = new FreeCamera('camera', new Vector3(0, 0, -10), scene);
   camera.setTarget(Vector3.Zero()); scene.activeCamera = camera; camera.getViewMatrix(true);
   const wall = MeshBuilder.CreateBox('wall', { width: 4, height: 4, depth: .2 }, scene);
@@ -17,9 +19,8 @@ function setup() {
 
 test('overview shows all markers from 45 degrees down, skips ray tests, and resumes below the return threshold', () => {
   for (const rightHanded of [false, true]) {
-    const f = setup();
+    const f = setup(rightHanded);
     try {
-      f.scene.useRightHandedSystem = rightHanded;
       const tilt = (degrees: number) => {
         const angle = degrees * Math.PI / 180;
         f.camera.setTarget(f.camera.position.add(new Vector3(0, -Math.sin(angle), Math.cos(angle))));
@@ -65,9 +66,8 @@ test('opaque walls hide markers, moving a wall reveals them, hidden roofs and gl
 
 test('orthographic rays start at the projected marker and work in both handedness conventions', () => {
   for (const rightHanded of [false, true]) {
-    const f = setup();
+    const f = setup(rightHanded);
     try {
-      f.scene.useRightHandedSystem = rightHanded;
       f.camera.mode = Camera.ORTHOGRAPHIC_CAMERA; f.camera.setTarget(Vector3.Zero()); f.camera.getViewMatrix(true);
       f.point.x = 3; f.wall.position.x = 1.5; f.wall.scaling.x = .1;
       assert.equal(f.sample(0), true, 'a perspective ray would incorrectly hit the offset wall');

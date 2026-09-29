@@ -15,6 +15,7 @@ import {
 } from '@babylonjs/core';
 import type { LightConfig, LightPart, LightPosition, LightSize } from '../types';
 import { createFloorplanLightRig, type FloorplanLightRig } from './FloorplanLighting';
+import { limitShadowCastersToRange } from './ShadowRange';
 
 export interface LightMeshEntry {
   floorplanRig?: FloorplanLightRig;
@@ -398,6 +399,7 @@ function createPointShadowGen(
   for (const mesh of shadowCasters) {
     sg.addShadowCaster(mesh, false);
   }
+  limitShadowCastersToRange(sg);
   return sg;
 }
 

@@ -5,6 +5,7 @@ import {referenceBuildings,referencePaths,referenceRoundabouts,referenceTransfor
 import {createCourtyardDetails} from './CourtyardDetails';
 import {createParkAtmosphereUpdater} from './ParkAtmosphere';
 import {ExteriorMeshPool} from './ExteriorMeshPool';
+import {mergeStaticExterior} from './ExteriorMerge';
 /** Decorative exterior only: no picking, no HA objects, no influence on model framing. */
 export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,windowFacadeX?:number,frontFacade?:FrontFacade){
  // Legacy imported geometry has stray bounds beyond the facade; anchor to the real cover line.
@@ -124,6 +125,10 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  const courtyard=createCourtyardDetails(scene,hostRoot,center,groundY,
   {x:host.entrance[0]-7*SITE_SCALE-13,z:entryZ+1},pathX,material);
  scene.metadata={...scene.metadata,courtyard,siteReference:{north:fromReference([285,45]),south:fromReference([285,940])}};
+ // Everything above is static: one draw per material instead of ~100 meshes and instances.
+ const merge=mergeStaticExterior([root,hostRoot],hostRoot,m=>m.name.endsWith('-batch'));
+ hostRoot.getChildMeshes(false).forEach(m=>{if(m.name.endsWith('-batch'))m.freezeWorldMatrix();});
+ scene.metadata.exteriorMerge=merge;
  const sky=MeshBuilder.CreateSphere('park-sky',{diameter:600,segments:16,sideOrientation:Mesh.BACKSIDE},scene);
  sky.position.copyFrom(center);sky.scaling.setAll(SITE_SCALE);sky.isPickable=false;sky.infiniteDistance=true;sky.applyFog=false;
  // WebGPU needs WGSL; both variants compute the same gradient.

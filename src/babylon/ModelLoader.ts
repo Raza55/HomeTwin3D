@@ -16,6 +16,7 @@ import '@babylonjs/loaders/glTF';
 import type { ModelObjectOverride, ModelObjectTransform } from '../types';
 import { prepareWindowGlass } from './WindowGlass';
 import { optimizeTransmissionPass } from './TransmissionCulling';
+import { setupMetalReflections } from './MetalReflections';
 import { normalizeModelScale } from './SceneScale';
 import { readFloorplanManifest } from '../services/floorplanImport';
 
@@ -157,6 +158,11 @@ export async function loadModel(
     sketchSpecular: options?.sketchSpecular ?? 0.1,
     edgeRendering: options?.edgeRendering ?? true,
   });
+
+  // Metals and mirrors need something to reflect; replaces the previous model's setup.
+  scene.metadata ??= {};
+  scene.metadata.metalReflections?.dispose();
+  scene.metadata.metalReflections = setupMetalReflections(scene, solidMeshes);
 
   const shadowCasters: AbstractMesh[] = solidMeshes.filter(m=>!m.metadata?.windowGlass);
 

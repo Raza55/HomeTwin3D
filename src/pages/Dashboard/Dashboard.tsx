@@ -58,7 +58,7 @@ import {
 import { createSmartDeviceMesh, removeSmartDeviceMesh, updateSmartDeviceState, type SmartDeviceMeshMap } from '../../babylon/SmartDeviceMeshFactory';
 import { getConfig, updateConfig, getModelBlob, getModelObjectBlob } from '../../services/configApi';
 import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
-import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, enableClusteredFloorplanLights, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
+import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, enableClusteredFloorplanLights, individualFloorplanLights, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
 import { getEntityCache, setEntityCache } from '../../services/entityCache';
 import type { HAEntityOption } from '../../components/EntityPicker';
 import { getSetting, updateSettings, type HomeViewPose } from '../../services/settingsStore';
@@ -620,7 +620,7 @@ export default function Dashboard() {
     const scene = sceneCtxRef.current?.scene;
     if (!scene || !modelMeshesRef.current.length) return;
     batchStaticRendering(scene, modelMeshesRef.current,
-      Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
+      individualFloorplanLights(Object.values(meshMapRef.current)));
   }, []);
 
   const handleEdgeModeChange = useCallback((mode: 'classic' | 'enhanced') => {
@@ -1167,7 +1167,7 @@ export default function Dashboard() {
         // Merge static model meshes into render-only batches (fewer draw calls).
         // Runs last so display/TV material swaps above are already in place.
         if (!isDisabledForDebug('batches')) batchStaticRendering(ctx.scene, result.meshes,
-          Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
+          individualFloorplanLights(Object.values(meshMapRef.current)));
         // Glow pass: emissive meshes plus merged static occluders instead of the whole scene.
         if (ctx.glowLayer) setupGlowOccluders(ctx.scene, ctx.glowLayer, result.meshes, modelScale);
 

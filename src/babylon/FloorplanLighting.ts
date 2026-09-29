@@ -368,9 +368,18 @@ export function getClusteredContainer(scene: Scene): ClusteredLightContainer | n
   return container && !container.isDisposed() ? container : null;
 }
 
-/** `?cluster=0` keeps every emitter as an individual light (for comparisons). */
-function clusteredLightingRequested(): boolean {
-  return typeof location === 'undefined' || new URLSearchParams(location.search).get('cluster') !== '0';
+/**
+ * Which emitters are clustered: 'multi' = multi-emitter fixtures (desktop default),
+ * 'all' = every lamp (touch default: no lamp shadows, but every surface then gets
+ * the same lights, so render batches never split and the draw count drops; on
+ * WebKit each draw call is the dominant cost), 'off' = none. `?cluster=0|multi|all`.
+ */
+export function clusteredLightingMode(): 'off' | 'multi' | 'all' {
+  const requested = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('cluster');
+  if (requested === '0' || requested === 'off') return 'off';
+  if (requested === 'all' || requested === 'multi') return requested;
+  const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  return coarse ? 'all' : 'multi';
 }
 
 /**
@@ -383,8 +392,9 @@ function clusteredLightingRequested(): boolean {
  */
 export function enableClusteredFloorplanLights(scene: Scene, rigs: FloorplanLightRig[]): ClusteredLightContainer | null {
   getClusteredContainer(scene)?.dispose();
-  if (!clusteredLightingRequested()) return null;
-  const candidates = rigs.filter(rig => rig.lights.length > 1);
+  const mode = clusteredLightingMode();
+  if (mode === 'off') return null;
+  const candidates = mode === 'all' ? rigs.filter(rig => rig.lights.length) : rigs.filter(rig => rig.lights.length > 1);
   if (!candidates.length) return null;
   const container = new ClusteredLightContainer('floorplan-clustered-lights', [], scene);
   if (!container.isSupported) { container.dispose(); return null; }
@@ -405,4 +415,13 @@ export function enableClusteredFloorplanLights(scene: Scene, rigs: FloorplanLigh
   }
   scene.metadata = { ...scene.metadata, floorplanClusteredLights: container };
   return container;
+}
+
+/**
+ * Lamps that light surfaces individually. Render batches group surfaces by the
+ * lamps in reach; clustered emitters are identical for every surface and must
+ * not split batches.
+ */
+export function individualFloorplanLights(entries: Array<{ floorplanRig?: FloorplanLightRig }>): Light[] {
+  return entries.flatMap(entry => entry.floorplanRig?.lights.filter(light => !entry.floorplanRig!.clustered?.has(light)) ?? []);
 }

@@ -23,6 +23,7 @@ import { SceneChangeMonitor } from './SceneChangeMonitor';
 import { installUniformNameCache } from './UniformNameCache';
 import { installShaderFixes } from './ShaderFixes';
 import { debugDevicePixelRatio } from './DebugFlags';
+import { setupSnapshotRendering } from './SnapshotRendering';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -276,7 +277,8 @@ export function createScene(
   let followUpFrames = 0;
   let lastRender = 0;
   const changeMonitor = new SceneChangeMonitor(scene);
-  const requestRender = () => { lastChange = lastRequest = performance.now(); };
+  const snapshot = setupSnapshotRendering(scene, engine);
+  const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); };
   const isStatic = (quietMs = 3000, ignoreChanges = false) => {
     const now = performance.now();
     return !document.hidden && now - lastActivity > quietMs && (ignoreChanges || now - lastChange > quietMs);
@@ -300,6 +302,7 @@ export function createScene(
       if (now - lastRender < interval - 4) return;
     }
     lastRender = now;
+    snapshot?.prepareFrame();
     try {
       scene.render();
     } catch (error) {
@@ -319,7 +322,7 @@ export function createScene(
       if (moved) lastActivity = now;
     }
     if (followUpFrames > 0) followUpFrames--;
-    if (changeMonitor.check()) { lastChange = now; followUpFrames = CHANGE_FOLLOW_UP_FRAMES; }
+    if (changeMonitor.check()) { lastChange = now; followUpFrames = CHANGE_FOLLOW_UP_FRAMES; snapshot?.invalidate(); }
   };
   let renderLoopRunning = false;
   const startRenderLoop = () => {
@@ -357,6 +360,7 @@ export function createScene(
     document.removeEventListener('visibilitychange', onVisibilityChange);
     stopRenderLoop();
     disposePerfOverlay?.();
+    snapshot?.dispose();
     scene.dispose();
     engine.dispose();
   }

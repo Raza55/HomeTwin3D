@@ -1,9 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import {Tv,Monitor,Gamepad2,Play,Power,X} from 'lucide-react';
-import {type Scene} from '@babylonjs/core';
+import {type Scene,type Vector3} from '@babylonjs/core';
 import type {HAState} from '../types';
 import {floorplanId} from '../babylon/FloorplanBindings';
-import {getMarkerProjection,setMarkerStyle} from '../babylon/MarkerProjection';
+import {useMapMarkers} from './useMapMarkers';
 import {getActiveHAConnection} from '../services/haWebSocket';
 import {TV_DIAL_AUTOMATION,TV_DIAL_CHOICES,tvDialRequest,tvDialSelected,type TVDialChoice} from '../services/tvDial';
 import './ITMarkers.css';
@@ -14,24 +14,20 @@ export default function TVDialControl({scene,states,connected,onCommand}:{scene:
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[feedback,setFeedback]=useState(''),[error,setError]=useState('');
   const selected=tvDialSelected(states,connected),enabled=connected&&states[TV_DIAL_AUTOMATION]?.state==='on';
   const running=Number(states[TV_DIAL_AUTOMATION]?.attributes.current??0)>0;
-  useEffect(()=>{
-    let screen=scene.meshes.find(m=>floorplanId(m)==='4784bb9f-40cd-5e6b-9165-63d8ffbe0dc1'&&/Fernseher_Bildschirm/.test(m.name)&&m.getTotalVertices()>0);
-    let nextLookup=0;
-    const observer=scene.onAfterRenderObservable.add(()=>{
+  useMapMarkers(scene,()=>{
+    const find=()=>scene.meshes.find(m=>floorplanId(m)==='4784bb9f-40cd-5e6b-9165-63d8ffbe0dc1'&&/Fernseher_Bildschirm/.test(m.name)&&m.getTotalVertices()>0);
+    let screen=find(),nextLookup=0;
+    // TV controls remain accessible even when the screen is occluded.
+    return [{id:'tv-dial',element:()=>marker.current,display:'flex',anchor:(out:Vector3)=>{
       if(!screen||screen.isDisposed()){
-        if(marker.current)marker.current.style.display='none';
-        if(performance.now()<nextLookup)return;nextLookup=performance.now()+1000;
-        screen=scene.meshes.find(m=>floorplanId(m)==='4784bb9f-40cd-5e6b-9165-63d8ffbe0dc1'&&/Fernseher_Bildschirm/.test(m.name)&&m.getTotalVertices()>0);
-        if(!screen)return;
+        if(performance.now()<nextLookup)return null;nextLookup=performance.now()+1000;
+        screen=find();if(!screen)return null;
       }
-      const projection=getMarkerProjection(scene),el=marker.current;if(!projection||!el)return;
-      const box=screen.getBoundingInfo().boundingBox,point=box.centerWorld.clone();point.y=box.maximumWorld.y+.12;
-      // TV controls remain accessible even when the screen is occluded.
-      const p=projection.project(point),{rect,width,height}=projection;
-      setMarkerStyle(el,'display',p.z<0||p.z>1||p.x<0||p.x>width||p.y<0||p.y>height?'none':'flex');
-      setMarkerStyle(el,'left',`${rect.left+p.x/width*rect.width}px`);setMarkerStyle(el,'top',`${rect.top+p.y/height*rect.height}px`);
-    });return()=>{scene.onAfterRenderObservable.remove(observer);};
-  },[scene]);
+      const box=screen.getBoundingInfo().boundingBox;
+      out.copyFrom(box.centerWorld);out.y=box.maximumWorld.y+.12;
+      return out;
+    }}];
+  },[]);
   const close=()=>{setOpen(false);marker.current?.focus();};
   useEffect(()=>{if(!open)return;const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);marker.current?.focus();}};window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);},[open]);
   const send=async(choice:TVDialChoice)=>{

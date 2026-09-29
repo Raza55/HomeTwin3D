@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Monitor, Server, Pencil, X, Power } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState, ITConfig, ITDevice, ITAction } from '../types';
-import { getMarkerProjection, setMarkerStyle } from '../babylon/MarkerProjection';
+import { useMapMarkers } from './useMapMarkers';
 import { itStatus, itStatusLabel, itMetric, itActionAvailable, itCommand, validateIT } from '../services/itState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import EntityPicker from './EntityPicker';
@@ -27,21 +27,11 @@ export default function ITMarkers({scene,config,states,connected,open,onOpen,onS
     const escape=(e:KeyboardEvent)=>{if(e.key==='Escape' && !(e.target as HTMLElement)?.closest('[role=combobox]'))onOpen(null);};
     window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);
   },[onOpen]);
-  useEffect(()=>{
-    const targets=objects.map(o=>({o,center:new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1)}));
-    const observer=scene.onAfterRenderObservable.add(()=>{
-      const projection=getMarkerProjection(scene);if(!projection)return;
-      for(const {o,center} of targets){
-        const el=refs.current[o.id];if(!el)continue;
-        // PCs and the shared server/network control remain visible through walls and furniture.
-        const p=projection.project(center);
-        const {rect,width,height}=projection;
-        setMarkerStyle(el,'display',p.z<0||p.z>1||p.x<0||p.x>width||p.y<0||p.y>height?'none':'flex');
-        setMarkerStyle(el,'left',`${rect.left+p.x/width*rect.width}px`);
-        setMarkerStyle(el,'top',`${rect.top+p.y/height*rect.height}px`);
-      }
-    });return()=>{scene.onAfterRenderObservable.remove(observer);};
-  },[scene,config]);
+  // PCs and the shared server/network control remain visible through walls and furniture.
+  useMapMarkers(scene,()=>objects.map(o=>{
+    const center=new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1);
+    return {id:o.id,element:()=>refs.current[o.id],display:'flex',anchor:(out:Vector3)=>out.copyFrom(center)};
+  }),[config]);
   const send=async(device:ITDevice,action:ITAction,confirmed=false)=>{
     const command=itCommand(action,device,states,connected),ha=getActiveHAConnection();
     if(!command||pending.current||(!onCommand&&!ha?.isConnected))return;

@@ -1,4 +1,5 @@
-import { getMarkerProjection, setMarkerStyle } from '../babylon/MarkerProjection';
+import { setMarkerStyle } from '../babylon/MarkerProjection';
+import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { useEffect, useRef, useState } from 'react';
 import { DoorClosed, DoorOpen, Clock, Pencil, X, CircleHelp, LockKeyhole, LockKeyholeOpen } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
@@ -22,31 +23,21 @@ export default function DoorMarkers({ scene, config, states, connected, onAssign
     document.addEventListener('pointerdown', outside);document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside);document.removeEventListener('keydown', escape); };
   }, []);
-  useEffect(() => {
+  const markers = useMapMarkers(scene, () => {
     const rigs = new Map(createDoorRigs(scene).map(r => [r.id, r]));
-    const anchors = doors.map(o => {
+    return doors.map(o => {
       const rig = rigs.get(o.id), scale = config.model?.scale ?? 1;
-      return { id: o.id, alwaysVisible: o.door?.kind === 'entrance', point: rig ? doorMarkerAnchor(scene, rig) : new Vector3(o.position.x, o.position.y + o.size.height / 2 + .12, o.position.z).scale(scale) };
+      const point = rig ? doorMarkerAnchor(scene, rig) : new Vector3(o.position.x, o.position.y + o.size.height / 2 + .12, o.position.z).scale(scale);
+      // The entrance door stays visible through walls.
+      return { id: o.id, element: () => buttons.current[o.id], occlude: o.door?.kind !== 'entrance', display: 'grid', anchor: (out: Vector3) => out.copyFrom(point) };
     });
-    const observer = scene.onAfterRenderObservable.add(() => {
-      const projection = getMarkerProjection(scene); if (!projection) return;
-      const { rect, width: w, height: h } = projection;
-      for (const { id, point, alwaysVisible } of anchors) {
-        const button = buttons.current[id];if (!button) continue;
-        const p = projection.project(point, alwaysVisible ? undefined : button);
-        const visible = p.z >= 0 && p.z <= 1 && p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h;
-        setMarkerStyle(button, 'display', visible ? 'grid' : 'none');
-        const x = rect.left + p.x / w * rect.width, y = rect.top + p.y / h * rect.height;
-        setMarkerStyle(button, 'left', `${x}px`);setMarkerStyle(button, 'top', `${y}px`);
-        if (id === open && popup.current) {
-          const panel = popup.current;setMarkerStyle(panel, 'visibility', visible ? 'visible' : 'hidden');
-          setMarkerStyle(panel, 'left', `${Math.max(8, Math.min(window.innerWidth - panel.offsetWidth - 8, x - panel.offsetWidth / 2))}px`);
-          setMarkerStyle(panel, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.offsetHeight - 8, y + 22))}px`);
-        }
-      }
-    });
-    return () => { scene.onAfterRenderObservable.remove(observer); };
-  }, [scene, config, open]);
+  }, [config]);
+  useMarkerPlacement(scene, markers, open, ({ x, y, visible }) => {
+    const panel = popup.current; if (!panel) return;
+    setMarkerStyle(panel, 'visibility', visible ? 'visible' : 'hidden');
+    setMarkerStyle(panel, 'left', `${Math.max(8, Math.min(window.innerWidth - panel.offsetWidth - 8, x - panel.offsetWidth / 2))}px`);
+    setMarkerStyle(panel, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.offsetHeight - 8, y + 22))}px`);
+  });
   return <>{doors.map(o => {
     const state = states[o.entityId], pose = connected ? doorPose(state, now, o.door?.kind) : null;
     const lock = config.model?.floorplan?.objects.find(l => l.doorLock?.doorId === o.id);

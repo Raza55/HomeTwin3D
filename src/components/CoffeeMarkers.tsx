@@ -3,7 +3,8 @@ import { Coffee, Pencil, X } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
-import { getMarkerProjection, setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
+import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
+import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { coffeeState, coffeeProgram } from '../services/coffeeState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './CoffeeMarkers.css';
@@ -36,36 +37,20 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, [onOpen]);
-  useEffect(() => {
-    const targets = objects.map(o => ({ o, fallback: new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale ?? 1), meshes: scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0) }));
-    const center = Vector3.Zero();
-    const observer = scene.onAfterRenderObservable.add(() => {
-      const projection = getMarkerProjection(scene); if (!projection) return;
-      const { rect, width, height } = projection;
-      const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
-      for (const { o, meshes, fallback } of targets) {
-        const element = refs.current[o.id]; if (!element) continue;
-        markerCenterToRef(meshes, fallback, center);
-        // The coffee machine is an always-visible control in the plan.
-        const p = projection.project(center);
-        setMarkerStyle(element, 'display', p.z < 0 || p.z > 1 || p.x < 0 || p.x > width || p.y < 0 || p.y > height ? 'none' : 'flex');
-        const x = rect.left + p.x / width * rect.width;
-        let y = rect.top + p.y / height * rect.height;
-        const markerWidth = 140, markerHeight = 72;
-        for (const prior of placed) {
-          if (Math.abs(x - prior.x) < (markerWidth + prior.width) / 2 + 6 && Math.abs(y - prior.y) < (markerHeight + prior.height) / 2 + 6)
-            y = prior.y + (markerHeight + prior.height) / 2 + 6;
-        }
-        placed.push({ x, y, width: markerWidth, height: markerHeight });
-        setMarkerStyle(element, 'left', `${x}px`); setMarkerStyle(element, 'top', `${y}px`);
-        if (o.id === open && panel.current) {
-          setMarkerStyle(panel.current, 'left', `${Math.max(8, Math.min(window.innerWidth - panel.current.offsetWidth - 8, x + 90))}px`);
-          setMarkerStyle(panel.current, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.current.offsetHeight - 8, y - 60))}px`);
-        }
-      }
-    });
-    return () => { scene.onAfterRenderObservable.remove(observer); };
-  }, [scene, config, open]);
+  const markers = useMapMarkers(scene, () => objects.map(o => {
+    const fallback = new Vector3(o.position.x, o.position.y, o.position.z).scale(config.model?.scale ?? 1);
+    const meshes = scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0);
+    return {
+      id: o.id, element: () => refs.current[o.id], occlude: false, display: 'flex',
+      stack: { group: 'coffee', width: 140, height: 72 },
+      anchor: (out: Vector3) => markerCenterToRef(meshes, fallback, out),
+    };
+  }), [config]);
+  useMarkerPlacement(scene, markers, open, ({ x, y }) => {
+    const element = panel.current; if (!element) return;
+    setMarkerStyle(element, 'left', `${Math.max(8, Math.min(window.innerWidth - element.offsetWidth - 8, x + 90))}px`);
+    setMarkerStyle(element, 'top', `${Math.max(8, Math.min(window.innerHeight - element.offsetHeight - 8, y - 60))}px`);
+  });
 
   const send = async (action: 'on' | 'off' | 'start' | 'stop') => {
     const ha = getActiveHAConnection();

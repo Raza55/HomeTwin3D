@@ -24,6 +24,7 @@ import { installUniformNameCache } from './UniformNameCache';
 import { installShaderFixes } from './ShaderFixes';
 import { debugDevicePixelRatio } from './DebugFlags';
 import { setupSnapshotRendering } from './SnapshotRendering';
+import { setMarkerRenderRequest } from './MarkerLayer';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -279,6 +280,7 @@ export function createScene(
   const changeMonitor = new SceneChangeMonitor(scene);
   const snapshot = setupSnapshotRendering(scene, engine);
   const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); };
+  setMarkerRenderRequest(scene, requestRender);
   const isStatic = (quietMs = 3000, ignoreChanges = false) => {
     const now = performance.now();
     return !document.hidden && now - lastActivity > quietMs && (ignoreChanges || now - lastChange > quietMs);

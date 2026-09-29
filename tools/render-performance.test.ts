@@ -343,3 +343,18 @@ test('clustered PBR lighting compiles for sheen materials (Babylon include fix)'
     assert.ok(!source.includes('computeSheenLighting(preInfo,normalW,'), 'sheen uses the function normal');
   }
 });
+
+import { parseShadows, transformScale } from '../src/babylon/MarkerRaster';
+
+test('marker raster reads computed box shadows and hover scale', () => {
+  assert.deepEqual(parseShadows('rgba(0, 0, 0, 0.47) 0px 2px 9px 0px, rgba(16, 33, 48, 0.667) 0px 0px 0px 2px'), [
+    { color: 'rgba(0, 0, 0, 0.47)', x: 0, y: 2, blur: 9, spread: 0 },
+    { color: 'rgba(16, 33, 48, 0.667)', x: 0, y: 0, blur: 0, spread: 2 },
+  ]);
+  assert.deepEqual(parseShadows('none'), []);
+  assert.deepEqual(parseShadows('rgba(0, 0, 0, 0.5) 0px 0px 4px 0px inset'), []);
+  assert.deepEqual(parseShadows('rgba(0, 0, 0, 0) 0px 2px 4px 0px'), []);
+  assert.equal(transformScale('none'), 1);
+  assert.equal(transformScale('matrix(1.4, 0, 0, 1.4, -18.2, -18.2)'), 1.4);
+  assert.equal(transformScale('matrix(1, 0, 0, 1, -13, -13)'), 1);
+});

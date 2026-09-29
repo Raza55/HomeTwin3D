@@ -1,0 +1,6 @@
+/* WebGL marker layer: the marker elements stay in the DOM as invisible sources
+   of appearance, state and accessibility (see src/babylon/MarkerLayer.ts). */
+[data-map-marker]{clip-path:inset(50%)!important;pointer-events:none!important;transition:none!important}
+/* Mouse hover is forwarded from the canvas as an attribute; mirrors the :hover rules. */
+.cluster-map-marker[data-map-marker=hover]{transform:translate(-50%,-50%) scale(1.4);z-index:21}
+.blind-map-marker[data-map-marker=hover] .blind-marker-caption{display:block}

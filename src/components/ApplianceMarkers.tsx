@@ -1,4 +1,5 @@
-import { getMarkerProjection, setMarkerStyle } from '../babylon/MarkerProjection';
+import { setMarkerStyle } from '../babylon/MarkerProjection';
+import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import {useEffect,useRef,useState} from 'react';
 import {WashingMachine,Pencil,X} from 'lucide-react';
 import {Vector3,type Scene} from '@babylonjs/core';
@@ -23,31 +24,18 @@ export default function ApplianceMarkers({scene,config,states,connected,onAssign
   document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
   return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
  },[]);
- useEffect(()=>{
-  const targets=objects.map(o=>({o,mesh:scene.meshes.find(m=>floorplanId(m)===o.id&&m.getTotalVertices()>0)}));
-  const observer=scene.onAfterRenderObservable.add(()=>{
-   const projection = getMarkerProjection(scene); if (!projection) return;
-   const { rect, width: w, height: h } = projection;
-   const placed: Array<{x:number;y:number;height:number}>=[];
-   for(const {o,mesh} of targets){
-    const el=refs.current[o.id];if(!el)continue;
-    const center=mesh?.getBoundingInfo().boundingBox.centerWorld??new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1);
-    // Washer and dryer remain accessible through walls and furniture.
-    const p=projection.project(center);
-    setMarkerStyle(el, 'display', p.z<0||p.z>1||p.x<0||p.x>w||p.y<0||p.y>h?'none':'flex');
-    const x=rect.left+p.x/w*rect.width,height=32;
-    let y=rect.top+p.y/h*rect.height;
-    for(const prior of placed)if(Math.abs(x-prior.x)<38&&Math.abs(y-prior.y)<(height+prior.height)/2+6)y=prior.y+(height+prior.height)/2+6;
-    placed.push({x,y,height});
-    setMarkerStyle(el, 'left', `${x}px`);setMarkerStyle(el, 'top', `${y}px`);
-    if(o.id===open&&popup.current){
-     const panel=popup.current;
-     setMarkerStyle(panel, 'left', `${Math.max(8,Math.min(window.innerWidth-panel.offsetWidth-8,x+24))}px`);
-     setMarkerStyle(panel, 'top', `${Math.max(8,Math.min(window.innerHeight-panel.offsetHeight-8,y-panel.offsetHeight/2))}px`);
-    }
-   }
-  });return()=>{scene.onAfterRenderObservable.remove(observer);};
- },[scene,config,open]);
+ // Washer and dryer remain accessible through walls and furniture.
+ const markers=useMapMarkers(scene,()=>objects.map(o=>{
+  const mesh=scene.meshes.find(m=>floorplanId(m)===o.id&&m.getTotalVertices()>0);
+  const fallback=new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1);
+  return {id:o.id,element:()=>refs.current[o.id],display:'flex',stack:{group:'appliance',width:32,height:32},
+   anchor:(out:Vector3)=>out.copyFrom(mesh?.getBoundingInfo().boundingBox.centerWorld??fallback)};
+ }),[config]);
+ useMarkerPlacement(scene,markers,open,({x,y})=>{
+  const panel=popup.current;if(!panel)return;
+  setMarkerStyle(panel,'left',`${Math.max(8,Math.min(window.innerWidth-panel.offsetWidth-8,x+24))}px`);
+  setMarkerStyle(panel,'top',`${Math.max(8,Math.min(window.innerHeight-panel.offsetHeight-8,y-panel.offsetHeight/2))}px`);
+ });
  return <>{objects.map(o=>{
   const a=o.appliance!,running=connected&&applianceRunning(a,states[o.entityId]);
   const rest=connected?applianceRemaining(states[a.remainingEntityId??'']):'';

@@ -2,7 +2,8 @@ import {Mesh,MeshBuilder,StandardMaterial,Vector3,DynamicTexture,VertexData,type
 
 /** Photo-based courtyard details in metres. Static parts are batched by material. */
 export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,groundY:number,
- treeCenter:{x:number;z:number},pathX:number,material:(name:string,color:string)=>StandardMaterial){
+ treeCenter:{x:number;z:number},pathX:number,material:(name:string,color:string)=>StandardMaterial,
+ playCenter:{x:number;z:number}={x:treeCenter.x-1,z:treeCenter.z+23},benchAnchorZ=treeCenter.z){
  const bark=material('courtyard-plane-bark','#9c9c80'),patch=material('courtyard-bark-cream','#d1cab0');
  const foliage=['#516a34','#698440','#7e9148','#415d31'].map((c,i)=>material('courtyard-leaf-'+i,c));
  const timber=material('courtyard-weathered-timber','#98917c'),concrete=material('courtyard-vent-concrete','#b9b5a4');
@@ -30,7 +31,7 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
   const data=new VertexData();data.positions=positions;data.indices=indices;data.uvs=uvs;const normals:number[]=[];VertexData.ComputeNormals(positions,indices,normals);data.normals=normals;mat.backFaceCulling=false;
   const m=new Mesh(name,scene);data.applyToMesh(m);return add(m,mat,p(x,y,z));
  };
- const {x:tx,z:tz}=treeCenter;
+ const {x:tx,z:tz}=treeCenter,bz=benchAnchorZ;
  groundPatch('plane-grove-earth',tx,tz,11,11,soil);
  // Five separate trees around the clearing: open lower trunks and forked crowns.
  for(let i=0;i<5;i++){
@@ -58,7 +59,7 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  // First plinth starts 2.15 m beyond the entrance centre, clear of the side path.
  const benchShift=6.5,benchX=pathX-2.05; // 1.08 m half-path + 0.78 m half-plinth + narrow verge.
  for(let i=0;i<2;i++){
-  const z=tz+benchShift-3.1+i*5.2;
+  const z=bz+benchShift-3.1+i*5.2;
   box('vent-bench-plinth',p(benchX,.09,z),1.55,.18,4.5,concrete);
   box('vent-bench-body',p(benchX,.46,z),1.35,.65,4.2,concrete);
   for(const side of [-1,1]){
@@ -67,10 +68,10 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
   }
   for(let n=0;n<11;n++)box('vent-bench-seat-slat',p(benchX,.825,z-1.95+n*.39),1.48,.09,.355,timber);
  }
- const bin=add(MeshBuilder.CreateCylinder('courtyard-bin',{height:.85,diameter:.38,tessellation:12},scene),dark,p(benchX-1.2,.7,tz+benchShift+5));
+ const bin=add(MeshBuilder.CreateCylinder('courtyard-bin',{height:.85,diameter:.38,tessellation:12},scene),dark,p(benchX-1.2,.7,bz+benchShift+5));
  box('bin-post',p(bin.position.x-center.x,.28,bin.position.z-center.z),.08,.56,.08,metal);
  // The balcony looks further along the courtyard, toward a small sand play area.
- const playX=tx-1,playZ=tz+23;
+ const playX=playCenter.x,playZ=playCenter.z;
  groundPatch('playground-sand',playX,playZ,5.7,4.2,sand,.03);
  const posts=[[-3,-1,2.4],[-.6,-1.5,2.8],[1.8,-.5,2.3],[2.5,1.5,1.5],[-1,1.6,1.1]];
  for(const [x,z,h] of posts)branch('playground-timber-post',p(playX+x,0,playZ+z),p(playX+x,h,playZ+z),.12,timber);
@@ -96,8 +97,10 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  for(let i=0;i<3;i++)box('playground-bench-back-slat',p(seatX-.28,.66+i*.12,seatZ),.065,.10,1.95,timber);
  // Loose multi-stem shrubs and young trees leave the play area and existing paths clear.
  const shrubs=[[-7,13],[-4,14],[3,14],[6,16],[-8,20],[7,22],[-6,29],[0,30],[5,30],[8,27],[-7,7],[8,-4.5]];
+ // Offsets were laid out with the play area at (-1, 23) from the grove; the far ones follow the play area.
+ const aroundPlay=(dx:number,dz:number)=>dz>10?[playX+1+dx,playZ-23+dz]:[tx+dx,tz+dz];
  for(const [i,[dx,dz]] of shrubs.entries()){
-  const x=tx+dx,z=tz+dz,h=1.5+(i%3)*.55;
+  const [x,z]=aroundPlay(dx,dz),h=1.5+(i%3)*.55;
   for(let k=0;k<5;k++){
    const a=k*2.4,top=p(x+Math.cos(a)*.7,h,z+Math.sin(a)*.7);
    branch('shrub-stem',p(x,.05,z),top,.028);
@@ -105,18 +108,18 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
   }
  }
  // Larger multi-stem shrub at the beginning of the shifted ventilation seats.
- const entryShrubX=benchX-.25,entryShrubZ=tz+benchShift-7.5;
+ const entryShrubX=benchX-.25,entryShrubZ=bz+benchShift-7.5;
  for(let k=0;k<7;k++){
   const a=k*2.4,top=p(entryShrubX+Math.cos(a)*.9,2.55,entryShrubZ+Math.sin(a)*.9);
   branch('bench-entry-shrub-stem',p(entryShrubX,.05,entryShrubZ),top,.038);
   for(let n=0;n<19;n++)tuft(top.add(new Vector3((random()-.5)*1.8,(random()-.4)*2,(random()-.5)*1.8)),.20+random()*.24,foliage[(k+n)%4]);
  }
  for(const [dx,dz] of [[2,12],[-5,25],[6,34]]){
-  const x=tx+dx,z=tz+dz;branch('young-tree-trunk',p(x,0,z),p(x,4.7,z),.09);
+  const [x,z]=aroundPlay(dx,dz);branch('young-tree-trunk',p(x,0,z),p(x,4.7,z),.09);
   groundPatch('young-tree-mulch',x,z,.9,.9,soil,.035);
   for(let i=0;i<22;i++){const a=i*2.4,y=2.6+random()*2.8,r=(5.9-y)*.38;const tip=p(x+Math.cos(a)*r,y,z+Math.sin(a)*r);branch('young-tree-branch',p(x,y-.7,z),tip,.025);tuft(tip,.5,foliage[i%4]);}
  }
  // Geometry is static: reduce thousands of individual details to one draw per material.
  for(const [mat,parts] of batches){const merged=Mesh.MergeMeshes(parts,true,true,undefined,false,false);if(merged){merged.name=mat.name+'-batch';merged.material=mat;merged.parent=parent;merged.isPickable=false;merged.receiveShadows=true;}}
- return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,tz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,dispose:()=>textures.forEach(t=>t.dispose())};
+ return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,dispose:()=>textures.forEach(t=>t.dispose())};
 }

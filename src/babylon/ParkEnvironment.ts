@@ -1,7 +1,7 @@
 import {MeshBuilder,Mesh,StandardMaterial,ShaderMaterial,ShaderLanguage,Color3,Vector3,VertexData,Curve3,Scene,type AbstractMesh} from '@babylonjs/core';
 import {mapToModel,hostBuildingLayout,SITE_SCALE,type FrontFacade} from './SiteLayout';
 import {createResidentialFacadeTexture} from './ResidentialFacade';
-import {referenceBuildings,referencePaths,referenceRoundabouts,referenceTransform,triangulateFootprint} from './SiteReference';
+import {referenceBuildings,referencePaths,referenceTrees,referenceRoundabouts,referenceTransform,triangulateFootprint,REFERENCE_GROVE,REFERENCE_PLAYGROUND} from './SiteReference';
 import {createCourtyardDetails} from './CourtyardDetails';
 import {createParkAtmosphereUpdater} from './ParkAtmosphere';
 import {ExteriorMeshPool} from './ExteriorMeshPool';
@@ -34,29 +34,33 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  const world=(u:number,v:number,y=groundY)=>{const [x,z]=mapToModel(u,v);return new Vector3(center.x+x,y,center.z+z);};
  place(MeshBuilder.CreateGround('park-base',{width:360,height:360},scene),grass,center.x,groundY-.02,center.z);
  const host=hostBuildingLayout(size.x,size.z,frontFacade?{slope:frontFacade.slope,intercept:frontFacade.intercept+frontFacade.slope*center.x-center.z}:undefined);
- const walkway=(name:string,points:number[][],width:number,mat:StandardMaterial,modelSpace=false)=>{
-  const line=Curve3.CreateCatmullRomSpline(points.map(([u,v])=>modelSpace?new Vector3(center.x+u,groundY+.008,center.z+v):world(u,v,groundY+.008)),12).getPoints();
+ // Roads sit slightly above footpaths so crossings never z-fight.
+ const walkway=(name:string,points:number[][],width:number,mat:StandardMaterial,modelSpace=false,lift=.008)=>{
+  const line=Curve3.CreateCatmullRomSpline(points.map(([u,v])=>modelSpace?new Vector3(center.x+u,groundY+lift,center.z+v):world(u,v,groundY+lift)),12).getPoints();
   const left:Vector3[]=[],right:Vector3[]=[];
   line.forEach((p,i)=>{const tangent=line[Math.min(i+1,line.length-1)].subtract(line[Math.max(0,i-1)]).normalize();const normal=new Vector3(-tangent.z,0,tangent.x).scale(width/2);left.push(p.add(normal));right.push(p.subtract(normal));});
   const mesh=place(MeshBuilder.CreateRibbon(name,{pathArray:[left,right],sideOrientation:Mesh.DOUBLESIDE},scene),mat,0,0,0);if(modelSpace)mesh.parent=hostRoot;
  };
  const near=halfX+3;
  const pathX=host.entrance[0]-3.5*SITE_SCALE,entryZ=host.entrance[1];
- const grove:[number,number]=[host.entrance[0]-7*SITE_SCALE-13,entryZ+1];
- const fromReference=referenceTransform(host,grove);
+ // The map is fitted to the host footprint; grove and playground follow their mapped positions.
+ const fromReference=referenceTransform(host);
+ const grove=fromReference(REFERENCE_GROVE),playground=fromReference(REFERENCE_PLAYGROUND);
+ const benchNorth:[number,number]=[pathX,entryZ-5],benchSouth:[number,number]=[pathX,entryZ+14];
  for(const route of referencePaths){
   const points=route.points.map(fromReference);
-  if(route.name==='west-courtyard'||route.name==='north-courtyard')points[0]=[pathX,entryZ-5];
-  if(route.name==='west-courtyard')points[1]=[pathX,entryZ+14];
-  walkway('park-'+route.name,points,route.road?3.5:1.6*SITE_SCALE,route.road?road:path,true);
+  // Run a few metres along the bench-side segment so the joint has no notch.
+  if(route.bench==='end')points.push(benchNorth,[pathX,entryZ-2]);
+  if(route.bench==='start')points.unshift([pathX,entryZ+11],benchSouth);
+  walkway('park-'+route.name,points,route.road?route.width??3.5:(route.width??1.6)*SITE_SCALE,route.road?road:path,true,route.road?.014:.008);
  }
- for(const [i,c] of referenceRoundabouts.entries()){
-  const ring=Array.from({length:33},(_,n)=>fromReference([c[0]+31*Math.cos(n*Math.PI/16),c[1]+31*Math.sin(n*Math.PI/16)]));
-  walkway('park-turning-circle-'+i,ring,3.5,road,true);
+ for(const [i,{center:c,radius}] of referenceRoundabouts.entries()){
+  const ring=Array.from({length:33},(_,n)=>fromReference([c[0]+radius*Math.cos(n*Math.PI/16),c[1]+radius*Math.sin(n*Math.PI/16)]));
+  walkway('park-turning-circle-'+i,ring,3.5,road,true,.014);
  }
  // Keep the short, confirmed entrance and bench-side segment in their current positions.
  walkway('park-home-entrance',[[pathX,entryZ],host.entrance],1.5*SITE_SCALE,path,true);
- walkway('park-bench-side-path',[[pathX,entryZ-5],[pathX,entryZ],[pathX,entryZ+14]],1.6*SITE_SCALE,path,true);
+ walkway('park-bench-side-path',[benchNorth,[pathX,entryZ],benchSouth],1.6*SITE_SCALE,path,true);
  const setbackHeight=2.0;
  const building=(name:string,points:[number,number][],height:number)=>{
   const poly=points.map(([x,z])=>new Vector3(center.x+x,groundY,center.z+z));
@@ -112,9 +116,10 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  // Five complete texture rows: four full floors and one setback floor.
  const neighborHeight=4*2.7+setbackHeight;
  for(const block of referenceBuildings)building('context-house-'+block.id,block.points.map(fromReference),neighborHeight*SITE_SCALE);
- const trees=[[17,-31],[24,-26],[21,34],[15,46],[37,51],[2,-46],[-23,-21],[62,-22],[60,12],[55,39],[-32,62],[26,-44]];
- trees.forEach(([u,v],i)=>{
-  const h=2.2+(i%4)*.4,p=world(u,v);
+ // Trees stand on the map's tree symbols; root is scaled, so convert model space into its local space.
+ referenceTrees.forEach((point,i)=>{
+  const [x,z]=fromReference(point),h=2.2+(i%4)*.4;
+  const p=new Vector3((center.x+x-root.position.x)/SITE_SCALE,groundY,(center.z+z-root.position.z)/SITE_SCALE);
   place(pool.create(`trunk:${h}`,'park-trunk',()=>MeshBuilder.CreateCylinder('park-trunk',{height:h,diameter:.24,tessellation:7},scene)),wood,p.x,groundY+h/2,p.z);
   for(let k=0;k<3;k++){
    const a=k*2.1+i,offset=k===0?0:.75;
@@ -123,8 +128,8 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  });
  // Photo references: open plane-tree grove, ventilation benches and balcony play area.
  const courtyard=createCourtyardDetails(scene,hostRoot,center,groundY,
-  {x:host.entrance[0]-7*SITE_SCALE-13,z:entryZ+1},pathX,material);
- scene.metadata={...scene.metadata,courtyard,siteReference:{north:fromReference([285,45]),south:fromReference([285,940])}};
+  {x:grove[0],z:grove[1]},pathX,material,{x:playground[0],z:playground[1]},entryZ+1);
+ scene.metadata={...scene.metadata,courtyard,siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
  // Everything above is static: one draw per material instead of ~100 meshes and instances.
  const merge=mergeStaticExterior([root,hostRoot],hostRoot,m=>m.name.endsWith('-batch'));
  hostRoot.getChildMeshes(false).forEach(m=>{if(m.name.endsWith('-batch'))m.freezeWorldMatrix();});

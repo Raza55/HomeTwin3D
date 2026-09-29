@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {referenceBuildings,referenceTransform,triangulateFootprint} from '../src/babylon/SiteReference.ts';
+import {referenceBuildings,referenceTransform,triangulateFootprint,REFERENCE_GROVE,REFERENCE_HOST} from '../src/babylon/SiteReference.ts';
 const area=p=>Math.abs(p.reduce((s,a,i)=>{const b=p[(i+1)%p.length];return s+a[0]*b[1]-a[1]*b[0];},0)/2);
 test('concave roof triangles cover exactly the footprint, in both winding directions',()=>{
  for(const block of referenceBuildings)for(const points of [block.points,[...block.points].reverse()]){
@@ -9,9 +9,11 @@ test('concave roof triangles cover exactly the footprint, in both winding direct
   assert.ok(Math.abs(sum-area(points))<1e-7,`roof ${block.id}`);
  }
 });
-test('map transform preserves distances uniformly and the established grove position',()=>{
- const transform=referenceTransform({footprint:[[-8,-40],[-8,10]]},[-30,-10]);
- const g=transform([285,521]);assert.ok(Math.hypot(g[0]+30,g[1]+10)<1e-8);
+test('map transform fits building 99 to the host footprint without stretching',()=>{
+ // A reflected, rotated, scaled copy of the reference building must be recovered exactly.
+ const k=.26,c=Math.cos(.4),sn=Math.sin(.4),model=([x,y])=>[3+k*(-c*x+sn*y),-7+k*(sn*x+c*y)];
+ const transform=referenceTransform({footprint:REFERENCE_HOST.map(model)});
+ for(const p of [...REFERENCE_HOST,REFERENCE_GROVE,[0,0],[700,900]]){const a=transform(p),b=model(p);assert.ok(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-8);}
  const origin=transform([0,0]),x=transform([100,0]),y=transform([0,100]);
  const u=x.map((v,i)=>v-origin[i]),v=y.map((n,i)=>n-origin[i]);
  assert.ok(Math.abs(Math.hypot(...u)-Math.hypot(...v))<1e-8);

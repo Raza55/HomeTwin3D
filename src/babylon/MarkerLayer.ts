@@ -81,6 +81,7 @@ export function getMarkerLayer(scene: Scene): MarkerLayer {
   if (!layer) {
     layer = new MarkerLayer(scene, markerLayerMode());
     layers.set(scene, layer);
+    if (import.meta.env?.DEV) (window as Window & { __markerLayer?: MarkerLayer }).__markerLayer = layer;
     scene.onDisposeObservable.addOnce(() => { layer!.dispose(); layers.delete(scene); });
   }
   return layer;
@@ -189,10 +190,16 @@ export class MarkerLayer {
     element.removeAttribute(PROXY_ATTRIBUTE);
   }
 
-  /** Writes to a proxy element without re-rasterizing it. */
+  /**
+   * Writes the proxy's position without re-rasterizing it. Only the layer's own
+   * style write is dropped: other pending changes (hover attribute, classes the
+   * component toggled in a forwarded event) still re-rasterize.
+   */
   quietly(marker: Marker, write: () => void): void {
+    const pending = marker.mutations.takeRecords();
     write();
     marker.mutations.takeRecords();
+    if (pending.length) { marker.dirty = true; this.requestRender(); }
   }
 
   dispose(): void {

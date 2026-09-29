@@ -89,8 +89,14 @@ test('unchanged light updates do not resync meshes or invalidate shadow maps', (
     assert.equal(enabledCalls, 1);
     assert.equal(light.intensity, 0);
     assert.equal(shadowInvalidations, 0);
+    // Doors and blinds mark maps of switched-off lights stale themselves (Babylon keeps
+    // that flag), so a scene with many lamps no longer re-renders every map at once.
     applyFloorplanLightState(rig, config, state);
-    assert.equal(shadowInvalidations, 1, 'turning back on refreshes geometry that may have moved while off');
+    assert.equal(shadowInvalidations, 0, 'switching back on reuses the unchanged map');
+    applyFloorplanLightState(rig, config, { ...state, state: 'off' });
+    (light as typeof light & { position: Vector3 }).position.x += 1;
+    applyFloorplanLightState(rig, config, state);
+    assert.equal(shadowInvalidations, 1, 'a light moved while off renders a fresh map');
   } finally { scene.dispose(); engine.dispose(); }
 });
 
@@ -252,5 +258,41 @@ test('blind shadow invalidation follows actual geometry, not repeated or unavail
     assert.equal(updateBlindState(entry,state),false);
     assert.equal(updateBlindState(entry,{...state,attributes:{current_position:25}}),true);
     assert.equal(updateBlindState(entry,{...state,state:'opening',attributes:{}}),false);
+  } finally { scene.dispose(); engine.dispose(); }
+});
+
+test('glow pass draws emissive and moving meshes plus merged static occluders only', async () => {
+  const { RenderTargetTexture } = await import('@babylonjs/core');
+  const { setupGlowOccluders } = await import('../src/babylon/GlowOccluder');
+  const engine = new NullEngine(), scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 20, Vector3.Zero(), scene);
+    const matte = new StandardMaterial('matte', scene), glowing = new StandardMaterial('glowing', scene);
+    glowing.emissiveColor = new Color3(1, .5, 0);
+    const wall = MeshBuilder.CreateBox('wall', { width: 4, height: 2.5, depth: .2 }, scene);
+    const cup = MeshBuilder.CreateBox('cup', { size: .1 }, scene);
+    const lamp = MeshBuilder.CreateBox('lamp', { size: 1 }, scene);
+    const door = MeshBuilder.CreateBox('door', { width: 1, height: 2, depth: .05 }, scene);
+    door.metadata = { gltf: { extras: { ha_room_door: 'hall' } } };
+    for (const mesh of [wall, cup, door]) mesh.material = matte;
+    lamp.material = glowing;
+    lamp.position.x = 10; // separate occluder cell
+    const texture = new RenderTargetTexture('glow-main', 64, scene);
+    const glow = { _mainTexture: texture } as never;
+    const occluders = setupGlowOccluders(scene, glow, [wall, cup, lamp, door]);
+    scene.render();
+    const cells = scene.meshes.filter(m => m.metadata?.glowOccluder);
+    assert.equal(cells.length, 2, 'wall and lamp are merged; cup is too small, door moves');
+    assert.ok(cells.every(m => !m.isEnabled()), 'occluders stay invisible to every other pass');
+    const drawn = texture.getCustomRenderList!(0, [wall, cup, lamp, door], 4)!;
+    assert.ok(drawn.includes(lamp) && drawn.includes(door));
+    assert.ok(!drawn.includes(wall) && !drawn.includes(cup));
+    assert.equal(drawn.filter(m => m.metadata?.glowOccluder).length, 2);
+    // Hidden sources leave their cell; the occluder must not keep blocking the view.
+    wall.isVisible = false;
+    scene.render();
+    assert.equal(scene.meshes.filter(m => m.metadata?.glowOccluder).length, 1);
+    occluders.dispose();
+    assert.equal(texture.getCustomRenderList, null);
   } finally { scene.dispose(); engine.dispose(); }
 });

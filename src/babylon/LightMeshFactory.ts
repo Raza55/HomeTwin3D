@@ -201,7 +201,8 @@ export function createLightMesh(
     if (cfg.hitbox) {
       const hbShape = cfg.hitbox.shape;
       const hbSz = cfg.hitbox.size || {};
-      hitboxMesh = createShapeMesh(scene, `hitbox_${id}`, hbShape, hbSz, { sphere: 0.5, box: 0.5 });
+      // Touch zones are faint or wireframe: 12 segments pick identically with 1/7 of the triangles.
+      hitboxMesh = createShapeMesh(scene, `hitbox_${id}`, hbShape, hbSz, { sphere: 0.5, box: 0.5 }, HITBOX_SEGMENTS);
       const hbPos = cfg.hitbox.position
         ? new Vector3(cfg.hitbox.position.x, cfg.hitbox.position.y, cfg.hitbox.position.z)
         : pos.clone();
@@ -219,7 +220,7 @@ export function createLightMesh(
     } else {
       const dimensions = getShapeDimensions(cfg.shape ?? 'sphere', cfg.size ?? {});
       const diameter = Math.max(dimensions.x, dimensions.y, dimensions.z, 0.45);
-      hitboxMesh = MeshBuilder.CreateSphere(`hitbox_${id}`, { diameter }, scene);
+      hitboxMesh = MeshBuilder.CreateSphere(`hitbox_${id}`, { diameter, segments: HITBOX_SEGMENTS }, scene);
       hitboxMesh.position = pos.clone();
     }
     hitboxMesh.metadata = { entityId: cfg.entityId };
@@ -403,6 +404,8 @@ function createPointShadowGen(
   return sg;
 }
 
+const HITBOX_SEGMENTS = 12;
+
 /** Create a primitive mesh for a configured light shape. */
 function createShapeMesh(
   scene: Scene,
@@ -410,6 +413,7 @@ function createShapeMesh(
   shape: LightPart['shape'],
   size: LightSize,
   fallback: { sphere: number; box: number } = { sphere: 0.25, box: 0.3 },
+  segments = 32,
 ): Mesh {
   if (shape === 'nanoleafShapes') {
     return createNanoleafShapesMesh(scene, name, size, fallback);
@@ -424,7 +428,7 @@ function createShapeMesh(
   }
 
   if (shape === 'ellipsoid') {
-    const mesh = MeshBuilder.CreateSphere(name, { diameter: 1 }, scene);
+    const mesh = MeshBuilder.CreateSphere(name, { diameter: 1, segments }, scene);
     mesh.scaling = new Vector3(
       size.width ?? size.diameter ?? fallback.box,
       size.height ?? size.diameter ?? fallback.box,
@@ -435,6 +439,7 @@ function createShapeMesh(
 
   return MeshBuilder.CreateSphere(name, {
     diameter: size.diameter ?? fallback.sphere,
+    segments,
   }, scene);
 }
 

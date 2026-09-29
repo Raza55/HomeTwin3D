@@ -159,22 +159,37 @@ export function floorplanLightState(state: HAState, warmth = 2700): { color: Col
   return { color, factor };
 }
 
+/** Light pose at its last activation; a map rendered for another pose is outdated. */
+const activationPoses = new WeakMap<Light, string>();
+function poseKey(light: Light): string {
+  const l = light as Light & { direction?: Vector3 };
+  const p = (light as Light & { getAbsolutePosition?: () => Vector3 }).getAbsolutePosition?.();
+  return `${p?.x},${p?.y},${p?.z}/${l.direction?.x},${l.direction?.y},${l.direction?.z}`;
+}
+
 export function applyFloorplanLightState(rig: FloorplanLightRig, config: LightConfig, state: HAState): Color3 {
   const { color, factor } = floorplanLightState(state, config.warmth);
   const gain = Math.max(0, Math.min(10, config.brightness ?? 1));
-  let activated = false;
   rig.lights.forEach((light, i) => {
     const intensity = rig.sources[i].lumens * factor * gain;
     const enabled = factor > 0 && gain > 0;
-    activated ||= enabled && !light.isEnabled(false);
+    // Depth depends on geometry and light pose, not emitted color or power. Geometry
+    // changes (doors, blinds) already mark the maps of switched-off lights as stale,
+    // and Babylon keeps that flag until the light renders again. Re-rendering every
+    // map on activation made a scene with many lamps stall one frame; only a moved
+    // light still needs a fresh map.
+    if (enabled && !light.isEnabled(false)) {
+      const pose = poseKey(light);
+      if (activationPoses.get(light) !== pose) {
+        activationPoses.set(light, pose);
+        rig.shadows[i]?.getShadowMap()?.resetRefreshCounter();
+      }
+    }
     light.diffuse.copyFrom(color);
     light.intensity = intensity;
     // Babylon resynchronizes all scene meshes even for redundant setEnabled calls.
     if (light.isEnabled(false) !== enabled) light.setEnabled(enabled);
   });
-  // Depth depends on geometry and light pose, not emitted color or power.
-  // Refresh on activation in case geometry changed while the light was off.
-  if (activated) invalidateFloorplanShadows(rig);
   return color.scale(factor); // No artificial minimum brightness for imported fixtures.
 }
 

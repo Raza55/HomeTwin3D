@@ -25,6 +25,7 @@ import { createParkEnvironment } from '../../babylon/ParkEnvironment';
 import { findFrontFacade } from '../../babylon/SiteLayout';
 import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, type SceneContext } from '../../babylon/SceneManager';
 import { batchStaticRendering } from '../../babylon/RenderBatch';
+import { setupGlowOccluders } from '../../babylon/GlowOccluder';
 import { invalidateShadowsNear } from '../../babylon/ShadowRange';
 import { batchStaticSunShadows } from '../../babylon/ShadowCasterBatch';
 import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance } from '../../babylon/ModelLoader';
@@ -1161,6 +1162,8 @@ export default function Dashboard() {
         // Runs last so display/TV material swaps above are already in place.
         batchStaticRendering(ctx.scene, result.meshes,
           Object.values(meshMapRef.current).flatMap(e => e.floorplanRig?.lights ?? []));
+        // Glow pass: emissive meshes plus merged static occluders instead of the whole scene.
+        if (ctx.glowLayer) setupGlowOccluders(ctx.scene, ctx.glowLayer, result.meshes, modelScale);
 
         // Weather effects (rain/snow particles + cloud cover)
         weatherRef.current = createWeatherEffects(ctx.scene, sunShadowGen ?? undefined);

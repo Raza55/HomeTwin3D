@@ -5,6 +5,8 @@ import type { AppConfig, HAState } from '../types';
 import { itStatus } from '../services/itState';
 import { attachITCamera } from '../babylon/ITCameraScreen';
 
+const RGB_STEP_MS=750;
+
 /** Clone only dedicated screen/LED materials, preserving shared furniture. */
 export default function ITVisuals({scene,config,states,connected}: {scene:Scene;config:AppConfig;states:Record<string,HAState>;connected:boolean}) {
   const live=useRef({states,connected});live.current={states,connected};
@@ -38,7 +40,9 @@ export default function ITVisuals({scene,config,states,connected}: {scene:Scene;
         if(!previous || previous.state!==state || previous.connected!==current.connected)
           status.set(device,{state,connected:current.connected,on:itStatus(device,current.states,current.connected)==='on'});
       }
-      const elapsed=performance.now()-start;
+      // The RGB cycle is slow (80 s per turn). Advancing it in 3.4° steps instead of every
+      // frame leaves identical frames in between, so the idle dashboard can skip them.
+      const elapsed=Math.floor((performance.now()-start)/RGB_STEP_MS)*RGB_STEP_MS;
       for(const t of targets){
         if(t.mesh.isDisposed())continue;
         const on=status.get(t.device)?.on??false;

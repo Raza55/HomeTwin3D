@@ -31,6 +31,8 @@ export interface RenderBatchSet {
   /** Resolves recorded lights; returns proxy → lights for batches that stay merged. */
   resolveLights(): Map<Mesh, Light[]>;
   isBatchedSource(mesh: AbstractMesh): boolean;
+  /** Sources merged into a batch proxy (undefined for any other mesh). */
+  sourcesOf(proxy: AbstractMesh): readonly Mesh[] | undefined;
   /** Increments whenever the drawn set changes, so light influence can re-run. */
   readonly version: number;
   readonly stats: { batches: number; sources: number };
@@ -40,7 +42,7 @@ export interface RenderBatchSet {
 const MIN_BATCH_SIZE = 2;
 /** Grid size (scene units, metres at scale 1) for grouping leftover meshes by area. */
 const AREA_CELL = 4;
-const DYNAMIC_EXTRAS = ['ha_id', 'ha_door', 'ha_room_door', 'ha_appliance', 'ha_cutaway'] as const;
+export const DYNAMIC_EXTRAS = ['ha_id', 'ha_door', 'ha_room_door', 'ha_appliance', 'ha_cutaway'] as const;
 
 /** Candidate provider state per scene; also consulted by other explicit render lists. */
 const sceneSets = new WeakMap<Scene, RenderBatchSetImpl>();
@@ -103,6 +105,10 @@ class RenderBatchSetImpl implements RenderBatchSet {
 
   isBatchedSource(mesh: AbstractMesh): boolean {
     return this.sourceToBatch.has(mesh);
+  }
+
+  sourcesOf(proxy: AbstractMesh): readonly Mesh[] | undefined {
+    return this.proxyToBatch.get(proxy)?.sources;
   }
 
   isHidden(mesh: AbstractMesh): boolean {

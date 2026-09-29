@@ -3,15 +3,21 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
+import { startSharedInstallation, watchSharedUpdates } from './services/sharedStore';
 import './App.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <App />
-    </HashRouter>
-  </StrictMode>,
-);
+// Take the newest shared installation (config, model, objects) before the app
+// reads its local copies; offline or without a server this returns quickly.
+void startSharedInstallation().finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <App />
+      </HashRouter>
+    </StrictMode>,
+  );
+  watchSharedUpdates();
+});
 
 if (import.meta.env.PROD) {
   // Auto-update the installed app when a new production version is available.

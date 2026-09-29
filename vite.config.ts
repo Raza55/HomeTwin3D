@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { existsSync, readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { createSharedStoreMiddleware } from './tools/shared-store-middleware.mjs';
 
 export default defineConfig(({ mode, command }) => {
   // Personal settings are never included in the default public production build.
@@ -10,7 +11,11 @@ export default defineConfig(({ mode, command }) => {
   const local = (command === 'serve' || process.env.HOMETWIN_PRIVATE_BUILD === '1') && existsSync(privatePath)
     ? JSON.parse(readFileSync(privatePath, 'utf8')) : {};
   const basePath = mode === 'addon' ? './' : '/HomeTwin3D/';
-  const mediaProxyTarget = loadEnv(mode, '.', '').HA_MEDIA_PROXY_TARGET || local.mediaProxyTarget || 'http://homeassistant.local:8123';
+  const env = loadEnv(mode, '.', '');
+  const mediaProxyTarget = env.HA_MEDIA_PROXY_TARGET || local.mediaProxyTarget || 'http://homeassistant.local:8123';
+  // Shared installation (config, model, objects) for every browser in the LAN.
+  // Data stays in .private/shared; without HOMETWIN_SHARED_PIN it is read-only.
+  const sharedStore = createSharedStoreMiddleware({ base: basePath, dir: '.private/shared', pin: env.HOMETWIN_SHARED_PIN });
 
   return {
     base: basePath,
@@ -20,6 +25,11 @@ export default defineConfig(({ mode, command }) => {
     },
     plugins: [
       react(),
+      {
+        name: 'hometwin-shared-store',
+        configureServer(server) { server.middlewares.use(sharedStore); },
+        configurePreviewServer(server) { server.middlewares.use(sharedStore); },
+      },
       VitePWA({
         registerType: 'autoUpdate',
         // Use the existing manifest files in public/.

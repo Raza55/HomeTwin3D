@@ -19,5 +19,6 @@ RUN apk add --no-cache nginx
 
 COPY --from=builder /app/dist /var/www/html
 COPY nginx.conf /etc/nginx/http.d/default.conf
+RUN touch /etc/nginx/hometwin-pin.map
 COPY run.sh /etc/services.d/nginx/run
 RUN chmod +x /etc/services.d/nginx/run

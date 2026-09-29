@@ -1,6 +1,6 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.2.1"
+version: "0.3.0"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
@@ -17,4 +17,5 @@ init: false
 startup: "application"
 boot: "auto"
 options: {}
-schema: {}
+schema:
+  write_pin: "password?"

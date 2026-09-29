@@ -24,6 +24,7 @@
     "test:tv-dial": "node --test tools/tv-dial.test.mjs",
     "privacy:check": "node tools/check-public-data.mjs",
     "privacy:install": "node tools/install-public-hook.mjs",
+    "test:shared": "node tools/run-shared-tests.mjs",
     "test:privacy": "node --test tools/public-data.test.mjs"
   },
   "dependencies": {

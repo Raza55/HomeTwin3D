@@ -8,6 +8,7 @@ import { useSimulationMode } from '../../contexts/SimulationModeContext';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { getConfig, updateConfig, importBackup, getModelBlob } from '../../services/configApi';
 import { getSettings, getSetting } from '../../services/settingsStore';
+import { joinedSharedInstallation } from '../../services/sharedStore';
 import WelcomeStep from './steps/WelcomeStep';
 import ImportReportStep from './steps/ImportReportStep';
 import HASetupStep, { testHA } from './steps/HASetupStep';
@@ -71,7 +72,8 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [isImportMode, setIsImportMode] = useState(false);
+  // A browser that received the shared installation only needs its own HA connection.
+  const [isImportMode, setIsImportMode] = useState(joinedSharedInstallation);
   const [hasModel, setHasModel] = useState(false);
   const [hasLocation, setHasLocation] = useState(false);
   const [importedHA, setImportedHA] = useState<{ url: string; port: number; token: string; error?: string } | null>(null);
@@ -199,7 +201,10 @@ export default function Onboarding() {
   // Connect: Welcome → HA → Model → Location → Done
   // Import:  Welcome → Report → (HA →) Dashboard  (HA only if connection failed)
   // Simulation: goes directly to dashboard (not through these steps)
-  const pathSteps: number[] = isImportMode
+  // Shared installation (no backup report): Welcome → HA → Dashboard
+  const pathSteps: number[] = isImportMode && !importReport
+    ? [0, 2]
+    : isImportMode
     ? importReport?.haStatus === 'success'
       ? [0, 1]           // report then dashboard
       : [0, 1, 2]        // report then HA then dashboard

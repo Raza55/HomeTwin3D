@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { buildWsUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
+import SharedInstallationSettings from './SharedInstallationSettings';
 import { getConfig, getModelBlob, resetConfig, updateConfig, exportBackup, importBackup, uploadModel, restoreModel } from '../services/configApi';
 import { clearSettings, getSetting, getSettings, updateSettings } from '../services/settingsStore';
 import { MODEL_SCALE_MAX, MODEL_SCALE_MIN, normalizeModelScale } from '../babylon/SceneScale';
@@ -1247,6 +1248,8 @@ export default function SettingsModal({
 
             {(section === 'system' || (animating && prevSection === 'system')) && (
               <div className="settings-page">
+                <SharedInstallationSettings />
+
                 <div className="settings-section">
                   <div className="settings-section-label">{t('settings.backup')}</div>
                   <div className="settings-actions">

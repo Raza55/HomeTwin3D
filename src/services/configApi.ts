@@ -13,6 +13,7 @@ import {
 import { getSettings, setAllSettings, type AppSettings } from './settingsStore';
 import { isSimulationActive } from '../contexts/SimulationModeContext';
 import { systemLocationWithNorthOffset } from '../constants/location';
+import { markSharedChange } from './sharedStore';
 
 const CONFIG_KEY = 'config';
 
@@ -39,6 +40,11 @@ function normalizeConfig(config: Partial<AppConfig>): AppConfig {
       importedObjects: config.model?.importedObjects ?? [],
     },
   };
+}
+
+/** Store a complete config as received from the shared installation (no change notification). */
+export function writeStoredConfig(config: AppConfig): void {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(normalizeConfig(config)));
 }
 
 /** Returns true if a config has been saved to localStorage. */
@@ -96,6 +102,8 @@ export function updateConfig(data: {
   const merged = { ...current, ...data };
   merged.floorplanBindings = collectFloorplanBindings(merged);
   localStorage.setItem(CONFIG_KEY, JSON.stringify(merged));
+  // The per-browser onboarding flag alone is not a shared change.
+  if (Object.keys(data).some(key => key !== 'onboarding')) markSharedChange('config');
 }
 
 /** Store a GLB model in IndexedDB. Accepts Blob so a failed replacement can be rolled back. */
@@ -105,6 +113,7 @@ export async function uploadModel(model: Blob, importEntities = true): Promise<v
   const next = importEntities ? mergeFloorplan(previous, manifest) : previous;
   const previousBlob = await dbGetModel();
   await dbSaveModel(model);
+  markSharedChange('model');
   try {
     if (importEntities) updateConfig(next);
   } catch (error) {
@@ -122,11 +131,13 @@ export async function getModelBlob(): Promise<Blob | null> {
 export async function restoreModel(model: Blob | null, config: AppConfig): Promise<void> {
   if (model) await dbSaveModel(model);
   else await dbDeleteModel();
+  markSharedChange('model');
   updateConfig(config);
 }
 
 export async function uploadModelObject(id: string, file: File): Promise<void> {
   await dbSaveObjectAsset(id, file);
+  markSharedChange({ object: id });
 }
 
 export async function getModelObjectBlob(id: string): Promise<Blob | null> {
@@ -135,6 +146,7 @@ export async function getModelObjectBlob(id: string): Promise<Blob | null> {
 
 export async function deleteModelObjectAsset(id: string): Promise<void> {
   await dbDeleteObjectAsset(id);
+  markSharedChange({ deleted: id });
 }
 
 /** Remove config from localStorage and model from IndexedDB. */
@@ -193,6 +205,7 @@ export async function importBackup(file: File): Promise<{ ok: boolean; hasModel:
   if (bindingsFile) importedConfig = importFloorplanBindings(importedConfig, JSON.parse(await bindingsFile.async('string')));
 
   localStorage.setItem(CONFIG_KEY, JSON.stringify(importedConfig));
+  markSharedChange('config');
 
   // Settings (if present in backup)
   let hasSettings = false;
@@ -221,6 +234,7 @@ export async function importBackup(file: File): Promise<{ ok: boolean; hasModel:
   if (modelFile) {
     const modelBlob = await modelFile.async('blob');
     await dbSaveModel(modelBlob);
+    markSharedChange('model');
     hasModel = true;
   }
 
@@ -229,6 +243,7 @@ export async function importBackup(file: File): Promise<{ ok: boolean; hasModel:
     if (!objectFile) continue;
     const objectBlob = await objectFile.async('blob');
     await dbSaveObjectAsset(object.id, objectBlob);
+    markSharedChange({ object: object.id });
   }
 
   return { ok: true, hasModel, hasSettings };

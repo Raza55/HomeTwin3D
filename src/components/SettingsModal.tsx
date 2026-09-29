@@ -7,7 +7,7 @@ import {
   Monitor, Smartphone, Search, RotateCw, Move,
   Github, HeartHandshake, Scale, Upload, RefreshCw, FileBox, AlertTriangle,
 } from 'lucide-react';
-import { buildWsUrl, type HAConnectionStatus } from '../services/haWebSocket';
+import { haSocketUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
 import SharedInstallationSettings from './SharedInstallationSettings';
 import { getConfig, getModelBlob, resetConfig, updateConfig, exportBackup, importBackup, uploadModel, restoreModel } from '../services/configApi';
@@ -321,7 +321,7 @@ export default function SettingsModal({
     const resetError = () => setTimeout(() => setHaSaveStatus('idle'), 3000);
     let ws: WebSocket;
     try {
-      ws = new WebSocket(buildWsUrl(haUrl, haPort));
+      ws = new WebSocket(haSocketUrl(haUrl, haPort));
     } catch {
       setHaSaveStatus('error');
       resetError();

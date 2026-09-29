@@ -1,7 +1,7 @@
 // Modified for HomeTwin3D: independent add-on repository. See ORIGIN.md.
 import { useState } from 'react';
 import { updateSettings } from '../../../services/settingsStore';
-import { buildWsUrl } from '../../../services/haWebSocket';
+import { haSocketUrl } from '../../../services/haWebSocket';
 import { useTranslation } from '../../../contexts/LanguageContext';
 
 interface Props {
@@ -14,7 +14,7 @@ export async function testHA(url: string, port: number, token: string): Promise<
   return new Promise((resolve) => {
     let ws: WebSocket;
     try {
-      ws = new WebSocket(buildWsUrl(url, port));
+      ws = new WebSocket(haSocketUrl(url, port));
     } catch {
       resolve({ success: false, error: 'Invalid URL' });
       return;

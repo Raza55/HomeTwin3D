@@ -16,6 +16,12 @@ export default defineConfig(({ mode, command }) => {
   // Shared installation (config, model, objects) for every browser in the LAN.
   // Data stays in .private/shared; without HOMETWIN_SHARED_PIN it is read-only.
   const sharedStore = createSharedStoreMiddleware({ base: basePath, dir: '.private/shared', pin: env.HOMETWIN_SHARED_PIN });
+  // LAN HTTPS for `vite preview` (Safari offers WebGPU only on secure pages).
+  // Local certificate from tools/lan-https-cert.mjs; the iPad trusts its CA,
+  // served at <base>hometwin-ca.crt. The dev server keeps plain HTTP.
+  const tlsDir = '.private/tls';
+  const lanTls = existsSync(`${tlsDir}/lan.key`) && existsSync(`${tlsDir}/lan.crt`)
+    ? { key: readFileSync(`${tlsDir}/lan.key`), cert: readFileSync(`${tlsDir}/lan.crt`) } : undefined;
 
   return {
     base: basePath,
@@ -28,7 +34,14 @@ export default defineConfig(({ mode, command }) => {
       {
         name: 'hometwin-shared-store',
         configureServer(server) { server.middlewares.use(sharedStore); },
-        configurePreviewServer(server) { server.middlewares.use(sharedStore); },
+        configurePreviewServer(server) {
+          server.middlewares.use(sharedStore);
+          server.middlewares.use(`${basePath}hometwin-ca.crt`, (_req, res) => {
+            if (!existsSync(`${tlsDir}/ca.crt`)) { res.statusCode = 404; res.end(); return; }
+            res.setHeader('content-type', 'application/x-x509-ca-cert');
+            res.end(readFileSync(`${tlsDir}/ca.crt`));
+          });
+        },
       },
       VitePWA({
         registerType: 'autoUpdate',
@@ -120,6 +133,7 @@ export default defineConfig(({ mode, command }) => {
         },
       },
     },
+    preview: { https: lanTls },
     server: {
       port: 5187,
       strictPort: true,
@@ -128,6 +142,13 @@ export default defineConfig(({ mode, command }) => {
       // QA output, private data and build artifacts are large and change outside the source tree.
       watch: { ignored: ['**/.qa/**', '**/.private/**', '**/dist/**', '**/dist-server/**'] },
       proxy: {
+        // Same-origin Home Assistant WebSocket for HTTPS LAN builds (VITE_HA_WS_PROXY=1).
+        '/HomeTwin3D/ha-ws': {
+          target: mediaProxyTarget,
+          ws: true,
+          changeOrigin: true,
+          rewrite: () => '/api/websocket',
+        },
         '^/HomeTwin3D/ha-camera/camera\\.[a-z0-9_]+(?:\\?|$)': {
           target: mediaProxyTarget,
           changeOrigin: true,

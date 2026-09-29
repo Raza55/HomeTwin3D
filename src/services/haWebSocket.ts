@@ -36,6 +36,17 @@ export function buildWsUrl(url: string, port: number): string {
   return `${protocol}://${host}:${port}/api/websocket`;
 }
 
+/**
+ * URL for the actual WebSocket. A LAN build served over HTTPS (needed for
+ * WebGPU in Safari) cannot open ws:// to a plain-HTTP Home Assistant, so such
+ * builds (VITE_HA_WS_PROXY=1) connect through the preview server's
+ * same-origin proxy instead. An explicit https:// address still connects directly.
+ */
+export function haSocketUrl(url: string, port: number): string {
+  const proxied = import.meta.env?.VITE_HA_WS_PROXY === '1' && window.location.protocol === 'https:' && !/^(?:https|wss):/i.test(url.trim());
+  return proxied ? `wss://${window.location.host}${import.meta.env.BASE_URL}ha-ws` : buildWsUrl(url, port);
+}
+
 export class HAConnection {
   private ws: WebSocket | null = null;
   private msgId = 1;
@@ -69,7 +80,7 @@ export class HAConnection {
     this.callbacks.onStatusChanged?.('connecting');
 
     const { url, port } = this.options;
-    const wsUrl = buildWsUrl(url, port);
+    const wsUrl = haSocketUrl(url, port);
     try {
       this.ws = new WebSocket(wsUrl);
     } catch (err) {

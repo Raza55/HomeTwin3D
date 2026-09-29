@@ -10,6 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "lan:cert": "node tools/lan-https-cert.mjs",
+    "build:lan": "node tools/build-lan.mjs",
     "test:floorplan": "node --test tools/floorplan.test.mjs tools/floorplan-matching.test.mjs tools/light-clusters.test.mjs tools/hue-sync.test.mjs",
     "test:media": "node --test tools/tv-media.test.mjs",
     "test:balcony": "node --test tools/balcony.test.mjs",

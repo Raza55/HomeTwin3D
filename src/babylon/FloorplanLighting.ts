@@ -3,6 +3,7 @@ import type { FloorplanEmitter, HAState, LightConfig } from '../types';
 import { kelvinToRGB } from '../utils/color';
 import { getRenderBatchSet } from './RenderBatch';
 import { limitShadowCastersToRange } from './ShadowRange';
+import { isTabletClass } from './DeviceClass';
 
 export interface FloorplanLightRig {
   lights: Array<PointLight | SpotLight>;
@@ -72,8 +73,7 @@ export function invalidateFloorplanShadows(rig?: FloorplanLightRig): void {
 export function floorplanLightBudget(): number {
   const requested = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('lights');
   if (requested !== null && /^\d$/.test(requested)) return Math.min(6, Number(requested));
-  const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-  return coarse ? 2 : 6;
+  return isTabletClass() ? 2 : 6;
 }
 
 export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLightRig[], meshes: AbstractMesh[], budget = floorplanLightBudget()): void {
@@ -380,8 +380,7 @@ export function clusteredLightingMode(): 'off' | 'multi' | 'all' {
   const requested = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('cluster');
   if (requested === '0' || requested === 'off') return 'off';
   if (requested === 'all' || requested === 'multi') return requested;
-  const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-  return coarse ? 'off' : 'multi';
+  return isTabletClass() ? 'off' : 'multi';
 }
 
 /**

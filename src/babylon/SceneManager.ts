@@ -25,6 +25,7 @@ import { installShaderFixes } from './ShaderFixes';
 import { debugDevicePixelRatio } from './DebugFlags';
 import { setupSnapshotRendering } from './SnapshotRendering';
 import { setMarkerRenderRequest } from './MarkerLayer';
+import { isTabletClass } from './DeviceClass';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -128,10 +129,10 @@ function capMaterialLights(scene: Scene, limit: number): void {
 }
 
 /** Texture size limit for this device, or 0 for none (see createScene). */
-function maxTextureSizeFor(coarsePointer: boolean): number {
+function maxTextureSizeFor(tablet: boolean): number {
   const requested = new URLSearchParams(location.search).get('maxtex');
   if (requested !== null) return Math.max(0, Number(requested) || 0);
-  return coarsePointer ? 2048 : 0;
+  return tablet ? 2048 : 0;
 }
 
 /**
@@ -183,8 +184,8 @@ export function createScene(
   installUniformNameCache();
   installShaderFixes();
 
-  const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-  const maxDevicePixelRatio = debugDevicePixelRatio() ?? options?.maxDevicePixelRatio ?? (coarsePointer ? 1.5 : 2);
+  const tablet = isTabletClass();
+  const maxDevicePixelRatio = debugDevicePixelRatio() ?? options?.maxDevicePixelRatio ?? (tablet ? 1.5 : 2);
 
   const engine = existingEngine ?? new Engine(canvas, true, {
     preserveDrawingBuffer: options?.preserveDrawingBuffer ?? false,
@@ -194,7 +195,7 @@ export function createScene(
   // Tablets (Safari/iPadOS) reload a tab under memory pressure. Textures above
   // 2048 px are scaled down on upload there; on an 11-13" screen this is not
   // visible. PCs keep full resolution. `?maxtex=<px>` (0 = unlimited) overrides.
-  const textureLimit = maxTextureSizeFor(coarsePointer);
+  const textureLimit = maxTextureSizeFor(tablet);
   if (textureLimit && !engine.isWebGPU) {
     const caps = engine.getCaps();
     caps.maxTextureSize = Math.min(caps.maxTextureSize, textureLimit);

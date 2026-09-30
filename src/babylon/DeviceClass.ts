@@ -1,0 +1,14 @@
+/**
+ * Tablets and phones get the lighter rendering tier (fewer lamps per surface,
+ * no clustered lighting, capped pixel ratio and textures): they are GPU- and
+ * memory-bound. An iPad with a keyboard/trackpad case reports a fine primary
+ * pointer, so touch capability decides, not `(pointer: coarse)`. Camera input
+ * handling still follows the pointer type. `?device=tablet|desktop` overrides.
+ */
+export function isTabletClass(): boolean {
+  if (typeof window === 'undefined') return false;
+  const requested = new URLSearchParams(window.location.search).get('device');
+  if (requested === 'tablet') return true;
+  if (requested === 'desktop') return false;
+  return (window.matchMedia?.('(any-pointer: coarse)').matches ?? false) || (navigator.maxTouchPoints ?? 0) > 1;
+}

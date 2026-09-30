@@ -66,6 +66,8 @@ export class SceneChangeMonitor {
   private lights: number[] = [];
   private dynamicVersion = -1;
   private background = '';
+  /** What the last check() found changed first (diagnostics for the perf overlay). */
+  lastReason = '';
 
   constructor(private scene: Scene) {}
 
@@ -92,38 +94,40 @@ export class SceneChangeMonitor {
     const scene = this.scene;
     let changed = false;
     this.stamp++;
+    this.lastReason = '';
+    const note = (reason: string) => { if (!this.lastReason) this.lastReason = reason; changed = true; };
 
     const version = getDynamicTextureVersion();
-    if (version !== this.dynamicVersion) { this.dynamicVersion = version; changed = true; }
+    if (version !== this.dynamicVersion) { this.dynamicVersion = version; note('texture'); }
 
     const background = `${color(scene.clearColor)}/${color(scene.fogColor)}/${scene.fogStart}/${scene.fogEnd}`;
-    if (background !== this.background) { this.background = background; changed = true; }
+    if (background !== this.background) { this.background = background; note('background'); }
 
-    if (this.lightsChanged(scene.lights)) changed = true;
+    if (this.lightsChanged(scene.lights)) note('lights');
 
     // Running particle systems (rain, snow) and skeletal/morph animations change every frame.
-    if (scene.particleSystems.some(system => system.isStarted() && system.getActiveCount() > 0)) changed = true;
+    if (scene.particleSystems.some(system => system.isStarted() && system.getActiveCount() > 0)) note('particles');
     const animating = scene.animationGroups.some(group => group.isPlaying) || scene.animatables.length > 0;
-    if (animating) changed = true;
+    if (animating) note('animation');
 
     const active = scene.getActiveMeshes();
-    if (active.length !== this.lastActive.length) changed = true;
+    if (active.length !== this.lastActive.length) note('active meshes');
     for (let i = 0; i < active.length; i++) {
       const mesh = active.data[i];
-      if (this.lastActive[i] !== mesh) { this.lastActive[i] = mesh; changed = true; }
+      if (this.lastActive[i] !== mesh) { this.lastActive[i] = mesh; note('active meshes'); }
       const material = mesh.material;
-      if (material && this.materialChanged(material)) changed = true;
+      if (material && this.materialChanged(material)) note(`material ${material.name}`);
       const matrix = mesh.getWorldMatrix().m;
       const visible = mesh.isVisible && mesh.visibility === 1;
       const state = this.meshes.get(mesh);
       if (!state) {
         this.meshes.set(mesh, { matrix: Float64Array.from(matrix), visible, material });
-        changed = true;
+        note('new mesh');
         continue;
       }
-      if (state.visible !== visible || state.material !== material) { state.visible = visible; state.material = material; changed = true; }
-      for (let k = 0; k < 16; k++) if (matrix[k] !== state.matrix[k]) { state.matrix.set(matrix); changed = true; break; }
-      if ((mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances) changed = true;
+      if (state.visible !== visible || state.material !== material) { state.visible = visible; state.material = material; note(`visibility ${mesh.name}`); }
+      for (let k = 0; k < 16; k++) if (matrix[k] !== state.matrix[k]) { state.matrix.set(matrix); note(`moved ${mesh.name}`); break; }
+      if ((mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances) note(`instances ${mesh.name}`);
     }
     this.lastActive.length = active.length;
     if (this.meshes.size > active.length * 4 + 256) {

@@ -60,6 +60,17 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
   });
 
   let windowStart = performance.now();
+  // What kept the app awake during the last window (see WakeStats in SceneManager).
+  type Stats = { input: Record<string, number>; requests: number; markerRequests: number; viewMoves: number; changes: Record<string, number> };
+  const copy = (s?: Stats): Stats => ({ input: { ...s?.input }, requests: s?.requests ?? 0, markerRequests: s?.markerRequests ?? 0, viewMoves: s?.viewMoves ?? 0, changes: { ...s?.changes } });
+  let wakeStart = copy(scene.metadata?.wakeStats);
+  const wakeLine = () => {
+    const now = copy(scene.metadata?.wakeStats), top = (a: Record<string, number>, b: Record<string, number>) =>
+      Object.entries(a).map(([k, v]) => [k, v - (b[k] ?? 0)] as const).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([k, v]) => `${k} ${v}`).join(', ') || '–';
+    const line = `wake: input ${top(now.input, wakeStart.input)} · req ${now.requests - wakeStart.requests} (icons ${now.markerRequests - wakeStart.markerRequests}) · view ${now.viewMoves - wakeStart.viewMoves} · change ${top(now.changes, wakeStart.changes)}`;
+    wakeStart = now;
+    return line;
+  };
   const timer = window.setInterval(() => {
     const now = performance.now();
     const seconds = (now - windowStart) / 1000;
@@ -72,6 +83,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
       `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
       `eval ${per(evaluation)}  targets ${per(targets)}  main ${per(camera)}  other ${per(cpu - camera - evaluation)}  shaders ${(engineInstrumentation.shaderCompilationTimeCounter.total - compileStart).toFixed(0)} ms`,
       startupSummary(),
+      wakeLine(),
       `${renderer}   build ${typeof __HOMETWIN_BUILD__ === 'string' ? __HOMETWIN_BUILD__ : '?'}   cluster ${clusteredLightingMode()}   ${isTabletClass() ? 'tablet' : 'desktop'}`,
     ].join('\n');
     compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;

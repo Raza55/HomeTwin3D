@@ -66,6 +66,9 @@ export interface CreateSceneOptions {
   idleFrameRate?: number;
 }
 
+/** Counters of what keeps the render loop out of idle (perf overlay diagnostics). */
+export interface WakeStats { input: Record<string, number>; requests: number; markerRequests: number; viewMoves: number; changes: Record<string, number> }
+
 /** Input or camera movement keeps full frame rate for this long. */
 const IDLE_AFTER_MS = 1500;
 /**
@@ -286,15 +289,23 @@ export function createScene(
   const snapshot = setupSnapshotRendering(scene, engine);
   // Restarts a sleeping render loop (see renderFrame); set once the loop exists.
   let wakeLoop = () => {};
-  const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); wakeLoop(); };
-  setMarkerRenderRequest(scene, requestRender);
+  // What keeps the app out of idle, counted for the perf overlay (`?perf`).
+  const wakeStats: WakeStats = { input: {}, requests: 0, markerRequests: 0, viewMoves: 0, changes: {} };
+  scene.metadata = { ...scene.metadata, wakeStats };
+  const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); wakeStats.requests++; wakeLoop(); };
+  setMarkerRenderRequest(scene, () => { wakeStats.markerRequests++; requestRender(); });
   const isStatic = (quietMs = 3000, ignoreChanges = false) => {
     const now = performance.now();
     return !document.hidden && now - lastActivity > quietMs && (ignoreChanges || now - lastChange > quietMs);
   };
   const lastView = new Float64Array(16);
   const reportedRenderErrors = new Set<string>();
-  const markActive = () => { lastActivity = performance.now(); wakeLoop(); };
+  const markActive = (event?: Event) => {
+    lastActivity = performance.now();
+    const type = event?.type ?? 'other';
+    wakeStats.input[type] = (wakeStats.input[type] ?? 0) + 1;
+    wakeLoop();
+  };
   const activityEvents = ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'touchstart'] as const;
   activityEvents.forEach(type => window.addEventListener(type, markActive, { passive: true, capture: true }));
   window.addEventListener('resize', markActive);
@@ -334,10 +345,14 @@ export function createScene(
     if (view) {
       let moved = false;
       for (let i = 0; i < 16; i++) if (view[i] !== lastView[i]) { moved = true; lastView[i] = view[i]; }
-      if (moved) lastActivity = now;
+      if (moved) { lastActivity = now; wakeStats.viewMoves++; }
     }
     if (followUpFrames > 0) followUpFrames--;
-    if (changeMonitor.check()) { lastChange = now; followUpFrames = CHANGE_FOLLOW_UP_FRAMES; snapshot?.invalidate(); }
+    if (changeMonitor.check()) {
+      lastChange = now; followUpFrames = CHANGE_FOLLOW_UP_FRAMES; snapshot?.invalidate();
+      const reason = changeMonitor.lastReason.replace(/ .*/, m => m.slice(0, 24));
+      wakeStats.changes[reason] = (wakeStats.changes[reason] ?? 0) + 1;
+    }
   };
   let renderLoopRunning = false;
   const startRenderLoop = () => {

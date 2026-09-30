@@ -1,5 +1,6 @@
 // Modified for HomeTwin3D: development media URL follows the Vite base. See ORIGIN.md.
 import { tvMediaRoute, resolveTVScreen, mediaArtworkUrl } from '../services/tvMedia';
+import { itCameraUrl } from '../services/itCamera';
 import { getSetting } from '../services/settingsStore';
 import { buildWsUrl } from '../services/haWebSocket';
 import { drawTVMediaScreen } from './TVMediaScreen';
@@ -423,24 +424,28 @@ function updateRoutedTV(entry: DisplayMeshEntry, states: Record<string, HAState>
   const content = resolveTVScreen(states, route);
   const settings = getSetting('connection').haSettings;
   const base = settings.url ? buildWsUrl(settings.url, settings.port).replace(/^ws/, 'http') : '';
-  let url = mediaArtworkUrl(content.artwork, base);
+  // PC desktop stills come from the HA camera proxy; everything else from the media proxy.
+  let url = content.camera ? itCameraUrl(content.artwork, content.camera, base) : mediaArtworkUrl(content.artwork, base);
   // The HA add-on serves media from its own origin so WebGL can use the image.
   if (url && (import.meta.env.MODE === 'addon' || import.meta.env.DEV)) {
     const mediaUrl = new URL(url);
-    const prefix = import.meta.env.DEV ? `${import.meta.env.BASE_URL}ha-media/` : '/ha-media/';
-    url = `${location.origin}${prefix}${mediaUrl.pathname.slice('/api/media_player_proxy/'.length)}${mediaUrl.search}`;
+    const route = content.camera ? 'ha-camera/' : 'ha-media/', upstream = content.camera ? '/api/camera_proxy/' : '/api/media_player_proxy/';
+    const prefix = import.meta.env.DEV ? `${import.meta.env.BASE_URL}${route}` : `/${route}`;
+    url = `${location.origin}${prefix}${mediaUrl.pathname.slice(upstream.length)}${mediaUrl.search}`;
   }
-  // ADB snapshots can change without a state change or new image URL.
+  // ADB snapshots can change without a state change or new image URL; the PC helper sends every 30 s.
   if (url && content.artworkKind === 'screenshot') {
     const refreshUrl = new URL(url);
-    refreshUrl.searchParams.set('_preview', String(Math.floor(Date.now() / 10000)));
+    refreshUrl.searchParams.set('_preview', String(Math.floor(Date.now() / (content.camera ? 30000 : 10000))));
     url = refreshUrl.href;
   }
+  // Camera access tokens rotate; the entity, not the tokenised path, identifies the source.
+  const artworkSource = content.camera ?? content.artwork;
   if (runtime.artworkUrl !== url) {
     if (runtime.image) { runtime.image.onload = null; runtime.image.onerror = null; runtime.image.src = ''; }
     // Retain the last snapshot during refresh, but clear it immediately on input/image changes.
-    if (runtime.artworkSource !== content.artwork || !url) runtime.loaded = undefined;
-    runtime.artworkSource = content.artwork;
+    if (runtime.artworkSource !== artworkSource || !url) runtime.loaded = undefined;
+    runtime.artworkSource = artworkSource;
     runtime.artworkUrl = url; runtime.image = undefined;
     if (url) {
       const image = new Image(), owned = runtime;

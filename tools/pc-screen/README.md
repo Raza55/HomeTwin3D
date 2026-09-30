@@ -7,7 +7,7 @@ Windows 10/11, Python 3.10+ (Befehl `python`). Auf **DesktopMain im angemeldeten
 
    `powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup.ps1`
 
-   Setup installiert drei Python-Pakete in eine eigene `.venv`. MQTT-Host, Port, TLS und Zugangsdaten wie in HASS.Agent angeben. Bei TLS muss der Host zum Zertifikat passen; eine eigene CA kann als PEM-Datei angegeben werden. Die Zertifikatspruefung bleibt aktiv. Screen 0 ist der erste Monitor der angezeigten Liste (die Reihenfolge kann von HASS.Agent abweichen).
+   Setup installiert drei Python-Pakete in eine eigene `.venv`. MQTT-Host, Port, TLS und Zugangsdaten wie in HASS.Agent angeben. Bei TLS muss der Host zum Zertifikat passen; eine eigene CA kann als PEM-Datei angegeben werden. Die Zertifikatspruefung bleibt aktiv. Screen 0 ist der erste Monitor der angezeigten Liste (die Reihenfolge kann von HASS.Agent abweichen). In eckigen Klammern steht die Windows-Gerätekennung des Monitors (aus dem EDID, z. B. `DON0074` fuer einen ueber den Denon angeschlossenen Fernseher). Wird diese Kennung als **Fernseher** eingetragen, nimmt der Helfer immer den Fernseher auf, solange Windows ihn anzeigt ("Nur zweiter Bildschirm", Erweitern oder Duplizieren) – sonst den festen Screen. So zeigt das 3D-Modell des Wohnzimmer-TVs den Desktop, sobald der Receiver auf PC steht.
 
 3. Starten:
 
@@ -23,6 +23,7 @@ Windows 10/11, Python 3.10+ (Befehl `python`). Auf **DesktopMain im angemeldeten
 
 ## Betrieb
 
+- Jeder Wechsel der Aufnahmequelle steht als `Capture source: TV …` bzw. `Capture source: screen …` im Protokoll. Die Kennung kann auch direkt als `tv_monitor` in `config.json` gesetzt werden (leer = keine Umschaltung).
 - Maximal 1920 x 1080 (Full HD), Seitenverhaeltnis bleibt erhalten, kleinere Quellen werden nicht hochskaliert. JPEG Qualitaet 65 mit Rueckfall 50/35/25/15/8 fuer besonders detailreiche Bilder. Harte Nutzlastgrenze 200.000 Bytes, groessere Bilder werden verworfen. Aufloesung und Bytezahl stehen im Protokoll.
 - Eigene Client-ID `hometwin-pc-screen`; nur fuer **einen** PC verwenden. HASS.Agent bleibt parallel nutzbar.
 - Bilder binaer, ohne Base64, QoS 0, ohne Retain. Keine Bilddateien auf Disk; keine wartende Bildsammlung bei Verbindungsabbruch. Discovery und Online/Offline-Status werden retained veroeffentlicht.

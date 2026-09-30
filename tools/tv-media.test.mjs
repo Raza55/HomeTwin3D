@@ -86,3 +86,26 @@ test('saved living-room routes inherit the added screenshot dependency',()=>{
   const oldRoute={receiver:route.receiver,shield:route.shield,television:route.television};
   assert.ok(displayStateDependencies({kind:'tv',tvMedia:oldRoute,sources:[]}).includes(route.screenshot));
 });
+test('PC input shows the desktop camera still as background, gated by input and camera availability',()=>{
+  const states=fixture(), url='/api/camera_proxy/camera.desktop_main_bildschirm?token=fixture';
+  states[route.receiver].attributes.source='PC';
+  states[route.pcScreenshot]=state(route.pcScreenshot,'idle',{entity_picture:url});
+  const pc=resolveTVScreen(states,route,now);
+  assert.equal(pc.kind,'pc');assert.equal(pc.artwork,url);assert.equal(pc.artworkKind,'screenshot');
+  assert.equal(pc.camera,route.pcScreenshot);assert.equal(pc.status,'Bildschirmvorschau');
+  for(const value of ['off','standby','unknown','unavailable']) {
+    states[route.pcScreenshot].state=value;
+    const content=resolveTVScreen(states,route,now);
+    assert.equal(content.artwork,undefined);assert.equal(content.camera,undefined);assert.equal(content.status,'Verbunden');
+  }
+  states[route.pcScreenshot].state='idle';
+  for(const source of ['SHIELD Media','Playststion','TV Audio']) {
+    states[route.receiver].attributes.source=source;
+    assert.equal(resolveTVScreen(states,route,now).camera,undefined);
+  }
+  delete states[route.pcScreenshot];states[route.receiver].attributes.source='PC';
+  assert.equal(resolveTVScreen(states,route,now).artwork,undefined);
+  assert.ok(displayStateDependencies({kind:'tv',sources:[{entityId:route.television}]}).includes(route.pcScreenshot));
+  const saved={receiver:route.receiver,shield:route.shield,television:route.television};
+  assert.ok(displayStateDependencies({kind:'tv',tvMedia:saved,sources:[]}).includes(route.pcScreenshot));
+});

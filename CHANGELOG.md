@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.7 – PC-Desktop auf dem Wohnzimmer-TV (30.09.2026)
+
+- Steht der Receiver auf dem Eingang PC, zeigt das Fernsehermodell den Desktop der PC-Bildschirmkamera als Hintergrund (mit Beschriftung und HDMI-Badge darüber) statt der bisherigen Grafik. Ohne verfügbares Kamerabild bleibt die Grafik.
+- Der Windows-Screenshot-Helfer (`tools/pc-screen`) nimmt den Fernseher auf, solange Windows ihn anzeigt (Gerätekennung `tv_monitor` im Setup), und sonst wie bisher den festen Screen. Die Aufnahmequelle steht im Protokoll.
+
 ## 0.5.6 – Kamera-Empfindlichkeit (30.09.2026)
 
 - Neue Regler unter Einstellungen → 3D-Ansicht → Kamerasteuerung → Empfindlichkeit: Drehen (seitlich ziehen), Kippen (hoch/runter ziehen), Zoomen (Mausrad und Pinch) und Verschieben, jeweils 25–300 %. Die Werte gelten pro Gerät; „Empfindlichkeit zurücksetzen“ stellt 100 % wieder her.

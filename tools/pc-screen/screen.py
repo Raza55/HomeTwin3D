@@ -6,8 +6,10 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import re
 import socket
 import ssl
+from ctypes import wintypes
 from pathlib import Path
 import threading
 import time
@@ -47,6 +49,77 @@ def discovery():
                    "name": "DesktopMain Screenshot", "manufacturer": "HomeTwin3D",
                    "model": "JPEG MQTT helper"},
     }
+
+
+class _MonitorInfo(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT),
+                ("dwFlags", wintypes.DWORD), ("szDevice", wintypes.WCHAR * 32)]
+
+
+class _DisplayDevice(ctypes.Structure):
+    _fields_ = [("cb", wintypes.DWORD), ("DeviceName", wintypes.WCHAR * 32), ("DeviceString", wintypes.WCHAR * 128),
+                ("StateFlags", wintypes.DWORD), ("DeviceID", wintypes.WCHAR * 128), ("DeviceKey", wintypes.WCHAR * 128)]
+
+
+def monitor_id(device_id):
+    """PnP hardware ID of a monitor (e.g. DON0074), stable across desktop layouts."""
+    match = re.search(r"(?:DISPLAY|MONITOR)[#\\]([A-Za-z0-9]{3,8})(?:[#\\]|$)", str(device_id or ""))
+    return match.group(1).upper() if match else ""
+
+
+def list_monitors():
+    """Active desktop monitors in Windows enumeration order (the same order as mss)."""
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+                                       ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
+    user32.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(_MonitorInfo)]
+    user32.EnumDisplayDevicesW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(_DisplayDevice), wintypes.DWORD]
+    monitors = []
+
+    def callback(handle, _hdc, _rect, _data):
+        info = _MonitorInfo()
+        info.cbSize = ctypes.sizeof(_MonitorInfo)
+        if not user32.GetMonitorInfoW(handle, ctypes.byref(info)):
+            return True
+        # A display output can list several monitors (e.g. "second screen only"):
+        # only the one flagged DISPLAY_DEVICE_ACTIVE currently shows the desktop.
+        ids, index = [], 0
+        while True:
+            device = _DisplayDevice()
+            device.cb = ctypes.sizeof(_DisplayDevice)
+            if not user32.EnumDisplayDevicesW(info.szDevice, index, ctypes.byref(device), 1):
+                break
+            if device.StateFlags & 1 and monitor_id(device.DeviceID):
+                ids.append(monitor_id(device.DeviceID))
+            index += 1
+        rect = info.rcMonitor
+        monitors.append({"left": rect.left, "top": rect.top, "width": rect.right - rect.left,
+                         "height": rect.bottom - rect.top, "primary": bool(info.dwFlags & 1), "ids": ids})
+        return True
+
+    try:
+        ctypes.WinDLL("shcore").SetProcessDpiAwareness(2)  # physical pixels, as mss expects
+    except OSError:
+        pass
+    user32.EnumDisplayMonitors(None, None, callback_type(callback), 0)
+    return monitors
+
+
+def select_monitor(monitors, config):
+    """The TV wins whenever Windows currently drives it; otherwise the fixed screen index."""
+    wanted = str(config.get("tv_monitor") or "").strip().upper()
+    if wanted:
+        for monitor in monitors:
+            if wanted in monitor["ids"]:
+                return monitor, "tv"
+    index = int(config["screen"])
+    if index < 0 or index >= len(monitors):
+        raise ValueError("Configured monitor is not connected")
+    return monitors[index], "screen"
+
+
+def describe_monitor(monitor):
+    return f"{monitor['width']}x{monitor['height']} at {monitor['left']},{monitor['top']}" +         (f" [{'+'.join(monitor['ids'])}]" if monitor["ids"] else "") + (" primary" if monitor["primary"] else "")
 
 
 def desktop_unlocked():
@@ -135,6 +208,7 @@ def run(config, data_dir):
     stop_file = data_dir / "stop"
     next_frame = 0.0
     locked = False
+    source = None
     try:
         while not stop_file.exists():
             if not ready.is_set():
@@ -155,11 +229,13 @@ def run(config, data_dir):
             refresh.clear()
             next_frame = time.monotonic() + 30
             try:
-                with mss.mss() as capture:
-                    index = int(config["screen"]) + 1  # mss[0] is ALL monitors
-                    if index < 1 or index >= len(capture.monitors):
-                        raise ValueError("Configured monitor is not connected")
-                    shot = capture.grab(capture.monitors[index])
+                with mss.MSS() as capture:
+                    monitor, role = select_monitor(list_monitors(), config)
+                    key = (role, tuple(monitor["ids"]), monitor["width"], monitor["height"], monitor["left"], monitor["top"])
+                    if key != source:
+                        source = key
+                        logging.info("Capture source: %s %s", "TV" if role == "tv" else "screen", describe_monitor(monitor))
+                    shot = capture.grab({k: monitor[k] for k in ("left", "top", "width", "height")})
                     image = Image.frombytes("RGB", shot.size, shot.rgb)
                 # Recheck in case Windows locked during capture.
                 if desktop_unlocked():
@@ -186,10 +262,9 @@ def main():
     parser.add_argument("--config", type=Path)
     args = parser.parse_args()
     if args.list:
-        with mss.mss() as capture:
-            for index, monitor in enumerate(capture.monitors[1:]):
-                print(f"Screen {index}: {monitor['width']}x{monitor['height']} "
-                      f"at {monitor['left']},{monitor['top']}")
+        with mss.MSS():
+            for index, monitor in enumerate(list_monitors()):
+                print(f"Screen {index}: {describe_monitor(monitor)}")
         return
     if args.config is None:
         parser.error("--config is required")

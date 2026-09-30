@@ -7,6 +7,8 @@ export const LIVING_ROOM_TV = {
   television: installationEntity('media_player.living_room_tv'),
   remote: installationEntity('media_player.streaming_remote'),
   screenshot: installationEntity('media_player.streaming_screenshot'),
+  /** HA camera fed by the PC screen helper; shown as the TV background while the receiver is on the PC input. */
+  pcScreenshot: installationEntity('camera.desktop_main_bildschirm'),
 };
 export type TVMediaRoute = NonNullable<DisplayConfig['tvMedia']>;
 export interface TVScreenContent {
@@ -16,6 +18,8 @@ export interface TVScreenContent {
   status: string;
   artwork?: string;
   artworkKind?: 'cover' | 'screenshot';
+  /** Set when `artwork` is a camera still (`/api/camera_proxy/…`) rather than a media proxy image. */
+  camera?: string;
   position?: number;
   duration?: number;
   ticking?: boolean;
@@ -48,7 +52,12 @@ export function resolveTVScreen(states: Record<string, HAState>, route: TVMediaR
   if (!receiver || offline(receiver) || offline(tv)) return {kind:'unavailable',title:'TV',subtitle:'Verbindung nicht verfügbar',status:'Offline'};
   const source = text(receiver.attributes.source);
   const normalized = source.toLowerCase();
-  if (normalized === 'pc') return {kind:'pc',title:'PC',subtitle:'Desktop · HDMI',status:'Verbunden'};
+  if (normalized === 'pc') {
+    const camera = route.pcScreenshot ? states[route.pcScreenshot] : undefined;
+    const desktop = !offline(camera) && !['off','standby'].includes(camera!.state) ? picture(camera) : undefined;
+    return {kind:'pc',title:'PC',subtitle:'Desktop · HDMI',status:desktop ? 'Bildschirmvorschau' : 'Verbunden',
+      artwork:desktop,artworkKind:desktop ? 'screenshot' : undefined,camera:desktop ? route.pcScreenshot : undefined};
+  }
   if (['playststion','playstation','playstation 5','ps5'].includes(normalized))
     return {kind:'playstation',title:'PlayStation',subtitle:'Konsole · HDMI',status:'Verbunden'};
   if (normalized !== 'shield media') return {kind:'other',title:source || 'TV',subtitle:'Denon · HDMI',status:source?'Verbunden':'Quelle unbekannt'};

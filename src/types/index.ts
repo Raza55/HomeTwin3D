@@ -342,7 +342,7 @@ export type DisplayKind = 'info' | 'tv' | 'pc' | 'console' | 'qnap';
 
 export interface DisplayConfig {
   /** Receiver decides the displayed input; SHIELD metadata is gated by that input. */
-  tvMedia?: { receiver: string; shield: string; television: string; remote?: string; screenshot?: string };
+  tvMedia?: { receiver: string; shield: string; television: string; remote?: string; screenshot?: string; pcScreenshot?: string };
   floorplanIds?: string[];
   id: string;
   label: string;

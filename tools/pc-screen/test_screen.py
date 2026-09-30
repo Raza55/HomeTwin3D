@@ -47,6 +47,23 @@ class ScreenTests(unittest.TestCase):
                 screen.send_frame(client, Image.new('RGB', (20, 20)))
         client.publish.assert_not_called()
 
+    def test_tv_monitor_wins_only_while_windows_drives_it(self):
+        monitor = {'left': 0, 'top': 0, 'width': 3440, 'height': 1440, 'primary': True, 'ids': ['GSM7754']}
+        tv = {'left': 3440, 'top': 0, 'width': 3840, 'height': 2160, 'primary': False, 'ids': ['DON0074']}
+        config = {'screen': 0, 'tv_monitor': 'don0074'}
+        self.assertEqual(screen.select_monitor([monitor, tv], config), (tv, 'tv'))
+        self.assertEqual(screen.select_monitor([monitor], config), (monitor, 'screen'))
+        self.assertEqual(screen.select_monitor([monitor, tv], {'screen': 1}), (tv, 'screen'))
+        self.assertEqual(screen.select_monitor([monitor, tv], {'screen': 0, 'tv_monitor': ''}), (monitor, 'screen'))
+        with self.assertRaises(ValueError):
+            screen.select_monitor([monitor], {'screen': 1})
+
+    def test_monitor_id_from_device_paths(self):
+        self.assertEqual(screen.monitor_id(r'\?\DISPLAY#DON0074#5&263d68b9&0&UID4352#{e6f07b5f}'), 'DON0074')
+        self.assertEqual(screen.monitor_id(r'MONITOR\GSM7754\{guid}\0001'), 'GSM7754')
+        self.assertEqual(screen.monitor_id(''), '')
+        self.assertEqual(screen.monitor_id(None), '')
+
 
 if __name__ == '__main__':
     unittest.main()

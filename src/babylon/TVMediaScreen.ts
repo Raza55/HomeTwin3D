@@ -57,7 +57,7 @@ export function drawTVMediaScreen(ctx:CanvasRenderingContext2D,content:TVScreenC
   const accent=content.kind==='pc'?'#88caff':content.kind==='playstation'?'#a9baff':content.kind==='unavailable'?'#9da6b4':'#dcc38c';
   const bg=ctx.createLinearGradient(0,h,w,0);bg.addColorStop(0,'#080e18');bg.addColorStop(1,content.kind==='pc'?'#193658':content.kind==='playstation'?'#15224e':'#26312e');
   ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
-  if(artwork && content.kind==='shield' && content.artworkKind==='screenshot') {
+  if(artwork && (content.kind==='shield'||content.kind==='pc') && content.artworkKind==='screenshot') {
     const scale=Math.max(w/artwork.naturalWidth,h/artwork.naturalHeight);
     ctx.drawImage(artwork,(w-artwork.naturalWidth*scale)/2,(h-artwork.naturalHeight*scale)/2,artwork.naturalWidth*scale,artwork.naturalHeight*scale);
     const shade=ctx.createLinearGradient(0,0,w,0);

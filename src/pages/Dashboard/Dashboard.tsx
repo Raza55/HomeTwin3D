@@ -94,6 +94,7 @@ import { SIMULATION_CONFIG, SIMULATION_MODEL_URL } from '../../data/simulationDa
 import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, LightSceneOption, CardLayout, SidePanelCard } from '../../types';
 import './Dashboard.css';
 import { markStartup } from '../../babylon/StartupTiming';
+import { enableTouchZoneBatching } from '../../babylon/TouchZoneBatch';
 
 // Rarely used dialogs load on demand to keep the dashboard chunk small.
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
@@ -934,6 +935,8 @@ export default function Dashboard() {
       sceneCtxRef.current = ctx;
       ctxPromise = Promise.resolve(ctx);
     }
+    // Light touch zones are drawn as one mesh on the dashboard (see TouchZoneBatch).
+    void ctxPromise.then(context => enableTouchZoneBatching(context.scene));
 
     let pressTimer: ReturnType<typeof setTimeout> | null = null;
     let pressedEntity: string | null = null;

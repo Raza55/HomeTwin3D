@@ -207,3 +207,35 @@ test('dielectrics merge across metallic and roughness via vertex data; metals st
     set.dispose();
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+import { enableTouchZoneBatching, registerTouchZone, isBatchedTouchZone } from '../src/babylon/TouchZoneBatch';
+
+test('light touch zones draw as one mesh that follows each zone color and alpha', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    enableTouchZoneBatching(scene);
+    const zones = [0, 1, 2].map(i => {
+      const mesh = MeshBuilder.CreateSphere(`hitbox_${i}`, { diameter: .5, segments: 4 }, scene); mesh.position.x = i;
+      const material = new StandardMaterial(`hitboxmat_${i}`, scene);
+      material.disableLighting = true; material.emissiveColor = new Color3(.2, .4, .6); material.alpha = .06; material.disableDepthWrite = true;
+      mesh.material = material; registerTouchZone(mesh, material);
+      return { mesh, material };
+    });
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    const merged = scene.getMeshByName('touch-zones')!;
+    assert.ok(merged && zones.every(z => isBatchedTouchZone(z.mesh) && z.mesh.visibility === 0 && z.mesh.isPickable), 'zones stay pickable, merged draws them');
+    const perZone = zones[0].mesh.getTotalVertices() * 4;
+    const colors = () => merged.getVerticesData('color')!;
+    assert.deepEqual(Array.from(colors().slice(perZone, perZone + 4)).map(v => +v.toFixed(2)), [.2, .4, .6, .06]);
+    // Hover and state changes of one lamp update only its vertices.
+    zones[1].material.alpha = .18; zones[1].material.emissiveColor.set(1, .8, .5);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.deepEqual(Array.from(colors().slice(perZone, perZone + 4)).map(v => +v.toFixed(2)), [1, .8, .5, .18]);
+    assert.deepEqual(Array.from(colors().slice(0, 4)).map(v => +v.toFixed(2)), [.2, .4, .6, .06]);
+    // A removed lamp restores the rest.
+    zones[2].mesh.dispose();
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.equal(scene.getMeshByName('touch-zones')!.getTotalVertices(), zones[0].mesh.getTotalVertices() * 2);
+  } finally { scene.dispose(); engine.dispose(); }
+});

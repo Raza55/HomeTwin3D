@@ -16,6 +16,7 @@ import {
 import type { LightConfig, LightPart, LightPosition, LightSize } from '../types';
 import { createFloorplanLightRig, type FloorplanLightRig } from './FloorplanLighting';
 import { limitShadowCastersToRange } from './ShadowRange';
+import { isBatchedTouchZone, registerTouchZone } from './TouchZoneBatch';
 
 export interface LightMeshEntry {
   floorplanRig?: FloorplanLightRig;
@@ -236,6 +237,7 @@ export function createLightMesh(
     hitboxMat.disableDepthWrite = touchZoneEnabled;
     hitboxMesh.material = hitboxMat;
     hitboxMesh.visibility = touchZoneEnabled && withPointLight ? 1 : 0;
+    if (touchZoneEnabled) registerTouchZone(hitboxMesh, hitboxMat);
 
     // When hitbox exists, bulb should not catch clicks
     bulb.isPickable = false;
@@ -372,7 +374,7 @@ function createTouchIcon(scene: Scene, cfg: LightConfig, id: string, center: Vec
 
 export function setLightTouchZoneHovered(entry: LightMeshEntry, hovered: boolean): void {
   if (entry.touchIconMesh) entry.touchIconMesh.scaling.setAll(hovered ? 1.4 : 1);
-  if (!entry.hitboxMat || !entry.hitboxMesh || entry.hitboxMesh.visibility === 0) return;
+  if (!entry.hitboxMat || !entry.hitboxMesh || (entry.hitboxMesh.visibility === 0 && !isBatchedTouchZone(entry.hitboxMesh))) return;
   entry.hitboxMat.alpha = hovered ? Math.max(0.18, entry.touchIdleOpacity * 3) : entry.touchIdleOpacity;
 }
 

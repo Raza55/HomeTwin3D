@@ -284,7 +284,9 @@ export function createScene(
   let lastRender = 0;
   const changeMonitor = new SceneChangeMonitor(scene);
   const snapshot = setupSnapshotRendering(scene, engine);
-  const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); };
+  // Restarts a sleeping render loop (see renderFrame); set once the loop exists.
+  let wakeLoop = () => {};
+  const requestRender = () => { lastChange = lastRequest = performance.now(); snapshot?.invalidate(); wakeLoop(); };
   setMarkerRenderRequest(scene, requestRender);
   const isStatic = (quietMs = 3000, ignoreChanges = false) => {
     const now = performance.now();
@@ -292,7 +294,7 @@ export function createScene(
   };
   const lastView = new Float64Array(16);
   const reportedRenderErrors = new Set<string>();
-  const markActive = () => { lastActivity = performance.now(); };
+  const markActive = () => { lastActivity = performance.now(); wakeLoop(); };
   const activityEvents = ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'touchstart'] as const;
   activityEvents.forEach(type => window.addEventListener(type, markActive, { passive: true, capture: true }));
   window.addEventListener('resize', markActive);
@@ -306,7 +308,13 @@ export function createScene(
       // identical are skipped. A little jitter allowance lets a 60 Hz display
       // settle at every 2nd frame for 30 fps.
       const interval = followUpFrames > 0 || now - lastRequest < CHANGE_HOLD_MS ? idleFrameInterval : STATIC_FRAME_INTERVAL_MS;
-      if (now - lastRender < interval - 4) return;
+      if (now - lastRender < interval - 4) {
+        // Nothing to draw until the next floor frame: stop the loop instead of
+        // finishing an empty frame on every display refresh (~60 wake-ups per
+        // second on a wall tablet). Input, render requests and a timer wake it.
+        if (interval === STATIC_FRAME_INTERVAL_MS && !engine.isWebGPU) sleepUntil(lastRender + interval);
+        return;
+      }
     }
     lastRender = now;
     snapshot?.prepareFrame();
@@ -342,11 +350,23 @@ export function createScene(
     engine.stopRenderLoop(renderFrame);
     renderLoopRunning = false;
   };
+  // WebGL only: WebGPU keeps its loop running (see the visibility note below).
+  let sleepTimer: ReturnType<typeof setTimeout> | null = null;
+  let disposed = false;
+  function sleepUntil(time: number) {
+    stopRenderLoop();
+    if (sleepTimer) clearTimeout(sleepTimer);
+    sleepTimer = setTimeout(() => { sleepTimer = null; wakeLoop(); }, Math.max(0, time - performance.now()));
+  }
+  wakeLoop = () => {
+    if (sleepTimer) { clearTimeout(sleepTimer); sleepTimer = null; }
+    if (!disposed) startRenderLoop();
+  };
 
   startRenderLoop();
   const disposePerfOverlay = new URLSearchParams(location.search).has('perf') ? createPerfOverlay(engine, scene) : null;
 
-  const onResize = () => engine.resize();
+  const onResize = () => { engine.resize(); wakeLoop(); };
   window.addEventListener('resize', onResize);
 
   // The loop keeps running while the page is hidden and simply skips frames
@@ -361,6 +381,8 @@ export function createScene(
   document.addEventListener('visibilitychange', onVisibilityChange);
 
   function dispose() {
+    disposed = true;
+    if (sleepTimer) clearTimeout(sleepTimer);
     window.removeEventListener('resize', onResize);
     activityEvents.forEach(type => window.removeEventListener(type, markActive, { capture: true }));
     window.removeEventListener('resize', markActive);

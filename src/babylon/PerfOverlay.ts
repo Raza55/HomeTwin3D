@@ -44,7 +44,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
   renderer = renderer.slice(0, 64);
   const browserEngine = 'userAgentData' in navigator ? 'Chromium' : /AppleWebKit/.test(navigator.userAgent) ? 'WebKit' : 'other';
 
-  let frames = 0, cpu = 0, draws = 0, worstGap = 0, last = performance.now();
+  let frames = 0, cpu = 0, draws = 0, worstGap = 0, last = performance.now(), loopStart = engine.frameId;
   const onFrame = scene.onAfterRenderObservable.add(() => {
     // First frame with every shader ready (checked only until then).
     if (startupPhase('ready') && !startupPhase('frame') && scene.isReady(false)) markStartup('frame');
@@ -66,7 +66,8 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
     const per = (total: number) => (frames ? total / frames : 0).toFixed(1);
     panel.textContent = [
-      `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   worst ${worstGap.toFixed(0)} ms`,
+      // loop: render-loop passes per second (idle frames the app skipped count too; ~2 while it sleeps).
+      `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   worst ${worstGap.toFixed(0)} ms   loop ${((engine.frameId - loopStart) / seconds).toFixed(0)}/s`,
       `draws ${frames ? Math.round(draws / frames) : 0}   JS heap ${memory ? `${Math.round(memory.usedJSHeapSize / 1e6)} MB` : 'n/a'}`,
       `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
       `eval ${per(evaluation)}  targets ${per(targets)}  main ${per(camera)}  other ${per(cpu - camera - evaluation)}  shaders ${(engineInstrumentation.shaderCompilationTimeCounter.total - compileStart).toFixed(0)} ms`,
@@ -74,7 +75,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
       `${renderer}   build ${typeof __HOMETWIN_BUILD__ === 'string' ? __HOMETWIN_BUILD__ : '?'}   cluster ${clusteredLightingMode()}   ${isTabletClass() ? 'tablet' : 'desktop'}`,
     ].join('\n');
     compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;
-    frames = 0; cpu = 0; draws = 0; worstGap = 0; evaluation = 0; targets = 0; camera = 0; windowStart = now;
+    frames = 0; cpu = 0; draws = 0; worstGap = 0; evaluation = 0; targets = 0; camera = 0; windowStart = now; loopStart = engine.frameId;
   }, 2000);
 
   return () => {

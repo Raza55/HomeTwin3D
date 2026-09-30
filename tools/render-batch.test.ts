@@ -243,3 +243,47 @@ test('light touch zones draw as one mesh that follows each zone color and alpha'
     assert.equal(scene.getMeshByName('touch-zones')!.getTotalVertices(), zones[0].mesh.getTotalVertices() * 2);
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+import { GlowLayer } from '@babylonjs/core';
+import { setupGlowOccluders } from '../src/babylon/GlowOccluder';
+
+/**
+ * Idle regression: once a static scene has rendered, nothing may keep reporting
+ * changes, or the dashboard never drops to its idle frame rate (a touch zone
+ * batch rebuilt every frame once kept tablets at ~60 fps while static). The
+ * scene holds every system that adds or updates meshes on its own.
+ */
+test('a static scene settles: the change monitor goes quiet after the first frames', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    new PointLight('lamp', new Vector3(0, 2, 0), scene);
+    const pbr = (name: string, metallic: number, roughness: number, color: Color3) => {
+      const m = new PBRMaterial(name, scene); m.metallic = metallic; m.roughness = roughness; m.albedoColor = color; return m;
+    };
+    const shared = new StandardMaterial('wall', scene);
+    const parts = [
+      ...[0, 1, 2].map(i => { const m = MeshBuilder.CreateBox(`wall${i}`, {}, scene); m.position.x = i; m.material = shared; return m; }),
+      ...[0, 1, 2].map(i => { const m = MeshBuilder.CreateBox(`part${i}`, { size: .3 }, scene); m.position.z = 1 + i * .4; m.material = pbr(`p${i}`, .1 * i, .3 + .2 * i, new Color3(i / 3, .5, .5)); return m; }),
+    ];
+    const lamp = MeshBuilder.CreateSphere('bulb', { diameter: .2 }, scene);
+    const bulb = new StandardMaterial('bulb', scene); bulb.emissiveColor.set(1, .8, .5); lamp.material = bulb;
+    batchStaticRendering(scene, parts, []);
+    enableTouchZoneBatching(scene);
+    [0, 1].forEach(i => {
+      const zone = MeshBuilder.CreateSphere(`hitbox_${i}`, { diameter: .6, segments: 4 }, scene); zone.position.set(i * 2, 2, 0);
+      const material = new StandardMaterial(`hitboxmat_${i}`, scene);
+      material.disableLighting = true; material.emissiveColor.set(.2, .4, .6); material.alpha = .06; material.disableDepthWrite = true;
+      zone.material = material; registerTouchZone(zone, material);
+    });
+    const glow = new GlowLayer('glow', scene);
+    setupGlowOccluders(scene, glow, [...parts, lamp]);
+    const monitor = new SceneChangeMonitor(scene);
+    const changes: string[] = [];
+    for (let frame = 0; frame < 12; frame++) {
+      scene.render();
+      if (monitor.check() && frame >= 3) changes.push(`frame ${frame}: ${monitor.lastReason}`);
+    }
+    assert.deepEqual(changes, [], 'no changes after settling');
+  } finally { scene.dispose(); engine.dispose(); }
+});

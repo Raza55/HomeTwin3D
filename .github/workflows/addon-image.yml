@@ -7,7 +7,7 @@ name: Add-on images
 on:
   push:
     branches: [main]
-    paths: ['3dash-addon/**']
+    paths: ['3dash-addon/**', '.github/workflows/addon-image.yml']
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: version
-        run: echo "version=$(sed -n 's/^version: *"\(.*\)"/\1/p' 3dash-addon/config.yaml)" >> "$GITHUB_OUTPUT"
+        # Block scalar: the sed pattern's ": " would end a plain YAML value.
+        run: |
+          echo "version=$(sed -n 's/^version: *"\(.*\)"/\1/p' 3dash-addon/config.yaml)" >> "$GITHUB_OUTPUT"
       # The web app is built natively (--platform=$BUILDPLATFORM); only the
       # small nginx stage runs emulated for arm64.
       - uses: docker/setup-qemu-action@v3

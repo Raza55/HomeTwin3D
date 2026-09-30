@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.4.5 – Neues Logo im Dashboard (30.09.2026)
+
+- Oben links im Dashboard steht jetzt nur noch das neue HomeTwin3D-Logo statt „///3DASH · Live“. Demo- und Simulationsmodus bleiben als Hinweis neben dem Logo sichtbar.
+
 ## 0.4.4 – Neues App-Icon (30.09.2026)
 
 - Eigenes HomeTwin3D-Icon statt des alten 3Dash-Logos: isometrisches Haus mit leuchtenden Kanten, beleuchtetem Fenster und Bodenraster (der digitale Zwilling). Für Browser-Tab, iPad-Home-Bildschirm, PWA (inkl. maskable) und die Add-on-Seite in Home Assistant.

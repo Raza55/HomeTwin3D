@@ -17,7 +17,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSetting } from '../services/settingsStore';
 import { isRaining, isSnowing, type WeatherData } from '../services/weatherApi';
-import { LOGO_2D_VIEWBOX, LOGO_2D_SLASHES } from './logoData';
 import './HUD.css';
 
 interface Props {
@@ -186,30 +185,10 @@ export default function HUD({
       <div className="corner br" />
 
       <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
-        <svg className="hud-logo" viewBox={LOGO_2D_VIEWBOX} xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="hud-glow" x="-80%" y="-80%" width="260%" height="260%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="b1" />
-              <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="b2" />
-              <feGaussianBlur in="SourceGraphic" stdDeviation="50" result="b3" />
-              <feMerge>
-                <feMergeNode in="b3" />
-                <feMergeNode in="b2" />
-                <feMergeNode in="b1" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          {LOGO_2D_SLASHES.map((p, i) => (
-            <polygon key={i} points={p} className="hud-logo-front" />
-          ))}
-          <g filter="url(#hud-glow)" className="hud-logo-glow">
-            {LOGO_2D_SLASHES.map((p, i) => (
-              <polygon key={i} points={p} fill="none" strokeWidth="6" strokeLinejoin="round" />
-            ))}
-          </g>
-        </svg>
-        <div className="label">{'3Dash'}<span className="label-sep">{' · '}</span>{simulationMode ? t('dashboard.simulation') : demoMode ? t('dashboard.demoView') : t('dashboard.liveView')}</div>
+        <img className="hud-logo" src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="HomeTwin3D" draggable={false} />
+        {(simulationMode || demoMode) && (
+          <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>
+        )}
       </div>
 
       <div className="time-display">

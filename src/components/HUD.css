@@ -28,18 +28,13 @@
   gap: 10px;
 }
 
-/* HUD mini logo */
+/* HUD logo (app icon, public/favicon) */
 .hud-logo {
-  width: 22px;
-  height: 22px;
-  overflow: visible;
-}
-
-.hud-logo-front { fill: var(--text); }
-
-.hud-logo-glow {
-  stroke: var(--green);
-  animation: pulse 2s ease-in-out infinite;
+  width: 36px;
+  height: 36px;
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(114, 230, 255, 0.35));
+  user-select: none;
 }
 
 .title-bar .label {
@@ -51,16 +46,8 @@
   opacity: 0.85;
 }
 
-.title-bar .label-sep {
-  color: var(--green);
-}
-
 /* Demo mode */
-.title-bar.demo .hud-logo-glow {
-  stroke: var(--orange);
-}
-
-.title-bar.demo .label-sep {
+.title-bar.demo .label {
   color: var(--orange);
 }
 
@@ -179,8 +166,8 @@
   }
 
   .hud-logo {
-    width: 12px;
-    height: 12px;
+    width: 28px;
+    height: 28px;
   }
 
   .title-bar .label {

@@ -1452,7 +1452,13 @@ export default function Dashboard() {
       weatherRef.current?.dispose();
       weatherRef.current = null;
       disposeGroundGrid();
-      void ctxPromise.then(scene => scene.dispose());
+      // A re-run of this effect (model reload, StrictMode) creates the next engine
+      // on the same canvas, i.e. the same WebGL context, right after this cleanup.
+      // Disposing later would unbind that shared context's textures behind the new
+      // engine's texture cache; its BRDF lookup texture then decodes from an empty
+      // unit and every PBR surface turns black/white. Dispose now when possible.
+      if (ctx) ctx.dispose();
+      else void ctxPromise.then(scene => scene.dispose());
     };
   }, [modelReloadVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 

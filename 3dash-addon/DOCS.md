@@ -27,6 +27,10 @@ Für den Umzug einer lokalen Einrichtung (Dev-/LAN-Server):
 2. Im Projekt `npm run addon:export` ausführen. Es entsteht `.private/addon-export/shared` mit Konfiguration, Modell, Objekten und den Installationswerten (Entity-Zuordnung, Standort) aus `.private/installation.json`.
 3. Add-on stoppen, den Ordner `shared` in den HomeTwin3D-Ordner der Freigabe `addon_configs` kopieren (vorhandenen ersetzen), Add-on starten.
 
+Automatisch geht Schritt 2–3 mit `npm run addon:sync`: einmalig in `.env.local` `HOMETWIN_ADDON_SHARE=\<ha-host>ddon_configs\<slug>` eintragen (der Ordner entsteht beim ersten Start des Add-ons). Der Befehl schreibt Dateien zuerst und `state.json` zuletzt, daher muss das Add-on dafür nicht gestoppt werden; die Revision liegt immer über der des Add-ons, und das Modell gilt nur bei geändertem Inhalt als neu. Offene Browser übernehmen die Version innerhalb einer Minute. Einen PIN braucht der Befehl nicht.
+
+Ist Port 8099 auf dem Host schon belegt, gibt HA ihn für das Add-on nicht frei (Netzwerk-Eintrag leer, die App ist nicht erreichbar). Dann unter Konfiguration → Netzwerk einen freien Host-Port eintragen (z. B. 8199) und den Reverse Proxy auf diesen Port richten.
+
 Öffentliche Builds wie das Add-on enthalten keine privaten Installationswerte; sie kommen mit der gemeinsamen Version und werden im Browser gespeichert.
 
 ## Gemeinsame Version für alle Browser (ab 0.3.0)

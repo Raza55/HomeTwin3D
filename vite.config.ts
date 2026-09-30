@@ -46,6 +46,9 @@ export default defineConfig(({ mode, command }) => {
       },
       VitePWA({
         registerType: 'autoUpdate',
+        // LAN builds change constantly; a cached app shell kept tablets on old
+        // versions. Their service worker unregisters itself (and old ones) instead.
+        selfDestroying: process.env.HOMETWIN_NO_SERVICE_WORKER === '1',
         // Use the existing manifest files in public/.
         manifest: false,
         workbox: {

@@ -1,4 +1,5 @@
 import { Camera, Matrix, Ray, Vector3, type AbstractMesh, type Scene } from '@babylonjs/core';
+import { OcclusionBVHCache } from './OcclusionBVH';
 
 type Entry = { point: Vector3; visible: boolean; checked: number; seen: number; revision: number };
 /** Everything that decides whether a mesh can occlude a marker. */
@@ -20,7 +21,34 @@ export class MarkerOcclusion {
   private meshTransforms = new Map<AbstractMesh, Matrix>();
   private nextMeshScan = -Infinity;
   private overview = false;
-  constructor(private scene: Scene, private meshes: readonly AbstractMesh[], private scale = 1) {}
+  private bvh = new OcclusionBVHCache();
+  private segmentEnd = Vector3.Zero();
+  private idleHandle: number | null = null;
+  constructor(private scene: Scene, private meshes: readonly AbstractMesh[], private scale = 1) {
+    // Build ray trees for the largest meshes while the browser is idle, so the
+    // first close-up view does not pay for them.
+    const pending = [...new Set(meshes)].filter(m => (m.getTotalIndices?.() ?? 0) >= 3 * 256)
+      .sort((a, b) => (b.getTotalIndices?.() ?? 0) - (a.getTotalIndices?.() ?? 0));
+    const idle = (globalThis as { requestIdleCallback?: (cb: (d: { timeRemaining(): number }) => void) => number }).requestIdleCallback;
+    const schedule = () => { this.idleHandle = idle ? idle(step) : setTimeout(step, 16) as unknown as number; };
+    const step = (deadline?: { timeRemaining(): number }) => {
+      this.idleHandle = null;
+      do {
+        const mesh = pending.shift();
+        if (!mesh) return;
+        if (!mesh.isDisposed()) this.bvh.get(mesh);
+      } while (deadline && deadline.timeRemaining() > 4);
+      schedule();
+    };
+    if (pending.length) schedule();
+  }
+
+  dispose(): void {
+    if (this.idleHandle === null) return;
+    const cancel = (globalThis as { cancelIdleCallback?: (handle: number) => void }).cancelIdleCallback;
+    if (cancel) cancel(this.idleHandle); else clearTimeout(this.idleHandle);
+    this.idleHandle = null;
+  }
 
   visible(key: object, point: Vector3, now = performance.now()): boolean {
     if (this.overview) return true;
@@ -118,6 +146,13 @@ export class MarkerOcclusion {
       mesh.computeWorldMatrix();
       const box = mesh.getBoundingInfo().boundingBox;
       if (!this.ray.intersectsBoxMinMax(box.minimumWorld, box.maximumWorld)) continue;
+      // Large meshes: the same any-hit test through a triangle tree instead of every triangle.
+      const tree = this.bvh.get(mesh);
+      if (tree) {
+        this.ray.direction.scaleToRef(this.ray.length, this.segmentEnd).addInPlace(this.ray.origin);
+        if (OcclusionBVHCache.segmentHits(tree, mesh, this.ray.origin, this.segmentEnd)) return true;
+        continue;
+      }
       const hit = this.ray.intersectsMesh(mesh, true);
       if (hit.hit && hit.distance <= this.ray.length) return true;
     }
@@ -127,6 +162,7 @@ export class MarkerOcclusion {
 
 const occlusion = new WeakMap<Scene, MarkerOcclusion>();
 export function configureMarkerOcclusion(scene: Scene, meshes: readonly AbstractMesh[], scale: number): void {
+  occlusion.get(scene)?.dispose();
   occlusion.set(scene, new MarkerOcclusion(scene, meshes, scale));
 }
 export function getMarkerOcclusion(scene: Scene): MarkerOcclusion | undefined { return occlusion.get(scene); }

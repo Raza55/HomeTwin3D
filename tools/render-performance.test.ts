@@ -30,7 +30,7 @@ test('atmosphere cache preserves day/night, weather and sub-step fog colors with
     ]) {
       const weather = { clouds, wet, snow, fog };
       scene.metadata = { sunAltitudeDeg: elevation, outdoorWeather: weather };
-      const daylight = Math.max(0, Math.min(1, (elevation + 8) / 30));
+      const daylight = Math.max(0, Math.min(1, (elevation + 10) / 26));
       const tint = originalLerp(new Color3(.025, .03, .045), new Color3(.42, .47, .51), daylight);
       const horizon = originalLerp(originalLerp(new Color3(.045, .055, .10), new Color3(.78, .85, .89), daylight), tint, Math.max(clouds * .55, fog));
       const key = JSON.stringify([Math.round(elevation * 10), weather]);

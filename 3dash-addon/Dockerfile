@@ -1,13 +1,23 @@
 # Modified for HomeTwin3D: build this independent repository. See ../ORIGIN.md.
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.20
+#
+# Releases are prebuilt by .github/workflows/addon-image.yml (config.yaml
+# `image:`), so Home Assistant only downloads them. This file also builds
+# locally (Supervisor fallback, docker build).
+ARG BUILD_ARCH=amd64
 
-# Stage 1: Build the SPA
-FROM node:22-alpine AS builder
+# Stage 1: build the web app once on the build machine itself: its output is
+# the same for every architecture, so no emulated (slow) ARM build is needed.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
+# SOURCE_REF: the commit to build (CI passes it; local builds use main).
+# BUILD_VERSION is part of the step so a new version never reuses an old clone.
+ARG SOURCE_REF=main
 ARG BUILD_VERSION
 RUN apk add --no-cache git
 WORKDIR /app
-RUN git clone --depth 1 --branch main https://github.com/Raza55/HomeTwin3D.git .
+RUN echo "HomeTwin3D ${BUILD_VERSION} from ${SOURCE_REF}" \
+ && git clone --filter=blob:none https://github.com/Raza55/HomeTwin3D.git . \
+ && git checkout --quiet "${SOURCE_REF}"
 RUN npm ci
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Behind an HTTPS reverse proxy the app reaches HA through /ha-ws (nginx.conf).
@@ -15,8 +25,8 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV VITE_HA_WS_PROXY=1 HOMETWIN_NO_SERVICE_WORKER=1
 RUN npm run build -- --mode addon
 
-# Stage 2: Serve with nginx on HA base image
-FROM ${BUILD_FROM}
+# Stage 2: serve with nginx on the HA base image of the target architecture.
+FROM ghcr.io/home-assistant/${BUILD_ARCH}-base:3.20
 
 RUN apk add --no-cache nginx
 

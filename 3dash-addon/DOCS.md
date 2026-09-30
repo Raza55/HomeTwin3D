@@ -53,6 +53,8 @@ Die Route `/ha-media/media_player.…` leitet Bilder an `http://homeassistant:81
 
 PC-Monitore unterstützen außerdem eine zugeordnete Kamera im IT-Dialog. `/ha-camera/camera.…` nutzt denselben festen HA-Upstream für Einzelbilder. Bei eingeschaltetem PC und verfügbarer Kamera wird die Textur alle 30 Sekunden aktualisiert; unsichtbare Monitore und Hintergrund-Tabs pausieren die Abfragen. Ausgeschaltete oder nicht erreichbare PCs bleiben dunkel. Die Kamera-Zuordnung wird mit den IT-Einstellungen gespeichert und beim Modell-Reimport erhalten.
 
+Ab 0.4.1 lädt Home Assistant vorgebaute Images (`ghcr.io/raza55/{arch}-addon-hometwin3d`), die `.github/workflows/addon-image.yml` bei jeder Versionserhöhung in `config.yaml` auf `main` baut. Release: Version in `3dash-addon/config.yaml` und CHANGELOG erhöhen, nach `main` pushen, den Workflow abwarten; danach bietet Home Assistant das Update an.
+
 Ein Push auf GitHub ersetzt keine laufende Installation. Der Build verwendet den jeweiligen Stand von `main`; für veröffentlichte Updates die Add-on-Version erhöhen und den Supervisor-Build auf dem Zielgerät prüfen. Der Add-on-Betrieb wurde bei der Repository-Umstellung nicht neu ausgerollt.
 
 ## Weitere Informationen

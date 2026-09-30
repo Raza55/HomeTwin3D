@@ -1,18 +1,21 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.4.0"
+version: "0.4.1"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
 arch:
   - amd64
   - aarch64
-  - armv7
+# Prebuilt by .github/workflows/addon-image.yml: Home Assistant downloads the
+# image of its architecture instead of building (20-30 min on a Raspberry Pi).
+image: "ghcr.io/raza55/{arch}-addon-hometwin3d"
 ingress: false
 ports:
   8099/tcp: 8099
 ports_description:
   8099/tcp: "Web interface"
+webui: "http://[HOST]:[PORT:8099]"
 # Shared installation data lives in the add-on's config folder: visible in the
 # "addon_configs" Samba share (initial import) and included in HA backups.
 map:

@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.4.1 – Vorgebaute Add-on-Images (30.09.2026)
+
+- Das Add-on wird nicht mehr auf dem Home-Assistant-Gerät gebaut: GitHub baut bei jeder Versionserhöhung Images für amd64 und aarch64 (ghcr.io), Home Assistant lädt sie nur noch herunter (Sekunden statt 20–30 Minuten auf einem Raspberry Pi). Die Web-App wird dabei einmal nativ gebaut und ist für alle Architekturen gleich.
+- nginx-Konfiguration: Regex der gemeinsamen Version korrekt gequotet (nginx startete sonst nicht).
+- „Web-UI öffnen“ in Home Assistant; armv7 entfernt (von HA abgekündigt); Build-Parameter im Dockerfile statt build.yaml.
+- `npm run addon:sync` überträgt die gemeinsame Version per Samba in das Add-on.
+
 ## 0.4.0 – Tablet-Performance und Add-on-Betrieb (30.09.2026)
 
 - Tablets (auch iPads mit Tastatur/Trackpad) erhalten eine leichtere Render-Stufe: keine Cluster-Beleuchtung, zwei Lampen pro Fläche, begrenzte Pixeldichte und Texturen, einfachere Sonnenschatten und Glow. iPad Safari: von ~5 auf ~45–50 FPS.

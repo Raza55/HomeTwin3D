@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.4.6 – Wetter neben der Uhr (30.09.2026)
+
+- Sonne und Wetter stehen oben rechts in einer Reihe neben Uhrzeit und Datum statt darunter. Die Ansichtsumschaltung rückt entsprechend nach oben.
+
 ## 0.4.5 – Neues Logo im Dashboard (30.09.2026)
 
 - Oben links im Dashboard steht jetzt nur noch das neue HomeTwin3D-Logo statt „///3DASH · Live“. Demo- und Simulationsmodus bleiben als Hinweis neben dem Logo sichtbar.

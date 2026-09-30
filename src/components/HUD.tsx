@@ -192,8 +192,6 @@ export default function HUD({
       </div>
 
       <div className="time-display">
-        <div className="time">{clock}</div>
-        <div className="date">{date}</div>
         <div className="hud-status-lines">
           <div className="hud-status-line">
             <span className={`hud-status-icon-badge ${sunStatus.variant}`}>
@@ -209,6 +207,10 @@ export default function HUD({
             <span className="hud-status-label">{t('dashboard.weather')}</span>
             <strong>{weatherStatus.text}</strong>
           </div>
+        </div>
+        <div className="hud-clock">
+          <div className="time">{clock}</div>
+          <div className="date">{date}</div>
         </div>
       </div>
     </div>

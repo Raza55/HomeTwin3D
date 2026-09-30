@@ -27,7 +27,7 @@
 
 .dashboard-render-toggle {
   position: absolute;
-  top: 126px;
+  top: 86px;
   right: 32px;
   z-index: 20;
   display: flex;
@@ -178,7 +178,7 @@
   }
 
   .dashboard-render-toggle {
-    top: 84px;
+    top: 60px;
     right: 18px;
   }
 }

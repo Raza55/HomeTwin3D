@@ -57,6 +57,10 @@
   top: 24px;
   right: 32px;
   text-align: right;
+  /* Sun and weather beside the clock, so the top right stays one compact row. */
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .time-display .time {
@@ -79,7 +83,6 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 3px;
-  margin-top: 8px;
 }
 
 .hud-status-line {
@@ -178,6 +181,7 @@
   .time-display {
     top: 16px;
     right: 18px;
+    gap: 10px;
   }
 
   .time-display .time {
@@ -190,7 +194,6 @@
 
   .hud-status-lines {
     gap: 2px;
-    margin-top: 4px;
   }
 
   .hud-status-line {

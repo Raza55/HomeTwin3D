@@ -132,7 +132,7 @@ function capMaterialLights(scene: Scene, limit: number): void {
 function maxTextureSizeFor(tablet: boolean): number {
   const requested = new URLSearchParams(location.search).get('maxtex');
   if (requested !== null) return Math.max(0, Number(requested) || 0);
-  return tablet ? 2048 : 0;
+  return tablet ? 1024 : 0;
 }
 
 /**
@@ -193,8 +193,9 @@ export function createScene(
   });
   engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, maxDevicePixelRatio));
   // Tablets (Safari/iPadOS) reload a tab under memory pressure. Textures above
-  // 2048 px are scaled down on upload there; on an 11-13" screen this is not
-  // visible. PCs keep full resolution. `?maxtex=<px>` (0 = unlimited) overrides.
+  // 1024 px are scaled down on upload there: only a few framed photos are larger
+  // (~19 MB each at 2048 px with mipmaps), and on an 11-13" screen they never show
+  // more pixels. PCs keep full resolution. `?maxtex=<px>` (0 = unlimited) overrides.
   const textureLimit = maxTextureSizeFor(tablet);
   if (textureLimit && !engine.isWebGPU) {
     const caps = engine.getCaps();

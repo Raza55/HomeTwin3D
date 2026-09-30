@@ -93,6 +93,7 @@ import { dashboardTourSteps } from '../../components/GuidedTour/tourSteps';
 import { SIMULATION_CONFIG, SIMULATION_MODEL_URL } from '../../data/simulationData';
 import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, LightSceneOption, CardLayout, SidePanelCard } from '../../types';
 import './Dashboard.css';
+import { markStartup } from '../../babylon/StartupTiming';
 
 // Rarely used dialogs load on demand to keep the dashboard chunk small.
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
@@ -1003,6 +1004,7 @@ export default function Dashboard() {
           modelScale,
           objectOverrides: configRef.current?.model?.objectOverrides ?? [],
         });
+        markStartup('model');
         if (disposed) return;
 
         ctx.camera.lowerRadiusLimit = result.diagonal * 0.27;
@@ -1170,6 +1172,7 @@ export default function Dashboard() {
           individualFloorplanLights(Object.values(meshMapRef.current)));
         // Glow pass: emissive meshes plus merged static occluders instead of the whole scene.
         if (ctx.glowLayer) setupGlowOccluders(ctx.scene, ctx.glowLayer, result.meshes, modelScale);
+        markStartup('ready');
 
         // Weather effects (rain/snow particles + cloud cover)
         weatherRef.current = createWeatherEffects(ctx.scene, sunShadowGen ?? undefined);

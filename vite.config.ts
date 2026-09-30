@@ -26,7 +26,7 @@ export default defineConfig(({ mode, command }) => {
   return {
     base: basePath,
     // Build time in the perf overlay shows which bundle a device really runs (service worker caches).
-    define: { __HOMETWIN_INSTALLATION__: JSON.stringify(local), __HOMETWIN_BUILD__: JSON.stringify(command === 'build' ? new Date().toISOString().slice(0, 16).replace('T', ' ') : 'dev') },
+    define: { __HOMETWIN_INSTALLATION__: JSON.stringify(local), __HOMETWIN_BUILD__: JSON.stringify(command === 'build' ? new Date().toLocaleString('sv-SE').slice(0, 16) : 'dev') },
     resolve: {
       dedupe: ['react', 'react-dom'],
     },

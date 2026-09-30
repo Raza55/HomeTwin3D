@@ -107,11 +107,26 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
     // Light positions and eligibility are shared by every surface in this update.
     const active = lights.filter(l => l.isEnabled() && l.intensity > 0 && l.getShadowGenerator())
       .map(light => ({ light, position: light.getAbsolutePosition(), rangeSquared: light.range * light.range }));
-    const candidates: Array<{ light: PointLight | SpotLight; contribution: number }> = [];
+    type Candidate = { light: PointLight | SpotLight; contribution: number };
+    // Sources of one render batch share the lamps chosen for the whole batch
+    // (its proxy's bounds). Chosen per source, neighbouring parts (e.g. parquet
+    // strips) picked different pairs of a strip light's emitters, and a batch
+    // with differing lamps falls back to one draw per source.
+    const perBatch = new Map<AbstractMesh, Candidate[]>();
+    let candidates: Candidate[] = [];
     for (const mesh of meshes) {
-      mesh.computeWorldMatrix();
-      const b = mesh.getBoundingInfo().boundingBox;
-      candidates.length = 0;
+      const proxy = batches?.proxyOf(mesh);
+      const shared = proxy && perBatch.get(proxy);
+      if (shared) {
+        shared.forEach(c => selected.get(c.light)!.push(mesh));
+        batches!.recordLights(mesh, shared.map(c => c.light));
+        continue;
+      }
+      const bounds = proxy ?? mesh;
+      bounds.computeWorldMatrix();
+      const b = bounds.getBoundingInfo().boundingBox;
+      candidates = [];
+      if (proxy) perBatch.set(proxy, candidates);
       for (const { light, position, rangeSquared } of active) {
         Vector3.ClampToRef(position, b.minimumWorld, b.maximumWorld, nearest);
         if (Vector3.DistanceSquared(position, nearest) > rangeSquared) continue;

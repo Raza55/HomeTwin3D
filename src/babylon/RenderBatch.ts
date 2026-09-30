@@ -37,6 +37,8 @@ export interface RenderBatchSet {
   /** Resolves recorded lights; returns proxy → lights for batches that stay merged. */
   resolveLights(): Map<Mesh, Light[]>;
   isBatchedSource(mesh: AbstractMesh): boolean;
+  /** Proxy of the batch a source belongs to (undefined for any other mesh). */
+  proxyOf(source: AbstractMesh): Mesh | undefined;
   /** Sources merged into a batch proxy (undefined for any other mesh). */
   sourcesOf(proxy: AbstractMesh): readonly Mesh[] | undefined;
   /** Increments whenever the drawn set changes, so light influence can re-run. */
@@ -127,6 +129,10 @@ class RenderBatchSetImpl implements RenderBatchSet {
 
   isBatchedSource(mesh: AbstractMesh): boolean {
     return this.sourceToBatch.has(mesh);
+  }
+
+  proxyOf(source: AbstractMesh): Mesh | undefined {
+    return this.sourceToBatch.get(source)?.proxy;
   }
 
   sourcesOf(proxy: AbstractMesh): readonly Mesh[] | undefined {

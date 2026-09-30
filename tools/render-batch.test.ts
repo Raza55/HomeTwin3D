@@ -151,3 +151,30 @@ test('color batches keep every source in place, including mirrored ones', () => 
     set.dispose();
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+import { ShadowGenerator } from '@babylonjs/core';
+import { configureFloorplanLightInfluence, type FloorplanLightRig } from '../src/babylon/FloorplanLighting';
+
+test('sources of one batch share the lamps chosen for the whole batch', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const material = new StandardMaterial('parquet', scene);
+    const strips = [0, 1].map(i => { const m = MeshBuilder.CreateBox(`strip${i}`, {}, scene); m.position.x = i * 4; m.material = material; return m; });
+    // One emitter above each strip: chosen per strip with a budget of one lamp, the strips would differ.
+    const lamps = [0, 4].map((x, i) => {
+      const lamp = new PointLight(`emitter${i}`, new Vector3(x, 1, 0), scene);
+      lamp.range = 20; lamp.intensity = 1;
+      new ShadowGenerator(64, lamp);
+      return lamp;
+    });
+    batchStaticRendering(scene, strips, lamps);
+    const proxy = scene.meshes.find(m => m.metadata?.renderBatch)!;
+    configureFloorplanLightInfluence(scene, [{ lights: lamps, sources: [], shadows: [] } as unknown as FloorplanLightRig], strips, 1);
+    const lit = lamps.filter(l => l.includedOnlyMeshes.includes(strips[0]));
+    assert.equal(lit.length, 1);
+    assert.ok(lit[0].includedOnlyMeshes.includes(strips[1]), 'both strips get the same lamp');
+    assert.ok(lit[0].includedOnlyMeshes.includes(proxy));
+    assert.ok(candidates(scene).includes(proxy) && !candidates(scene).includes(strips[0]), 'the batch stays merged');
+  } finally { scene.dispose(); engine.dispose(); }
+});

@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.4.3 – Wartung (30.09.2026)
+
+- Inhaltlich wie 0.4.2. Die neue Version lässt Home Assistant das vorgebaute Image herunterladen, falls eine Installation nach einem lokalen „Neu bauen“ ohne Image dasteht.
+
 ## 0.4.2 – Gemeinsame Startansicht und Texturen (30.09.2026)
 
 - Die Startansicht (Zentrieren-Knopf) gilt für die ganze Installation: „Startansicht ändern“ speichert sie zusätzlich in der gemeinsamen Version; eine eigene Startansicht eines Browsers hat Vorrang.

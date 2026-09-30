@@ -116,7 +116,11 @@ export class MarkerLayer {
       const marker: Marker = {
         spec, element: null, raster: null, slot: null, used: { width: 0, height: 0 }, pixelRatio: 1, dirty: true,
         placement: { x: 0, y: 0, visible: false }, point: Vector3.Zero(),
-        mutations: new MutationObserver(() => { marker.dirty = true; this.requestRender(); }),
+        mutations: new MutationObserver(records => {
+          if (records.every(invisibleChange)) return;
+          marker.dirty = true;
+          this.requestRender();
+        }),
       };
       return marker;
     });
@@ -213,7 +217,7 @@ export class MarkerLayer {
     const pending = marker.mutations.takeRecords();
     write();
     marker.mutations.takeRecords();
-    if (pending.length) { marker.dirty = true; this.requestRender(); }
+    if (pending.some(record => !invisibleChange(record))) { marker.dirty = true; this.requestRender(); }
   }
 
   dispose(): void {
@@ -223,6 +227,12 @@ export class MarkerLayer {
     if (this.layoutObserver) this.scene.onAfterRenderObservable.remove(this.layoutObserver);
     this.onLayoutObservable.clear();
   }
+}
+
+/** Tooltip and screen-reader texts (e.g. a door's "open for 5 min") never change the drawn marker. */
+const TEXT_ATTRIBUTES = new Set(['title', 'aria-label', 'aria-expanded', 'aria-haspopup']);
+function invisibleChange(record: MutationRecord): boolean {
+  return record.type === 'attributes' && TEXT_ATTRIBUTES.has(record.attributeName ?? '');
 }
 
 function park(element: HTMLElement): void {

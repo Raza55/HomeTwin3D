@@ -23,7 +23,7 @@ import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../.
 import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
 import { findFrontFacade } from '../../babylon/SiteLayout';
-import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, type SceneContext } from '../../babylon/SceneManager';
+import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, sunShadowFilteringQuality, type SceneContext } from '../../babylon/SceneManager';
 import { batchStaticRendering } from '../../babylon/RenderBatch';
 import { isDisabledForDebug } from '../../babylon/DebugFlags';
 import { setupGlowOccluders } from '../../babylon/GlowOccluder';
@@ -480,7 +480,7 @@ export default function Dashboard() {
     if (res === 0) return;
     const sg = new ShadowGenerator(res, ctx.sunLight);
     sg.usePercentageCloserFiltering = true;
-    sg.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
+    sg.filteringQuality = sunShadowFilteringQuality();
     sg.bias = 0.001;
     sg.normalBias = 0.02;
     for (const mesh of casters) sg.addShadowCaster(mesh, false);

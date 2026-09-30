@@ -25,7 +25,7 @@ import { installShaderFixes } from './ShaderFixes';
 import { debugDevicePixelRatio } from './DebugFlags';
 import { setupSnapshotRendering } from './SnapshotRendering';
 import { setMarkerRenderRequest } from './MarkerLayer';
-import { isTabletClass } from './DeviceClass';
+import { isTabletClass, reducedEffects } from './DeviceClass';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -258,7 +258,10 @@ export function createScene(
   let glowLayer: GlowLayer | null = null;
   let highlightLayer: HighlightLayer | null = null;
   if (options?.enableGlow) {
-    glowLayer = new GlowLayer('glow', scene);
+    // Tablets: quarter-resolution glow texture and a smaller blur kernel.
+    glowLayer = reducedEffects()
+      ? new GlowLayer('glow', scene, { mainTextureRatio: 0.25, blurKernelSize: 16 })
+      : new GlowLayer('glow', scene);
     glowLayer.intensity = 0.8;
     refreshGlowOnChange(scene, glowLayer);
 
@@ -375,6 +378,11 @@ export function createScene(
  * Create a shadow generator for the sun (directional) light.
  * Call after model is loaded, passing all meshes that should cast shadows.
  */
+/** Sun shadows cover the whole screen by day; tablets sample them once per pixel. */
+export function sunShadowFilteringQuality(): number {
+  return reducedEffects() ? ShadowGenerator.QUALITY_LOW : ShadowGenerator.QUALITY_MEDIUM;
+}
+
 export function setupSunShadows(
   ctx: SceneContext,
   casters: AbstractMesh[],
@@ -393,7 +401,7 @@ export function setupSunShadows(
 
   const sg = new ShadowGenerator(resolution, ctx.sunLight);
   sg.usePercentageCloserFiltering = true;
-  sg.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
+  sg.filteringQuality = sunShadowFilteringQuality();
   sg.bias = 0.001;
   sg.normalBias = 0.02;
 

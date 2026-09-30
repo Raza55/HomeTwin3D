@@ -12,3 +12,13 @@ export function isTabletClass(): boolean {
   if (requested === 'desktop') return false;
   return (window.matchMedia?.('(any-pointer: coarse)').matches ?? false) || (navigator.maxTouchPoints ?? 0) > 1;
 }
+
+/**
+ * Tablet tier effects: sun shadows with single-tap (hardware-filtered) PCF and
+ * a quarter-resolution glow with a smaller blur. Both are per-pixel costs of
+ * every frame on a GPU-bound tablet. `?fx=full` keeps full quality there.
+ */
+export function reducedEffects(): boolean {
+  if (typeof window === 'undefined') return false;
+  return isTabletClass() && new URLSearchParams(window.location.search).get('fx') !== 'full';
+}

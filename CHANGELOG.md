@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.4.4 – Neues App-Icon (30.09.2026)
+
+- Eigenes HomeTwin3D-Icon statt des alten 3Dash-Logos: isometrisches Haus mit leuchtenden Kanten, beleuchtetem Fenster und Bodenraster (der digitale Zwilling). Für Browser-Tab, iPad-Home-Bildschirm, PWA (inkl. maskable) und die Add-on-Seite in Home Assistant.
+- Quelle `branding/*.svg` aus `tools/app-icon.py`, alle Größen per `node tools/render-icons.mjs`.
+
 ## 0.4.3 – Wartung (30.09.2026)
 
 - Inhaltlich wie 0.4.2. Die neue Version lässt Home Assistant das vorgebaute Image herunterladen, falls eine Installation nach einem lokalen „Neu bauen“ ohne Image dasteht.

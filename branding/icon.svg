@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+    <stop offset="0" stop-color="#14375a"/><stop offset="1" stop-color="#060c15"/>
+  </radialGradient>
+  <radialGradient id="floorGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#72e6ff" stop-opacity=".35"/><stop offset="1" stop-color="#72e6ff" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="roofSheen" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ffffff" stop-opacity=".16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="fadeGrad" cx="0.500" cy="0.622" r="0.420">
+    <stop offset=".35" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+  </radialGradient>
+  <mask id="fade"><rect width="1024" height="1024" fill="url(#fadeGrad)"/></mask>
+  <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14.0"/></filter>
+  <radialGradient id="warmGlow"><stop offset="0" stop-color="#ffb347" stop-opacity=".55"/><stop offset=".45" stop-color="#ffb347" stop-opacity=".18"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+<ellipse cx="512" cy="657.0" rx="430.0" ry="250.0" fill="url(#floorGlow)"/>
+<g stroke="#3fb6e6" stroke-width="2.4" opacity=".55" mask="url(#fade)"><line x1="512.0" y1="202.0" x2="-241.4" y2="637.0"/><line x1="512.0" y1="202.0" x2="1265.4" y2="637.0"/><line x1="606.2" y1="256.4" x2="-147.3" y2="691.4"/><line x1="417.8" y1="256.4" x2="1171.3" y2="691.4"/><line x1="700.4" y1="310.8" x2="-53.1" y2="745.8"/><line x1="323.6" y1="310.8" x2="1077.1" y2="745.8"/><line x1="794.5" y1="365.1" x2="41.1" y2="800.1"/><line x1="229.5" y1="365.1" x2="982.9" y2="800.1"/><line x1="888.7" y1="419.5" x2="135.3" y2="854.5"/><line x1="135.3" y1="419.5" x2="888.7" y2="854.5"/><line x1="982.9" y1="473.9" x2="229.5" y2="908.9"/><line x1="41.1" y1="473.9" x2="794.5" y2="908.9"/><line x1="1077.1" y1="528.2" x2="323.6" y2="963.2"/><line x1="-53.1" y1="528.2" x2="700.4" y2="963.2"/><line x1="1171.3" y1="582.6" x2="417.8" y2="1017.6"/><line x1="-147.3" y1="582.6" x2="606.2" y2="1017.6"/><line x1="1265.4" y1="637.0" x2="512.0" y2="1072.0"/><line x1="-241.4" y1="637.0" x2="512.0" y2="1072.0"/></g>
+<polygon points="512.0,271.0 252.2,421.0 382.1,370.0 641.9,220.0" fill="#1b4264"/>
+<polygon points="771.8,637.0 512.0,787.0 512.0,571.0 771.8,421.0" fill="#1f4a6b"/>
+<polygon points="252.2,637.0 512.0,787.0 512.0,571.0 382.1,370.0 252.2,421.0" fill="#173652"/>
+<polygon points="641.9,220.0 382.1,370.0 512.0,571.0 771.8,421.0" fill="#2a6690"/>
+<polygon points="641.9,220.0 382.1,370.0 512.0,571.0 771.8,421.0" fill="url(#roofSheen)"/>
+<polygon points="293.8,589.0 366.5,631.0 366.5,547.0 293.8,505.0" fill="#ffd27a"/>
+<ellipse cx="330.1" cy="568.0" rx="126.0" ry="108.0" fill="url(#warmGlow)"/>
+<polygon points="408.1,727.0 460.0,757.0 460.0,625.0 408.1,595.0" fill="#0b1b2b"/>
+<polygon points="725.0,574.0 662.7,610.0 662.7,544.0 725.0,508.0" fill="#72e6ff" opacity=".35"/>
+<g filter="url(#glow)" opacity=".85"><g fill="none" stroke="#72e6ff" stroke-width="8.4" stroke-linejoin="round" stroke-linecap="round"><polyline points="252.2,637.0 512.0,787.0 771.8,637.0"/><polyline points="252.2,637.0 252.2,421.0 382.1,370.0 512.0,571.0 512.0,787.0"/><polyline points="512.0,571.0 771.8,421.0 771.8,637.0"/><polyline points="382.1,370.0 641.9,220.0 771.8,421.0"/><polyline points="252.2,421.0 512.0,271.0 641.9,220.0"/></g></g>
+<g fill="none" stroke="#72e6ff" stroke-width="8.4" stroke-linejoin="round" stroke-linecap="round"><polyline points="252.2,637.0 512.0,787.0 771.8,637.0"/><polyline points="252.2,637.0 252.2,421.0 382.1,370.0 512.0,571.0 512.0,787.0"/><polyline points="512.0,571.0 771.8,421.0 771.8,637.0"/><polyline points="382.1,370.0 641.9,220.0 771.8,421.0"/><polyline points="252.2,421.0 512.0,271.0 641.9,220.0"/></g>
+<rect x="6" y="6" width="1012" height="1012" rx="222" fill="none" stroke="#72e6ff" stroke-opacity=".18" stroke-width="4"/>
+</svg>

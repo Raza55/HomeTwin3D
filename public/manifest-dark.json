@@ -6,7 +6,7 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1a1a2e",
+  "background_color": "#060c15",
   "theme_color": "#1a1a2e",
   "orientation": "portrait",
   "prefer_related_applications": false,
@@ -24,16 +24,22 @@
       "purpose": "any"
     },
     {
-      "src": "./favicon/dark/web-app-manifest-192x192.png",
+      "src": "./favicon/dark/web-app-manifest-maskable-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./favicon/dark/web-app-manifest-512x512.png",
+      "src": "./favicon/dark/web-app-manifest-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "./favicon/dark/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

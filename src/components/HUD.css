@@ -39,11 +39,14 @@
 
 .title-bar .label {
   color: var(--text);
-  font-size: 14px;
-  font-weight: 300;
+  font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  opacity: 0.85;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
 }
 
 /* Demo mode */
@@ -54,13 +57,19 @@
 /* Clock */
 .time-display {
   position: absolute;
-  top: 24px;
+  top: 20px;
   right: 32px;
   text-align: right;
   /* Sun and weather beside the clock, so the top right stays one compact row. */
   display: flex;
   align-items: center;
   gap: 18px;
+  /* Readable over any part of the model in both themes; no blur (GPU cost per frame). */
+  padding: 6px 12px 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
 }
 
 .time-display .time {
@@ -189,9 +198,11 @@
   }
 
   .time-display {
-    top: 16px;
+    top: 14px;
     right: 18px;
     gap: 10px;
+    padding: 4px 8px 4px 10px;
+    border-radius: 10px;
   }
 
   .time-display .time {

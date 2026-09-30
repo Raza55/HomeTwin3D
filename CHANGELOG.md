@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.2 – Lesbare Uhr im hellen Theme (30.09.2026)
+
+- Uhr, Sonne und Wetter oben rechts (sowie der Demo-/Simulationshinweis oben links) liegen auf einer halbtransparenten Fläche in Panelfarbe und sind so in beiden Themes über jedem Teil des Modells lesbar – ohne Unschärfe-Effekt, der auf Tablets Leistung kosten würde.
+
 ## 0.5.1 – Feinschliff (30.09.2026)
 
 - **Zuordnungs-Assistent** folgt jetzt Theme und Akzentfarbe (auch im hellen Modus lesbar), zeigt das Symbol des jeweiligen Geräts, einen Fortschrittszähler und kurze Hinweise statt langer Absätze (Details zu Türen unter „Mehr zum Verhalten“). Alle Texte sind übersetzbar; im Demo-Modus erscheint eine verständliche Meldung statt eines technischen Fehlers.

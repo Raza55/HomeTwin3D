@@ -8,8 +8,10 @@ import {getActiveHAConnection} from '../services/haWebSocket';
 import {TV_DIAL_AUTOMATION,TV_DIAL_CHOICES,tvDialRequest,tvDialSelected,type TVDialChoice} from '../services/tvDial';
 import './ITMarkers.css';
 import './TVDialControl.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function TVDialControl({scene,states,connected,onCommand}:{scene:Scene;states:Record<string,HAState>;connected:boolean;onCommand?:(request:ReturnType<typeof tvDialRequest>)=>Promise<unknown>}){
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const marker=useRef<HTMLButtonElement|null>(null),pending=useRef(false);
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[feedback,setFeedback]=useState(''),[error,setError]=useState('');
   const selected=tvDialSelected(states,connected),enabled=connected&&states[TV_DIAL_AUTOMATION]?.state==='on';

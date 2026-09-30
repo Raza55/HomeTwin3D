@@ -15,23 +15,24 @@ interface LanguageContextValue {
   t: (key: string, params?: TranslationParams) => string;
 }
 
-const LanguageContext = createContext<LanguageContextValue>({
-  language: 'de-DE',
-  languages: SUPPORTED_LANGUAGES,
-  setLanguage: () => {},
-  t: (key) => key,
-});
-
-function isLanguageCode(value: string | undefined): value is LanguageCode {
-  return value === 'de-DE' || value === 'en-GB';
-}
-
 function interpolate(template: string, params?: TranslationParams): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (_, key: string) => {
     const value = params[key];
     return value === undefined ? `{${key}}` : String(value);
   });
+}
+
+// Without a provider (QA harnesses) components still get German texts.
+const LanguageContext = createContext<LanguageContextValue>({
+  language: 'de-DE',
+  languages: SUPPORTED_LANGUAGES,
+  setLanguage: () => {},
+  t: (key, params) => interpolate(DICTIONARIES['de-DE']?.[key] ?? key, params),
+});
+
+function isLanguageCode(value: string | undefined): value is LanguageCode {
+  return value === 'de-DE' || value === 'en-GB';
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

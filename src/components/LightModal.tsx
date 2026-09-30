@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
+import ModalHeader from './ModalHeader';
 import ColorWheel, { hslToRgb } from './ColorWheel';
 import { miredToKelvin } from '../utils/color';
 import type { HAState, LightSceneOption } from '../types';
@@ -274,25 +275,15 @@ export default function LightModal({
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="light-modal">
-        <div className="modal-header">
-          <div className="modal-title">
-            <div
-              className="modal-bulb-icon"
-              style={{
-                background: isOn ? 'rgba(251,191,36,0.15)' : 'transparent',
-                borderColor: isOn ? '#fbbf24' : '#334155',
-              }}
-            >
-              &#128161;
-            </div>
-            <div>
-              <div className="modal-entity-name">{label}</div>
-              <div className="modal-entity-id">{entityId}</div>
-            </div>
-          </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
-        </div>
+      <div className="light-modal modal-card">
+        <ModalHeader
+          icon={<Lightbulb size={18} strokeWidth={1.7} />}
+          active={isOn}
+          title={label}
+          subtitle={isOn ? `${t('common.on')} · ${Math.round(brightness / 2.55)} %` : t('common.off')}
+          hint={entityId ?? undefined}
+          onClose={onClose}
+        />
 
         <div className="modal-body">
           {/* Toggle */}

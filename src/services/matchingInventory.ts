@@ -6,7 +6,10 @@ export interface MatchingInventory { entities: MatchEntity[]; lightTypes: Record
 export async function loadMatchingInventory(): Promise<MatchingInventory> {
   const ha = getActiveHAConnection();
   if (!ha?.isConnected) throw new Error('Bitte Home Assistant verbinden und erneut laden.');
-  const states = await ha.request({ type: 'get_states' }) as HAState[];
+  const raw = await ha.request({ type: 'get_states' });
+  // The demo connection answers every request with an empty object.
+  if (!Array.isArray(raw)) throw new Error('Diese Verbindung liefert keine Entity-Liste (z. B. im Demo-Modus). Bitte im Live-Modus zuordnen.');
+  const states = raw as HAState[];
   const registry = await Promise.allSettled([
     ha.request({ type: 'config/area_registry/list' }), ha.request({ type: 'config/device_registry/list' }), ha.request({ type: 'config/entity_registry/list' }),
   ]);

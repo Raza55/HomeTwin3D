@@ -6,12 +6,14 @@ import {loadMatchingInventory} from '../services/matchingInventory';
 import type {MatchEntity} from '../services/floorplanMatching';
 import './LightQuickControls.css';
 import './BlindQuickControls.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 interface Props {
  visible:boolean;entityId:string|null;label:string;state:HAState|null;states:Record<string,HAState>;config:AppConfig;connected:boolean;
  anchor:{x:number;y:number}|null;onClose:()=>void;
  onOpenCover:(id:string)=>Promise<unknown>;onCloseCover:(id:string)=>Promise<unknown>;onStopCover:(id:string)=>Promise<unknown>;onSetPosition:(id:string,position:number)=>Promise<unknown>;
 }
 export default function BlindQuickControls(props:Props){
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
  if(!props.visible||!props.entityId)return null;
  return <Controls key={props.entityId} {...props} entityId={props.entityId}/>;
 }

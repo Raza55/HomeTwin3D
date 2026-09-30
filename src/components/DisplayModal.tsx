@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X } from 'lucide-react';
+import { Monitor } from 'lucide-react';
+import ModalHeader from './ModalHeader';
 import type { DisplayConfig, HAState, HAHistoryPoint } from '../types';
 import { fetchHistory, generateDemoHistory } from '../services/haHistoryApi';
 import { useDemoMode } from '../contexts/DemoModeContext';
@@ -513,14 +514,11 @@ export default function DisplayModal({
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
-      <div className="indicator-modal">
-        {/* Header */}
-        <div className="im-header">
-          <div className="im-title">
-            <div>
-              <div className="im-name">{display.label}</div>
-              <div className="im-value-inline">
-                {screenEntityId
+      <div className="indicator-modal modal-card">
+        <ModalHeader
+          icon={<Monitor size={18} strokeWidth={1.7} />}
+          title={display.label}
+          subtitle={screenEntityId
                   ? `${states[screenEntityId]?.state ?? '--'}${states[screenEntityId]?.attributes?.source ? ` | ${String(states[screenEntityId].attributes.source)}` : ''}`
                   : display.sources.map((src) => {
                     const ha = states[src.entityId];
@@ -529,11 +527,8 @@ export default function DisplayModal({
                     const formatted = isNaN(num) ? val : num.toFixed(src.precision ?? 0);
                     return `${src.label ? src.label + ' ' : ''}${formatted}${src.unit ?? ''}`;
                   }).join('  ')}
-              </div>
-            </div>
-          </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
-        </div>
+          onClose={onClose}
+        />
 
         <div className="im-body">
           {mediaEntityId && (

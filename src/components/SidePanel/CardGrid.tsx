@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { GridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -42,6 +43,16 @@ export default function CardGrid({ config, ha, cardStates, width, editMode, onLa
   const isMobile = useIsMobile();
   const t = useTranslation();
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorCard | null>(null);
+  // Delete asks once: the first tap arms the button for a few seconds.
+  const [armedDelete, setArmedDelete] = useState<string | null>(null);
+  const armTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(armTimer.current), []);
+  const requestDelete = (id: string) => {
+    window.clearTimeout(armTimer.current);
+    if (armedDelete === id) { setArmedDelete(null); onCardDelete?.(id); return; }
+    setArmedDelete(id);
+    armTimer.current = window.setTimeout(() => setArmedDelete(null), 3500);
+  };
 
   const renderCardContent = (card: typeof config.cards[number]) => {
     switch (card.type) {
@@ -64,15 +75,26 @@ export default function CardGrid({ config, ha, cardStates, width, editMode, onLa
       {editMode && (
         <div className="card-edit-overlay">
           <button
-            className="card-edit-btn card-edit-btn-delete"
-            onClick={e => { e.stopPropagation(); onCardDelete?.(card.id); }}
+            type="button"
+            className={`card-edit-btn card-edit-btn-delete${armedDelete === card.id ? ' armed' : ''}`}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); requestDelete(card.id); }}
             title={t('cards.deleteCardTitle')}
-          >&#x2715;</button>
+            aria-label={armedDelete === card.id ? t('cards.confirmDelete') : t('cards.deleteCardTitle')}
+          >
+            <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
+            {armedDelete === card.id && <span>{t('cards.confirmDelete')}</span>}
+          </button>
           <button
+            type="button"
             className="card-edit-btn card-edit-btn-edit"
+            onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onCardEdit?.(card); }}
             title={t('cards.editCardTitle')}
-          >&#x270E;</button>
+            aria-label={t('cards.editCardTitle')}
+          >
+            <Pencil size={15} strokeWidth={1.8} aria-hidden="true" />
+          </button>
         </div>
       )}
     </>

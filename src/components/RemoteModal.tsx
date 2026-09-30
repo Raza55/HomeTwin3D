@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { Tv } from 'lucide-react';
+import { useTranslation } from '../contexts/LanguageContext';
+import ModalHeader from './ModalHeader';
 import type { RemoteButton, HAState } from '../types';
 import './RemoteModal.css';
 
@@ -65,6 +67,7 @@ export default function RemoteModal({
   onToggle,
   onPressButton,
 }: Props) {
+  const t = useTranslation();
   const isOn = state?.state === 'on';
   const [lastPressed, setLastPressed] = useState<string | null>(null);
 
@@ -107,26 +110,15 @@ export default function RemoteModal({
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="remote-modal">
-        {/* Header */}
-        <div className="modal-header">
-          <div className="modal-title">
-            <div
-              className="modal-bulb-icon"
-              style={{
-                background: isOn ? 'rgba(251,191,36,0.15)' : 'transparent',
-                borderColor: isOn ? '#fbbf24' : '#334155',
-              }}
-            >
-              📡
-            </div>
-            <div>
-              <div className="modal-entity-name">{label}</div>
-              <div className="modal-entity-id">{toggleEntityId}</div>
-            </div>
-          </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
-        </div>
+      <div className="remote-modal modal-card">
+        <ModalHeader
+          icon={<Tv size={18} strokeWidth={1.7} />}
+          active={isOn}
+          title={label}
+          subtitle={state ? (isOn ? t('common.on') : t('common.off')) : undefined}
+          hint={toggleEntityId ?? undefined}
+          onClose={onClose}
+        />
 
         <div className="remote-body">
           {/* ── Power row ── */}

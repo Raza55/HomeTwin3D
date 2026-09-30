@@ -9,12 +9,14 @@ import { floorplanId } from '../babylon/FloorplanBindings';
 import { quickLightCluster, isEnsis } from '../services/lightClusters';
 import './LightClusterControls.css';
 import { HUE_SYNC_COLOR, isHueSyncLocked } from '../services/hueSync';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function LightClusterMarkers({scene,config,meshes,states,onOpen,onLeave,onAssign}:{
   scene:Scene;config:AppConfig;meshes:MeshMap;states:Record<string,HAState>;
   onAssign?:(objectId:string)=>void;
   onOpen:(entityId:string,x:number,y:number,pinned:boolean)=>void;onLeave:()=>void;
 }){
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const buttons=useRef<Record<string,HTMLButtonElement|null>>({});
   const touchGesture=useRef<{x:number;y:number;moved:boolean}|null>(null);
   const groups:LightConfig[][]=[],seen=new Set<string>();

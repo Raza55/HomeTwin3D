@@ -7,12 +7,14 @@ import { itStatus, itStatusLabel, itMetric, itActionAvailable, itCommand, valida
 import { getActiveHAConnection } from '../services/haWebSocket';
 import EntityPicker from './EntityPicker';
 import './ITMarkers.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function ITMarkers({scene,config,states,connected,open,onOpen,onSave,onCommand}: {
   scene:Scene;config:AppConfig;states:Record<string,HAState>;connected:boolean;open:string|null;
   onOpen:(id:string|null)=>void;onSave:(id:string,it:ITConfig)=>void;
   onCommand?:(domain:string,service:string,entityId:string)=>Promise<unknown>;
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const refs=useRef<Record<string,HTMLButtonElement|null>>({});
   const pending=useRef(false);
   const [busy,setBusy]=useState(false),[error,setError]=useState('');

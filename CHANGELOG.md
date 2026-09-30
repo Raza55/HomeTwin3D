@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.1 – Feinschliff (30.09.2026)
+
+- **Zuordnungs-Assistent** folgt jetzt Theme und Akzentfarbe (auch im hellen Modus lesbar), zeigt das Symbol des jeweiligen Geräts, einen Fortschrittszähler und kurze Hinweise statt langer Absätze (Details zu Türen unter „Mehr zum Verhalten“). Alle Texte sind übersetzbar; im Demo-Modus erscheint eine verständliche Meldung statt eines technischen Fehlers.
+- **Geräte-Popups** (Licht, Fernbedienung, Anzeigen, Sensorkarten) haben einen einheitlichen Kopf mit Gerätesymbol, Statuszeile (z. B. „An · 80 %“) und großem Schließen-Knopf; die Entity-ID steht nur noch im Tooltip.
+- **Karten:** Löschen fragt einmal nach („Löschen?“), „Abbrechen“ im Karteneditor verwirft die Vorschau, Bearbeiten-/Löschen-Knöpfe sind größer.
+- **Leistung:** Zustandsänderungen von Lampen, Lüftern, Rollos, Batterie- und Wassersensoren aktualisieren nur noch die betroffenen Symbole im Plan statt das ganze Dashboard neu aufzubauen.
+
 ## 0.5.0 – Aufgeräumte Oberfläche (30.09.2026)
 
 - **Einstellungen neu gegliedert:** vier Bereiche statt acht (Verbindung, Darstellung, 3D-Ansicht, Einrichtung) mit kurzer Beschreibung und Verbindungsstatus. Einheitliche Schalter, Segmente und Knöpfe in Tablet-Größe (mind. 40 px), Hinweise direkt an den Optionen.

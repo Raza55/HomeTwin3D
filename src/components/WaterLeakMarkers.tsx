@@ -5,10 +5,12 @@ import type { AppConfig, HAState } from '../types';
 import { useMapMarkers } from './useMapMarkers';
 import { WATER_LEAK_SENSORS, waterLeakActive } from '../services/waterLeak';
 import './WaterLeakMarkers.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function WaterLeakMarkers({ scene, config, states, connected }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const active = WATER_LEAK_SENSORS.filter(sensor => waterLeakActive(states[sensor.entityId], connected));
   const activeKey = active.map(sensor => sensor.entityId).join('|');

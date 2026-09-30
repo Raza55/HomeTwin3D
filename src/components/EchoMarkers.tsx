@@ -9,12 +9,14 @@ import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { echoState, type EchoService } from '../services/echoState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './EchoMarkers.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function EchoMarkers({ scene, config, states, connected, open, onOpen, onAssign, onCommand }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
   open: string | null; onOpen: (id: string | null) => void; onAssign: (id: string) => void;
   onCommand?: (entityId: string, service: string, data?: Record<string, unknown>) => Promise<unknown>;
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const panel = useRef<HTMLElement>(null);
   const pending = useRef(false);

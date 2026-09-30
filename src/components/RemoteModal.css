@@ -1,8 +1,5 @@
 .remote-modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  width: 300px;
+  width: min(320px, calc(100vw - 32px));
   max-height: 85vh;
   overflow: hidden;
   display: flex;

@@ -1,48 +1,7 @@
 .indicator-modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  width: 320px;
+  width: min(340px, calc(100vw - 32px));
   max-height: 85vh;
   overflow-y: auto;
-}
-
-/* Header */
-.im-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.im-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.im-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-}
-
-.im-name {
-  color: var(--text);
-  font-size: 12px;
-  letter-spacing: 0.05em;
-}
-
-.im-value-inline {
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 2px;
 }
 
 .im-unit {

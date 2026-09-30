@@ -12,7 +12,8 @@ import { isBatteryState } from '../../services/batteryWarning';
 import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
-import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH } from '../../services/hueSync';
+import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
+import { notifyEntityStates } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
@@ -1517,16 +1518,19 @@ export default function Dashboard() {
         stopPendingFeedback(entityId);
         const wasBattery = lastStatesRef.current[entityId] && isBatteryState(lastStatesRef.current[entityId]);
         lastStatesRef.current[entityId] = state;
-        if (isWaterLeakEntity(entityId)) refreshQuickStates(n=>n+1);
-        if (wasBattery || isBatteryState(state) || /battery|batterie/.test(entityId)) refreshQuickStates(n=>n+1);
+        // Plan overlays (markers, door status, IT) re-render themselves; the
+        // Dashboard only re-renders where its own JSX shows the state: the
+        // Hue Sync lock and an open light popup (below).
+        if (isWaterLeakEntity(entityId) || wasBattery || isBatteryState(state) || /battery|batterie/.test(entityId)) notifyEntityStates();
         if (isHueSyncControl(entityId)) {
           for (const id of Object.keys(meshMapRef.current)) {
             const cached = lastStatesRef.current[id];
             if (cached) applyLightState(id, cached);
           }
         }
-        if (entityId.startsWith('fan.') || floorplanMarkerEntityIds().has(entityId)) refreshQuickStates(n=>n+1);
-        if (entityId.startsWith('light.') || isHueSyncControl(entityId) || ['automation.tv_dial_hdmi1','media_player.living_room_receiver','media_player.living_room_tv'].includes(entityId)) refreshQuickStates(n=>n+1);
+        if (entityId.startsWith('fan.') || floorplanMarkerEntityIds().has(entityId)) notifyEntityStates();
+        if (entityId.startsWith('light.') || ['automation.tv_dial_hdmi1','media_player.living_room_receiver','media_player.living_room_tv'].includes(entityId)) notifyEntityStates();
+        if (isHueSyncControl(entityId) || (HUE_SYNC_MEMBERS as readonly string[]).includes(entityId)) refreshQuickStates(n=>n+1);
         if (entityId.startsWith('scene.')) {
           setLightSceneOptions(buildSceneOptions(Object.values(lastStatesRef.current)));
         }
@@ -1543,6 +1547,7 @@ export default function Dashboard() {
         if (quickRef.current && quickLightCluster(configRef.current?.lights ?? [], quickRef.current.entityId).some(l => l.entityId === entityId)) refreshQuickStates(n=>n+1);
         if (entityId === modalDoubleTapEntityIdRef.current) setModalDoubleTapState(state);
         if (entityId === remoteModalEntityIdRef.current) setRemoteModalState(state);
+        if (entityId.startsWith('cover.')) notifyEntityStates();
         if (entityId.startsWith('cover.') && blindModalEntityIdRef.current) setBlindModalState(lastStatesRef.current[blindModalEntityIdRef.current] ? { ...lastStatesRef.current[blindModalEntityIdRef.current] } : null);
 
         // Mode sensor changed → re-apply color to the associated remote light
@@ -1583,7 +1588,6 @@ export default function Dashboard() {
         );
         setLightSceneOptions(buildSceneOptions(states));
         lastStatesRef.current = Object.fromEntries(states.map(state => [state.entity_id, state]));
-        refreshQuickStates(n=>n+1);
         refreshQuickStates(n=>n+1);
         const newCardStates: Record<string, HAState> = {};
         states.forEach((state) => {
@@ -2209,7 +2213,13 @@ export default function Dashboard() {
             card={editingCard}
             haEntities={cardPanelEntities}
             onSave={handleCardSave}
-            onCancel={() => { setCardPanelOpen(false); setEditingCard(null); }}
+            onCancel={() => {
+              // Drop the live preview: show the stored cards again.
+              setSidePanelConfig(configRef.current?.sidePanel);
+              if (configRef.current) rebuildEntityIndexes(configRef.current);
+              setCardPanelOpen(false);
+              setEditingCard(null);
+            }}
             onPreview={handleCardPreview}
           />
         </Suspense>

@@ -7,10 +7,12 @@ import type { AppConfig, HAState } from '../types';
 import { createDoorRigs, doorMarkerAnchor } from '../babylon/DoorAnimation';
 import { doorDuration, doorPose, doorStatus, lockStatus } from '../services/doorState';
 import './DoorMarkers.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function DoorMarkers({ scene, config, states, connected, onAssign }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean; onAssign: (id: string) => void;
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const buttons = useRef<Record<string, HTMLButtonElement | null>>({});
   const popup = useRef<HTMLElement>(null);
   const [open, setOpen] = useState<string | null>(null);

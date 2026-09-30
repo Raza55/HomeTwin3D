@@ -4,11 +4,13 @@ import type { AppConfig, HAState } from '../types';
 import { createDoorRigs, setDoorPose } from '../babylon/DoorAnimation';
 import { doorPose } from '../services/doorState';
 import { invalidateShadowsNear } from '../babylon/ShadowRange';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 /** Geometry only; status markers are rendered independently by DoorMarkers. */
 export default function DoorStatus({ scene, config, states, connected }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const live = useRef({ states, connected });live.current = { states, connected };
   useEffect(() => {
     const rigs = createDoorRigs(scene);

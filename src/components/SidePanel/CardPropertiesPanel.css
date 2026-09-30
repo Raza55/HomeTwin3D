@@ -206,36 +206,42 @@
 
 .card-edit-btn {
   position: absolute;
-  top: 4px;
+  top: 6px;
   pointer-events: all;
-  width: 20px;
-  height: 20px;
-  border-radius: 2px;
-  border: none;
-  background: none;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  gap: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border2);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-  transition: color 0.15s, opacity 0.15s;
-  padding: 0;
-  opacity: 0.5;
-}
-
-.card-edit-btn:hover {
-  opacity: 1;
+  font-family: inherit;
+  font-size: 11px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .card-edit-btn-edit {
-  right: 4px;
+  right: 6px;
   color: var(--accent);
 }
 
 .card-edit-btn-delete {
-  left: 4px;
+  left: 6px;
   color: var(--red);
+}
+
+.card-edit-btn-delete.armed {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-edit-btn:hover { border-color: currentColor; }
 }
 
 @media (max-width: 768px) {

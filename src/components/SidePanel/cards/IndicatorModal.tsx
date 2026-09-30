@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X } from 'lucide-react';
+import ModalHeader from '../../ModalHeader';
 import { createPortal } from 'react-dom';
 import type { IndicatorCard, HAState, HAHistoryPoint } from '../../../types';
 import { fetchHistory, generateDemoHistory } from '../../../services/haHistoryApi';
@@ -245,22 +245,14 @@ export default function IndicatorModal({
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
-      <div className="indicator-modal">
-        {/* Header */}
-        <div className="im-header">
-          <div className="im-title">
-            {card.icon && (
-              <div className="im-icon">
-                <LucideIcon name={card.icon} size={18} strokeWidth={1.5} />
-              </div>
-            )}
-            <div>
-              <div className="im-name">{card.title}</div>
-              <div className="im-value-inline">{display}{card.unit && <span className="im-unit">{card.unit}</span>}</div>
-            </div>
-          </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
-        </div>
+      <div className="indicator-modal modal-card">
+        <ModalHeader
+          icon={card.icon ? <LucideIcon name={card.icon} size={18} strokeWidth={1.6} /> : undefined}
+          title={card.title}
+          subtitle={<>{display}{card.unit && <span className="im-unit">{card.unit}</span>}</>}
+          hint={card.entityId}
+          onClose={onClose}
+        />
 
         <div className="im-body">
           {/* Graph */}

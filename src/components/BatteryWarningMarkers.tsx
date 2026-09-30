@@ -8,11 +8,13 @@ import { WATER_LEAK_SENSORS } from '../services/waterLeak';
 import { useMapMarkers } from './useMapMarkers';
 import { createDoorRigs, doorMarkerAnchor } from '../babylon/DoorAnimation';
 import './BatteryWarningMarkers.css';
+import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function BatteryWarningMarkers({ scene, config, states, connected, registryOverride }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
   registryOverride?: BatteryRegistryEntry[];
 }) {
+  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const [registry, setRegistry] = useState<BatteryRegistryEntry[]>([]);
   const refs = useRef<Record<string, HTMLSpanElement | null>>({});
   useEffect(() => {

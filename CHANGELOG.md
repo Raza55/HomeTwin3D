@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.3 – Hellere Dämmerung (30.09.2026)
+
+- Nach Sonnenuntergang fällt das Umgebungslicht nicht mehr schlagartig auf Nachtniveau, sondern geht über die Dämmerung (bis 10° unter dem Horizont) mit bläulichem Ton allmählich zurück. Auch der Himmel bleibt länger hell.
+- Bei tiefer Sonne ist die Szene etwas heller, und Bewölkung dunkelt das Umgebungslicht nur noch halb so stark ab wie das direkte Sonnenlicht.
+
 ## 0.5.2 – Lesbare Uhr im hellen Theme (30.09.2026)
 
 - Uhr, Sonne und Wetter oben rechts (sowie der Demo-/Simulationshinweis oben links) liegen auf einer halbtransparenten Fläche in Panelfarbe und sind so in beiden Themes über jedem Teil des Modells lesbar – ohne Unschärfe-Effekt, der auf Tablets Leistung kosten würde.

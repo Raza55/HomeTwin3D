@@ -19,7 +19,8 @@ export function createParkAtmosphereUpdater(
     const { clouds, wet, snow, fog } = weather;
     const weatherChanged = clouds !== lastClouds || wet !== lastWet || snow !== lastSnow || fog !== lastFog;
     if (elevation !== lastElevation || clouds !== lastClouds || fog !== lastFog) {
-      daylight = Math.max(0, Math.min(1, (elevation + 8) / 30));
+      // Twilight keeps the sky light until the sun is well below the horizon.
+      daylight = Math.max(0, Math.min(1, (elevation + 10) / 26));
       cloudTint = Color3.Lerp(new Color3(.025, .03, .045), new Color3(.42, .47, .51), daylight);
       horizon = Color3.Lerp(
         Color3.Lerp(new Color3(.045, .055, .10), new Color3(.78, .85, .89), daylight),

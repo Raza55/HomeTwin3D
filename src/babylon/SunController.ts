@@ -105,14 +105,29 @@ export function updateSunPosition(
     sun.position = dir.scale(-50);
     const t = Math.min(altitude / (Math.PI / 6), 1);
     sun.diffuse = new Color3(1.0, 0.7 + 0.25 * t, 0.5 + 0.35 * t);
-    sun.intensity = (0.3 + 0.8 * t) * ccf;
-    hemi.intensity = Math.max((0.4 + 0.2 * t) * ccf, 0.15);
+    sun.intensity = (0.45 + 0.65 * t) * ccf;
+    hemi.intensity = (HORIZON_AMBIENT + 0.1 * t) * ambientCloudFactor(ccf);
     hemi.diffuse = new Color3(0.85, 0.9, 1.0);
   } else {
     sun.intensity = 0;
-    hemi.intensity = 0.08;
-    hemi.diffuse = new Color3(0.2, 0.25, 0.4);
+    // Twilight: the sky stays bright for a while after sunset. Blend from the
+    // horizon ambient down to night over the twilight (0° to -10°).
+    const dusk = Math.max(0, Math.min(1, (altitude * 180 / Math.PI + TWILIGHT_DEG) / TWILIGHT_DEG));
+    const k = Math.pow(dusk, 1.3);
+    hemi.intensity = NIGHT_AMBIENT + (HORIZON_AMBIENT * ambientCloudFactor(ccf) - NIGHT_AMBIENT) * k;
+    hemi.diffuse = Color3.Lerp(NIGHT_TINT, DUSK_TINT, k);
   }
+}
+
+const HORIZON_AMBIENT = 0.5;
+const NIGHT_AMBIENT = 0.08;
+const TWILIGHT_DEG = 10;
+const NIGHT_TINT = new Color3(0.2, 0.25, 0.4);
+const DUSK_TINT = new Color3(0.7, 0.72, 0.9);
+
+/** Overcast sky still lights the scene diffusely: clouds dim ambient half as much as direct sun. */
+function ambientCloudFactor(ccf: number): number {
+  return 1 - (1 - ccf) * 0.5;
 }
 
 /**

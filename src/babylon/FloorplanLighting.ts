@@ -370,16 +370,18 @@ export function getClusteredContainer(scene: Scene): ClusteredLightContainer | n
 
 /**
  * Which emitters are clustered: 'multi' = multi-emitter fixtures (desktop default),
- * 'all' = every lamp (touch default: no lamp shadows, but every surface then gets
- * the same lights, so render batches never split and the draw count drops; on
- * WebKit each draw call is the dominant cost), 'off' = none. `?cluster=0|multi|all`.
+ * 'all' = every lamp (no lamp shadows, but every surface then gets the same
+ * lights, so render batches never split and the draw count drops), 'off' = none
+ * (touch default). `?cluster=0|multi|all`. Tablets are GPU-bound: two lamps per
+ * surface cost far less per pixel than every lit lamp of a tile (iPad Safari:
+ * 15-20 fps clustered, 30-35 fps off).
  */
 export function clusteredLightingMode(): 'off' | 'multi' | 'all' {
   const requested = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('cluster');
   if (requested === '0' || requested === 'off') return 'off';
   if (requested === 'all' || requested === 'multi') return requested;
   const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-  return coarse ? 'all' : 'multi';
+  return coarse ? 'off' : 'multi';
 }
 
 /**

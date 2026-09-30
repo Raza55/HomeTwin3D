@@ -1,4 +1,7 @@
 import { EngineInstrumentation, SceneInstrumentation, type AbstractEngine, type Engine, type Scene } from '@babylonjs/core';
+import { clusteredLightingMode } from './FloorplanLighting';
+
+declare const __HOMETWIN_BUILD__: string;
 
 /**
  * Read-only performance readout, enabled with `?perf` in the page URL.
@@ -63,7 +66,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
       `draws ${frames ? Math.round(draws / frames) : 0}   JS heap ${memory ? `${Math.round(memory.usedJSHeapSize / 1e6)} MB` : 'n/a'}`,
       `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
       `eval ${per(evaluation)}  targets ${per(targets)}  main ${per(camera)}  other ${per(cpu - camera - evaluation)}  shaders ${(engineInstrumentation.shaderCompilationTimeCounter.total - compileStart).toFixed(0)} ms`,
-      renderer,
+      `${renderer}   build ${typeof __HOMETWIN_BUILD__ === 'string' ? __HOMETWIN_BUILD__ : '?'}   cluster ${clusteredLightingMode()}`,
     ].join('\n');
     compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;
     frames = 0; cpu = 0; draws = 0; worstGap = 0; evaluation = 0; targets = 0; camera = 0; windowStart = now;

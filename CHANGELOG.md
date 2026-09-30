@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.4.7 – Kompakte Wetteranzeige (30.09.2026)
+
+- Sonne und Wetter oben rechts deutlich schmaler: keine Beschriftungen mehr, der Zustand steckt im Symbol, Bewölkung und Niederschlag mit kleinen Symbolen (z. B. „29° ☁ 78%“). Der volle Text bleibt als Tooltip erhalten.
+
 ## 0.4.6 – Wetter neben der Uhr (30.09.2026)
 
 - Sonne und Wetter stehen oben rechts in einer Reihe neben Uhrzeit und Datum statt darunter. Die Ansichtsumschaltung rückt entsprechend nach oben.

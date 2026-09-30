@@ -89,7 +89,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   color: var(--text);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -153,6 +153,16 @@
 }
 
 .hud-status-label {
+  color: var(--muted);
+}
+
+.hud-status-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.hud-status-mini {
   color: var(--muted);
 }
 

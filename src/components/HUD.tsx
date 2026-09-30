@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  Cloud,
   CloudOff,
   CloudRain,
   CloudSnow,
   CloudSun,
   Cloudy,
+  Droplets,
   Moon,
+  Snowflake,
   SunMedium,
   type LucideIcon,
 } from 'lucide-react';
@@ -135,40 +138,55 @@ export default function HUD({
     const degree = '\u00b0';
     const heading = cardinalFromAzimuth(pos.azimuthDeg, language);
     const modeTime = sunLiveMode ? '' : ` · ${scrubberTime}`;
-    const nightPrefix = pos.isDay ? '' : `${t('dashboard.sunNight')} `;
+    // Day or night shows in the icon; the full wording stays in the tooltip.
+    const text = `${Math.round(pos.altitudeDeg)}${degree} ${heading}${modeTime}`;
     return {
       icon: pos.isDay ? SunMedium : Moon,
       variant: pos.isDay ? 'sun-day' : 'sun-night',
-      text: `${nightPrefix}${Math.round(pos.altitudeDeg)}${degree} ${heading}${modeTime}`,
+      text,
+      title: `${t('dashboard.sun')}: ${pos.isDay ? '' : `${t('dashboard.sunNight')} `}${text}`,
     };
   }, [currentMinutes, language, latitude, longitude, northOffset, scrubberTime, sliderValue, sunLiveMode, t]);
 
+  // Compact: the badge shows the condition, cloud cover and precipitation get
+  // small icons instead of words. The full wording stays in the tooltip.
   const weatherStatus = useMemo(() => {
     if (!currentWeather) {
       return {
         icon: CloudOff,
         variant: 'weather-unavailable',
-        text: t('dashboard.weatherUnavailable'),
+        temperature: '',
+        clouds: '',
+        precipitation: null as null | { icon: LucideIcon; text: string },
+        title: t('dashboard.weatherUnavailable'),
       };
     }
 
     const condition = t(weatherConditionKey(currentWeather));
     const temperature = typeof currentWeather.temperature_2m === 'number'
-      ? `${Math.round(currentWeather.temperature_2m)}${'\u00b0'}C`
+      ? `${Math.round(currentWeather.temperature_2m)}${'°'}`
       : '';
-    const clouds = `${t('dashboard.weatherClouds')} ${Math.round(currentWeather.cloud_cover)}%`;
+    const clouds = `${Math.round(currentWeather.cloud_cover)}%`;
     const precipitation =
       currentWeather.snowfall > 0
-        ? `${t('dashboard.weatherSnow')} ${currentWeather.snowfall.toFixed(1)} cm/h`
+        ? { icon: Snowflake as LucideIcon, text: `${currentWeather.snowfall.toFixed(1)} cm/h`, label: t('dashboard.weatherSnow') }
         : currentWeather.rain > 0
-          ? `${t('dashboard.weatherRain')} ${currentWeather.rain.toFixed(1)} mm/h`
-          : '';
+          ? { icon: Droplets as LucideIcon, text: `${currentWeather.rain.toFixed(1)} mm/h`, label: t('dashboard.weatherRain') }
+          : null;
     const visual = weatherVisualFor(currentWeather);
 
     return {
       icon: visual.icon,
       variant: visual.variant,
-      text: [temperature, condition, clouds, precipitation].filter(Boolean).join(' · '),
+      temperature,
+      clouds,
+      precipitation,
+      title: [
+        `${t('dashboard.weather')}: ${temperature ? `${temperature}C` : ''}`.trim(),
+        condition,
+        `${t('dashboard.weatherClouds')} ${clouds}`,
+        precipitation ? `${precipitation.label} ${precipitation.text}` : '',
+      ].filter(Boolean).join(' · '),
     };
   }, [currentWeather, t]);
 
@@ -193,19 +211,33 @@ export default function HUD({
 
       <div className="time-display">
         <div className="hud-status-lines">
-          <div className="hud-status-line">
+          <div className="hud-status-line" title={sunStatus.title} aria-label={sunStatus.title}>
             <span className={`hud-status-icon-badge ${sunStatus.variant}`}>
               <SunStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
             </span>
-            <span className="hud-status-label">{t('dashboard.sun')}</span>
             <strong>{sunStatus.text}</strong>
           </div>
-          <div className="hud-status-line">
+          <div className="hud-status-line" title={weatherStatus.title} aria-label={weatherStatus.title}>
             <span className={`hud-status-icon-badge ${weatherStatus.variant}`}>
               <WeatherStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
             </span>
-            <span className="hud-status-label">{t('dashboard.weather')}</span>
-            <strong>{weatherStatus.text}</strong>
+            {weatherStatus.temperature && <strong>{weatherStatus.temperature}</strong>}
+            {weatherStatus.clouds && (
+              <span className="hud-status-part">
+                <Cloud className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
+                <strong>{weatherStatus.clouds}</strong>
+              </span>
+            )}
+            {weatherStatus.precipitation && (() => {
+              const PrecipitationIcon = weatherStatus.precipitation.icon;
+              return (
+                <span className="hud-status-part">
+                  <PrecipitationIcon className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
+                  <strong>{weatherStatus.precipitation.text}</strong>
+                </span>
+              );
+            })()}
+            {!weatherStatus.temperature && !weatherStatus.clouds && <span className="hud-status-label">{weatherStatus.title}</span>}
           </div>
         </div>
         <div className="hud-clock">

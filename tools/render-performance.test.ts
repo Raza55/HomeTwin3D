@@ -358,3 +358,26 @@ test('marker raster reads computed box shadows and hover scale', () => {
   assert.equal(transformScale('matrix(1.4, 0, 0, 1.4, -18.2, -18.2)'), 1.4);
   assert.equal(transformScale('matrix(1, 0, 0, 1, -13, -13)'), 1);
 });
+
+import { Observable, PointLight as ClusterPointLight, type ClusteredLightContainer } from '@babylonjs/core';
+import { cullSwitchedOffClusteredLights, CLUSTERED_OFF_RANGE } from '../src/babylon/FloorplanLighting';
+
+test('switched-off clustered emitters leave the tiles and get their range back', () => {
+  const engine = new NullEngine();
+  const scene = new Scene(engine);
+  const on = new ClusterPointLight('on', Vector3.Zero(), scene), off = new ClusterPointLight('off', Vector3.Zero(), scene);
+  on.range = 7; on.intensity = 2;
+  off.range = 3; off.intensity = 0;
+  const container = { lights: [on, off], onDisposeObservable: new Observable() } as unknown as ClusteredLightContainer;
+  cullSwitchedOffClusteredLights(scene, container);
+  scene.onBeforeRenderObservable.notifyObservers(scene);
+  assert.equal(on.range, 7);
+  assert.equal(off.range, CLUSTERED_OFF_RANGE);
+  off.intensity = 1; on.setEnabled(false);
+  scene.onBeforeRenderObservable.notifyObservers(scene);
+  assert.equal(off.range, 3);
+  assert.equal(on.range, CLUSTERED_OFF_RANGE);
+  container.onDisposeObservable.notifyObservers(container);
+  assert.equal(on.range, 7);
+  scene.dispose(); engine.dispose();
+});

@@ -413,8 +413,41 @@ export function enableClusteredFloorplanLights(scene: Scene, rigs: FloorplanLigh
       rig.clustered.add(light);
     }
   }
+  cullSwitchedOffClusteredLights(scene, container);
   scene.metadata = { ...scene.metadata, floorplanClusteredLights: container };
   return container;
+}
+
+/** Reach of a switched-off clustered emitter: it covers no screen tile. */
+export const CLUSTERED_OFF_RANGE = 1e-4;
+
+/**
+ * The container bins every added light into its screen tiles, switched on or
+ * not, and each pixel then evaluates all lights of its tile. Most lamps are off
+ * most of the time (e.g. 19 of 82 emitters), so pixels computed dozens of dark
+ * lights: on iPad that halved the frame rate. Switched-off emitters get a
+ * vanishing range instead (no shader recompile, unlike removing them from the
+ * container) and their own range back when they are switched on.
+ */
+export function cullSwitchedOffClusteredLights(scene: Scene, container: ClusteredLightContainer): void {
+  const ranges = new Map<Light, number>();
+  for (const light of container.lights) ranges.set(light, light.range);
+  const observer = scene.onBeforeRenderObservable.add(() => {
+    for (const [light, range] of ranges) {
+      const lit = light.isEnabled() && light.intensity > 0;
+      if (lit) {
+        if (light.range === CLUSTERED_OFF_RANGE) light.range = range;
+        else if (light.range !== range) ranges.set(light, light.range);
+      } else if (light.range !== CLUSTERED_OFF_RANGE) {
+        ranges.set(light, light.range);
+        light.range = CLUSTERED_OFF_RANGE;
+      }
+    }
+  });
+  container.onDisposeObservable.addOnce(() => {
+    scene.onBeforeRenderObservable.remove(observer);
+    for (const [light, range] of ranges) if (!light.isDisposed()) light.range = range;
+  });
 }
 
 /**

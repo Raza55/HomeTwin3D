@@ -10,6 +10,9 @@ WORKDIR /app
 RUN git clone --depth 1 --branch main https://github.com/Raza55/HomeTwin3D.git .
 RUN npm ci
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Behind an HTTPS reverse proxy the app reaches HA through /ha-ws (nginx.conf).
+# No service worker: a cached app shell kept wall tablets on old versions.
+ENV VITE_HA_WS_PROXY=1 HOMETWIN_NO_SERVICE_WORKER=1
 RUN npm run build -- --mode addon
 
 # Stage 2: Serve with nginx on HA base image

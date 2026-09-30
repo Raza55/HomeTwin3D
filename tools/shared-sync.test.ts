@@ -87,3 +87,38 @@ test('a published installation reaches other browsers; conflicts never overwrite
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('installation values travel with the shared version; only well-formed values are kept', async () => {
+  const { writeFile, readFile } = await import('node:fs/promises');
+  const dir = await mkdtemp(path.join(tmpdir(), 'hometwin-installation-'));
+  const middleware = createSharedStoreMiddleware({ base: '/HomeTwin3D/', dir, pin: 'pin2' });
+  const server = createServer((req, res) => middleware(req, res, () => { res.statusCode = 404; res.end(); }));
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  (globalThis as { __BASE?: string }).__BASE = `http://127.0.0.1:${(server.address() as { port: number }).port}/HomeTwin3D/`;
+  const reader = browser(); use(reader);
+  try {
+    const shared = await import('../src/services/sharedStore');
+    const installation = await import('../src/services/installationConfig');
+    // As written by `npm run addon:export`: a mapping, one malformed entry, a location.
+    await writeFile(path.join(dir, 'state.json'), JSON.stringify({
+      format: 1, revision: 7, updatedAt: new Date().toISOString(),
+      config: { location: { latitude: 0, longitude: 0 }, lights: [], rooms: [] }, model: null, objects: [],
+      installation: { entities: { 'automation.tv_dial_hdmi1': 'media_player.living_room_tv', 'media_player.living_room_receiver': 'kein Entity' }, location: { label: 'Beispiel', latitude: 0.5, longitude: 0.5 } },
+    }));
+    shared.setSharedEnabled(true);
+    assert.equal((await shared.syncFromShared()).kind, 'updated');
+    assert.deepEqual(JSON.parse(reader.values.get('hometwin:installation')!), {
+      entities: { 'automation.tv_dial_hdmi1': 'media_player.living_room_tv' },
+      location: { label: 'Beispiel', latitude: 0.5, longitude: 0.5 },
+    });
+    assert.equal(installation.installationEntity('automation.tv_dial_hdmi1'), 'media_player.living_room_tv');
+    // A browser of a public build publishes without values of its own: the shared ones stay.
+    shared.setSharedPin('pin2');
+    assert.equal((await shared.publishShared(true)).kind, 'published');
+    const published = JSON.parse(await readFile(path.join(dir, 'state.json'), 'utf8'));
+    assert.equal(published.installation.entities['automation.tv_dial_hdmi1'], 'media_player.living_room_tv');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    await rm(dir, { recursive: true, force: true });
+  }
+});

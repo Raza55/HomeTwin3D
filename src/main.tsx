@@ -2,13 +2,15 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
-import App from './App';
 import { startSharedInstallation, watchSharedUpdates } from './services/sharedStore';
 import './App.css';
 
-// Take the newest shared installation (config, model, objects) before the app
-// reads its local copies; offline or without a server this returns quickly.
-void startSharedInstallation().finally(() => {
+// Take the newest shared installation (config, model, objects, installation
+// values) before the app reads its local copies; offline or without a server
+// this returns quickly. The app is imported afterwards: its modules read the
+// installation's entity IDs when they load.
+void startSharedInstallation().finally(async () => {
+  const { default: App } = await import('./App');
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

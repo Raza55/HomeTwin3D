@@ -1,5 +1,14 @@
 # Änderungsverlauf
 
+## 0.4.0 – Tablet-Performance und Add-on-Betrieb (30.09.2026)
+
+- Tablets (auch iPads mit Tastatur/Trackpad) erhalten eine leichtere Render-Stufe: keine Cluster-Beleuchtung, zwei Lampen pro Fläche, begrenzte Pixeldichte und Texturen, einfachere Sonnenschatten und Glow. iPad Safari: von ~5 auf ~45–50 FPS.
+- Weniger Draw Calls: Lampenauswahl pro Batch, Zusammenfassen über Metallic/Roughness per Vertex (pixelgleich), Touch-Zonen als ein Mesh (897 → 537 auf dem Tablet).
+- Karten-Icons werden per WebGL im selben Frame wie das Modell gezeichnet; Long-Press führt die Hauptaktion aus (Licht, Rollo, TV, PC, Lüfter, Echo, Kaffee); auf Tablets größere Icons.
+- Leerlauf: Die Render-Schleife schläft, solange sich nichts ändert; Diagnose im `?perf`-Overlay (Startphasen, Weckgründe).
+- Add-on: HA-WebSocket über `/ha-ws` für HTTPS hinter einem Reverse Proxy, gemeinsame Version im Add-on-Konfigurationsordner (Samba `addon_configs`, Backups), Installationswerte (Entity-Zuordnung, Standort) kommen mit der gemeinsamen Version statt aus dem Build; `npm run addon:export` bereitet den Umzug vor. Kein Service Worker mehr.
+- WebGPU mit Snapshot-Rendering bleibt optional (`?engine=webgpu&snapshot=1`).
+
 ## 0.2.1 – Datenschutz (28.09.2026)
 
 - Öffentliche Beispiele, Dateinamen und Dokumentation von persönlichen Rechner-/Gerätenamen, LAN-Adressen, Wohnadresse und Standortkoordinaten bereinigt.

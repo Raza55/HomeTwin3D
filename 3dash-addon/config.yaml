@@ -1,6 +1,6 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.3.0"
+version: "0.4.0"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
@@ -13,6 +13,10 @@ ports:
   8099/tcp: 8099
 ports_description:
   8099/tcp: "Web interface"
+# Shared installation data lives in the add-on's config folder: visible in the
+# "addon_configs" Samba share (initial import) and included in HA backups.
+map:
+  - addon_config:rw
 init: false
 startup: "application"
 boot: "auto"

@@ -1,6 +1,7 @@
 import type { AppConfig } from '../types';
 import { getConfig, writeStoredConfig } from './configApi';
 import { deleteObjectAsset, getModel, getObjectAsset, saveModel, saveObjectAsset } from './storageApi';
+import { publishableInstallation, storeInstallation, type InstallationConfig } from './installationConfig';
 
 /**
  * Shared installation: one published version of the configuration (entity
@@ -14,7 +15,8 @@ import { deleteObjectAsset, getModel, getObjectAsset, saveModel, saveObjectAsset
  * dashboard also starts offline with the last received version.
  */
 
-const BASE = `${import.meta.env.BASE_URL}shared/`;
+/** Read per request (tests serve the store from different addresses). */
+const storeBase = () => `${import.meta.env.BASE_URL}shared/`;
 const KEYS = {
   enabled: 'shared:enabled',
   pin: 'shared:pin',
@@ -33,6 +35,8 @@ export interface SharedState {
   config: Omit<AppConfig, 'onboarding'>;
   model: { revision: number; size: number } | null;
   objects: Array<{ id: string; format: string; revision: number }>;
+  /** Entity mapping and location for public builds (add-on); see installationConfig. */
+  installation?: InstallationConfig;
 }
 
 interface Pending { config?: boolean; model?: boolean; objects?: string[]; deleted?: string[] }
@@ -67,7 +71,7 @@ const objectPath = (id: string, format: string) => `objects/${id}.${format.toLow
 
 export async function fetchSharedState(timeoutMs = 4000): Promise<SharedState | null | 'unavailable'> {
   try {
-    const response = await fetch(`${BASE}state.json`, { cache: 'no-cache', signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(`${storeBase()}state.json`, { cache: 'no-cache', signal: AbortSignal.timeout(timeoutMs) });
     if (response.status === 404) return null;
     if (!response.ok) return 'unavailable';
     const state = await response.json() as SharedState;
@@ -79,7 +83,7 @@ export async function fetchSharedState(timeoutMs = 4000): Promise<SharedState | 
 
 export async function checkSharedPin(pin: string): Promise<boolean> {
   try {
-    const response = await fetch(`${BASE}check-pin`, { method: 'POST', headers: { 'X-HomeTwin-Pin': pin }, cache: 'no-store' });
+    const response = await fetch(`${storeBase()}check-pin`, { method: 'POST', headers: { 'X-HomeTwin-Pin': pin }, cache: 'no-store' });
     return response.status === 204;
   } catch {
     return false;
@@ -93,16 +97,17 @@ async function apply(state: SharedState): Promise<void> {
   applying = true;
   try {
     if (state.model && state.model.revision !== read(KEYS.model, 0)) {
-      const response = await fetch(`${BASE}model.glb`, { cache: 'no-store' });
+      const response = await fetch(`${storeBase()}model.glb`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`model ${response.status}`);
       await saveModel(await response.blob());
       write(KEYS.model, state.model.revision);
     }
+    if (state.installation) storeInstallation(state.installation);
     const known = read<Record<string, number>>(KEYS.objects, {});
     const next: Record<string, number> = {};
     for (const object of state.objects) {
       if (known[object.id] !== object.revision || !(await getObjectAsset(object.id))) {
-        const response = await fetch(`${BASE}${objectPath(object.id, object.format)}`, { cache: 'no-store' });
+        const response = await fetch(`${storeBase()}${objectPath(object.id, object.format)}`, { cache: 'no-store' });
         if (!response.ok) throw new Error(`object ${response.status}`);
         await saveObjectAsset(object.id, await response.blob());
       }
@@ -177,7 +182,7 @@ export async function publishShared(force = false): Promise<SharedStatus> {
     : read<Pending>(KEYS.pending, {});
   const revision = base + 1;
   const put = async (file: string, body: Blob | string, type: string) => {
-    const response = await fetch(`${BASE}${file}`, withPin({ method: 'PUT', body, headers: { 'Content-Type': type } }));
+    const response = await fetch(`${storeBase()}${file}`, withPin({ method: 'PUT', body, headers: { 'Content-Type': type } }));
     if (response.status === 403) throw Object.assign(new Error('PIN'), { readonly: true });
     if (!response.ok) throw new Error(`${file} ${response.status}`);
   };
@@ -201,11 +206,12 @@ export async function publishShared(force = false): Promise<SharedStatus> {
       objects.push({ id: object.id, format: object.format, revision: revisionOf });
     }
     const { onboarding: _onboarding, ...shared } = config;
-    const state: SharedState = { format: 1, revision, updatedAt: new Date().toISOString(), config: shared, model, objects };
+    const installation = publishableInstallation() ?? current?.installation;
+    const state: SharedState = { format: 1, revision, updatedAt: new Date().toISOString(), config: shared, model, objects, ...(installation ? { installation } : {}) };
     await put('state.json', JSON.stringify(state), 'application/json');
     // Old object files are removed after the new state no longer references them.
     for (const [id, object] of previous) {
-      if (!objects.some(o => o.id === id)) await fetch(`${BASE}${objectPath(id, object.format)}`, withPin({ method: 'DELETE' })).catch(() => undefined);
+      if (!objects.some(o => o.id === id)) await fetch(`${storeBase()}${objectPath(id, object.format)}`, withPin({ method: 'DELETE' })).catch(() => undefined);
     }
     write(KEYS.revision, revision);
     if (model) write(KEYS.model, model.revision);

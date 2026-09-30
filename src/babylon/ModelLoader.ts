@@ -14,7 +14,7 @@ import {
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type { ModelObjectOverride, ModelObjectTransform } from '../types';
-import { prepareWindowGlass } from './WindowGlass';
+import { prepareWindowGlass, simplifyRefractiveGlass } from './WindowGlass';
 import { optimizeTransmissionPass } from './TransmissionCulling';
 import { setupMetalReflections } from './MetalReflections';
 import { normalizeModelScale } from './SceneScale';
@@ -118,6 +118,7 @@ export async function loadModel(
     }
     m.receiveShadows = true;
     prepareWindowGlass(m);
+    simplifyRefractiveGlass(m);
     solidMeshes.push(m);
   });
 

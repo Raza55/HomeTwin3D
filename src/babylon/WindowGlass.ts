@@ -8,3 +8,24 @@ export function prepareWindowGlass(mesh:AbstractMesh):boolean {
  mesh.metadata={...mesh.metadata,windowGlass:true};mesh.receiveShadows=false;
  return true;
 }
+/**
+ * Refractive glass (KHR_materials_transmission) makes Babylon render the whole
+ * opaque scene into an extra texture on every view change (~8 ms per frame in
+ * close-ups). Alpha-blended glass looks nearly the same for these small parts
+ * and costs nothing extra. Transparency follows the authored transmission.
+ */
+export function simplifyRefractiveGlass(mesh:AbstractMesh):boolean {
+ const mat=mesh.material;
+ if(!(mat instanceof PBRMaterial) || !mat.subSurface.isRefractionEnabled || isWindowGlassName(mat.name))return false;
+ const transmission=Math.min(1,Math.max(0,mat.subSurface.refractionIntensity));
+ mat.subSurface.isRefractionEnabled=false;
+ mat.alpha=Math.min(mat.alpha,Math.max(.14,1-transmission*.86));
+ mat.transparencyMode=Material.MATERIAL_ALPHABLEND;
+ mat.metallic=0;
+ mat.subSurface.refractionTexture=null;
+ mat.metadata={...mat.metadata,simpleGlass:true};
+ // The glTF transmission helper only re-sorts a mesh on a material change event;
+ // without it the mesh stays in its refraction list and keeps the extra pass alive.
+ mesh.onMaterialChangedObservable.notifyObservers(mesh);
+ return true;
+}

@@ -14,3 +14,9 @@ Dieses Repository ist öffentlich. Lies [docs/PUBLICATION_PRIVACY.md](docs/PUBLI
 - Herkunft, ursprüngliche Lizenz und legitime öffentliche Autorenhinweise erhalten; keine fremden Beiträge umetikettieren.
 
 Diese Regeln gelten auch für kleine Dokumentationsänderungen und Folgeaufträge wie „neuesten Stand synchronisieren“.
+
+## Modelländerungen (Blender → 3D-Twin)
+
+Jede Änderung am Wohnungsmodell folgt [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md): Änderung in Blender als neue Version speichern,
+dieselbe Änderung per Node-Skript auf den neuesten optimierten GLB übertragen (kein Voll-Export), im App-Loader prüfen und über
+eine Import-Seite mit Backup übernehmen.

@@ -4,7 +4,64 @@ Aktueller Gesamtüberblick: [Projektstand und Optimierungen](PROJECT_STATUS.md).
 Diese Datei enthält auch historische Prüfergebnisse und lokale Importzustände;
 sie bestätigt nicht den aktuellen Inhalt eines beliebigen Browsers.
 
-## Aktueller Modellstand v100 (28.09.2026)
+**Ablauf für jede Modelländerung (Blender → GLB-Patch → Import): [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md).**
+
+## Schlafzimmer v106 (29.09.2026) – aktueller Modellstand
+
+`tools/bedroom-v106.py` (auf der v105-Quelle) ändert:
+- Gepolstertes Kopfteil: Oberkante 1,09 → 0,92 m. Nur die oberen Vertices wandern, die Fase bleibt erhalten; der Hue-Lightstrip auf der Kante folgt.
+- Wandschalter: 8,5 cm aus der Türlaibung auf die Wand.
+- Wandboard und weiße Rückwand: 1,86 → 1,55 m, bündig mit den äußeren Kanten des Triptychons, 6 cm höher.
+  Figuren, Moospolster und Relief behalten ihre relative Position auf dem Board.
+
+Jede Änderung steht als Operation (`translate`, `lift_above`, `squeeze_y`) mit Objekt-Bounds und Materialien in `.qa/bedroom-v106.json`.
+Das Skript speichert `Wohnung_v106_3Dash_Schlafzimmer.blend`. `node tools/bedroom-v106.mjs` wendet dieselben Funktionen auf die Vertices des
+optimierten v105-GLB an und verschiebt HA-Objekte (Lightstrip) als Knoten mitsamt Manifest-Position und Emittern.
+Import über `tools/bedroom-v106-import.html` (Backups `config:before-bedroom-v106` / `model:before-bedroom-v106`).
+
+## Türanbauteile v105 (29.09.2026)
+
+Beim Öffnen von Innentüren blieben Anbauteile in der Luft stehen. Bei der Türtrennung in v91 waren sie in den statischen Batches geblieben:
+- Bad: helles Innenfutter und Kapuzenfutter beider Bademäntel (`BAD62_Flauschiges_Innenfutter`)
+- Abstellraum: Jackenärmel, innere Türklinke und Rosette
+
+`tools/door-attach-v105.py` markiert in der v104-Quelle alle Objekte auf den Türblättern von Bad, Abstellraum und Zimmer mit
+`ha_room_door_attach=<Tür-ID>`. Wand- und Rahmenteile (Scharniere, Schalter, Steckdosen, Zarge) sind ausgenommen. Das Skript speichert
+`../blender/Wohnung_v105_3Dash_Tuerteile.blend` und die Objekt-Bounds in `.qa/door-attach-v105.json`.
+`node tools/door-attach-v105.mjs` verschiebt statische Dreiecke mit passendem Material, deren drei Vertices in den Bounds eines markierten
+Objekts liegen, unverändert in neue `room-door:<id>:attach:*`-Knoten mit der `ha_room_door`-Spezifikation der Tür.
+Ergebnis: 8.268 Dreiecke am Bad, 780 am Abstellraum; die Jackentür des Zimmers war bereits vollständig.
+Die Werkzeugwand hinter der Stirntür hängt an der Wand und bleibt statisch.
+Die Fenster- und Balkontüren (HA-Türen) haben keine losen Anbauteile.
+Sichtprüfung: `tools/model-view-qa.html?…&doors=open`. Import: `tools/door-attach-v105-import.html`
+(Backups `config:before-door-attach-v105` / `model:before-door-attach-v105`).
+
+## Schlafzimmer-Skulpturen v104 (29.09.2026)
+
+`tools/sculptures-v104.py` ersetzt auf Basis der v103-Quelle die drei Strichfiguren durch Bronzeskulpturen nach Fotoreferenz.
+Die Figuren sind organisch über ein Skin-Modifier-Gerüst mit Subdivision aufgebaut. Materialien: `SZ_Bronze_Skulptur` für die Figuren,
+`SZ_Bronze_Patina` für den Sockel.
+- Wandboard links: Sprinter in Startposition (22 × 13 cm).
+- Wandboard rechts: Vorbeuge auf Felssockel (22 cm hoch).
+- Kommode: Schulterstand (24 cm hoch).
+
+Ergebnis ist `../blender/Wohnung_v104_3Dash_Skulpturen.blend` plus der Teil-Export `.qa/sculptures-v104-part.glb`
+(Vorschau mit Argument `preview`). `node tools/sculptures-v104.mjs` entfernt die alten Figuren aus dem optimierten v103-GLB
+(3 × 808 Dreiecke, Material `SZ_Bronze` innerhalb der alten Bounds), fügt die neuen ein (~25.200 Dreiecke) und optimiert.
+Ergebnis: `Wohnung_v104_3Dash_Skulpturen.glb` (77,3 MB). Import über `tools/sculptures-v104-import.html`,
+Backups unter `config:before-sculptures-v104` / `model:before-sculptures-v104`.
+
+## Wohnzimmer-Möbel v103 (29.09.2026)
+
+`tools/living-v103.py` (Blender, auf v100-Quelle) erzeugt `../blender/Wohnung_v103_3Dash_Wohnzimmer.blend`:
+Bambus-Stehlampe 30 % niedriger (Oberkante 1,53 → 1,07 m; Füße unverändert, Ringe/Bindungen nur verschoben),
+Couchtisch 70 cm, Sitzsack 60 cm und POÄNG 50 cm Richtung Sofa (POÄNG zusätzlich 15 cm nach links, frei von Dyson/Audiobox).
+Die Maße landen in `.qa/living-v103.json`. `node tools/living-v103.mjs` überträgt dieselben Transformationen auf den
+optimierten v102-GLB (gebündelte Möbel pro Vertex innerhalb der alten Objektgrenzen, Lampe per Knotenmatrix, Manifest-Höhe
+der Lampe angepasst) und führt `optimizeGlb` aus. v101-Vereinfachung und v102-Schwellenfix bleiben so erhalten.
+Import: `tools/living-v103-import.html` (Backup unter `config:before-living-v103` / `model:before-living-v103`).
+
+## Modellstand v100 (28.09.2026)
 
 Die lokale Reihe reicht inzwischen bis `../blender/Wohnung_v100_3Dash_Ohne_Stab.blend` und `.glb`. v94–v100 ergänzen Balkonlüfter, Echo-Geräte, Dyson-Geometrie, Kaffee- und IT-Zuordnungen, PC-Materialien sowie eine gezielte Geometriebereinigung. Die Abschnitte weiter unten beschreiben die einzelnen Schritte. Die Modelle selbst werden nicht mit Git veröffentlicht.
 

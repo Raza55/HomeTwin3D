@@ -53,13 +53,27 @@ export interface HomeViewPose {
   target: { x: number; y: number; z: number };
 }
 
+export interface CameraSensitivity {
+  /** Horizontal drag (turn around the plan). */
+  rotate: number;
+  /** Vertical drag (tilt the view). */
+  tilt: number;
+  /** Mouse wheel and pinch. */
+  zoom: number;
+  pan: number;
+}
+
 export interface ControlsSettings {
   cameraControls: {
     desktop: CameraControlsFlags;
     mobile: CameraControlsFlags;
   };
   homeView: HomeViewPose | null;
+  /** Camera sensitivity in percent per gesture (100 = default). */
+  sensitivity?: CameraSensitivity;
 }
+
+export const DEFAULT_CAMERA_SENSITIVITY: CameraSensitivity = { rotate: 100, tilt: 100, zoom: 100, pan: 100 };
 
 export interface MiscSettings {
   panelRatio: number | null;

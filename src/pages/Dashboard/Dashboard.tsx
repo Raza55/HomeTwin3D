@@ -62,7 +62,7 @@ import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
 import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, enableClusteredFloorplanLights, individualFloorplanLights, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
 import { getEntityCache, setEntityCache } from '../../services/entityCache';
 import type { HAEntityOption } from '../../components/EntityPicker';
-import { getSetting, updateSettings, type HomeViewPose } from '../../services/settingsStore';
+import { getSetting, updateSettings, DEFAULT_CAMERA_SENSITIVITY, type CameraSensitivity, type HomeViewPose } from '../../services/settingsStore';
 import { HAConnection, type HAConnectionStatus, type HALike, setActiveHAConnection } from '../../services/haWebSocket';
 import { DemoHAConnection } from '../../services/demoHAConnection';
 import { useDemoMode } from '../../contexts/DemoModeContext';
@@ -158,6 +158,14 @@ export default function Dashboard() {
   const { demoMode } = useDemoMode();
   const { simulationMode, setSimulationMode } = useSimulationMode();
   const camControls = useCameraControls();
+  const [cameraSensitivity, setCameraSensitivity] = useState<CameraSensitivity>(() => ({ ...DEFAULT_CAMERA_SENSITIVITY, ...getSetting('controls').sensitivity }));
+  const handleCameraSensitivityChange = useCallback((patch: Partial<CameraSensitivity>) => {
+    setCameraSensitivity(current => {
+      const next = { ...current, ...patch };
+      updateSettings('controls', { sensitivity: next });
+      return next;
+    });
+  }, []);
   const { resolved: theme, updateAutoTheme } = useTheme();
   const t = useTranslation();
   const navigate = useNavigate();
@@ -2144,20 +2152,25 @@ export default function Dashboard() {
     if (!camera || !scene) return;
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     const flags = isMobile ? camControls.mobile : camControls.desktop;
+    // User sensitivity (percent): Babylon's "precision"/"sensibility" values are
+    // inverse (higher = slower), wheelDeltaPercentage is proportional.
+    const factor = (percent: number) => Math.max(0.1, percent / 100);
+    const rotate = factor(cameraSensitivity.rotate), tilt = factor(cameraSensitivity.tilt);
+    const zoom = factor(cameraSensitivity.zoom), pan = factor(cameraSensitivity.pan);
 
     // Zoom: wheelDeltaPercentage keeps mouse and trackpad zoom smooth across distances.
-    camera.wheelPrecision = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.wheelPrecision : 99999;
-    camera.wheelDeltaPercentage = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.wheelDeltaPercentage : 0;
-    camera.pinchPrecision = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.pinchPrecision : 99999;
+    camera.wheelPrecision = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.wheelPrecision / zoom : 99999;
+    camera.wheelDeltaPercentage = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.wheelDeltaPercentage * zoom : 0;
+    camera.pinchPrecision = flags.zoom ? CAMERA_CONTROL_SENSITIVITY.pinchPrecision / zoom : 99999;
 
-    // Rotate: angular sensibility (higher = less sensitive, huge = disabled)
-    camera.angularSensibilityX = flags.rotate ? CAMERA_CONTROL_SENSITIVITY.angularSensibilityX : 99999;
-    camera.angularSensibilityY = flags.rotate ? CAMERA_CONTROL_SENSITIVITY.angularSensibilityY : 99999;
+    // Rotate (horizontal drag) and tilt (vertical drag): higher = less sensitive, huge = disabled
+    camera.angularSensibilityX = flags.rotate ? CAMERA_CONTROL_SENSITIVITY.angularSensibilityX / rotate : 99999;
+    camera.angularSensibilityY = flags.rotate ? CAMERA_CONTROL_SENSITIVITY.angularSensibilityY / tilt : 99999;
     camera.inertia = CAMERA_CONTROL_SENSITIVITY.inertia;
 
     // Pan: scale sensibility with radius so panning stays consistent at any zoom level
     camera.panningInertia = CAMERA_CONTROL_SENSITIVITY.panningInertia;
-    const BASE_PAN = CAMERA_CONTROL_SENSITIVITY.panningSensibility;
+    const BASE_PAN = CAMERA_CONTROL_SENSITIVITY.panningSensibility / pan;
     const refRadius = computeIdealRadius();
     if (!flags.pan) {
       camera.panningSensibility = 0;
@@ -2174,7 +2187,7 @@ export default function Dashboard() {
     return () => {
       scene.onBeforeRenderObservable.remove(observer);
     };
-  }, [camControls.desktop, camControls.mobile, sceneReady, computeIdealRadius]);
+  }, [camControls.desktop, camControls.mobile, cameraSensitivity, sceneReady, computeIdealRadius]);
 
   // Resize Babylon engine when canvas container changes size (e.g. side panel open/close)
   useEffect(() => {
@@ -2437,6 +2450,8 @@ export default function Dashboard() {
               onGroundGridChange={handleGroundGridChange}
               weatherEnabled={weatherEnabled}
               parkMinBrightness={parkMinBrightness}
+              cameraSensitivity={cameraSensitivity}
+              onCameraSensitivityChange={handleCameraSensitivityChange}
               onParkMinBrightnessChange={handleParkMinBrightnessChange}
               onWeatherEnabledChange={handleWeatherEnabledChange}
               perspective={perspective}

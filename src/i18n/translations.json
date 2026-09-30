@@ -125,7 +125,7 @@
     "settings.mobileTitle": "{control} (Mobil)",
     "settings.zoom": "Zoom",
     "settings.rotate": "Drehen",
-    "settings.pan": "Schwenken",
+    "settings.pan": "Verschieben",
     "dashboard.simulation": "Simulation",
     "dashboard.demoView": "Demo-Ansicht",
     "dashboard.liveView": "Live-Ansicht",
@@ -837,7 +837,17 @@
     "matching.saveFailed": "Speichern fehlgeschlagen.",
     "onboarding.sharedJoinedNotice": "Die gemeinsame Version dieses Zuhauses ist schon geladen – Modell, Geräte und Einstellungen sind da. Verbinde dieses Gerät nur noch mit Home Assistant.",
     "settings.parkMinBrightness": "Mindesthelligkeit Außenbereich",
-    "settings.parkMinBrightnessHint": "Hellt Park, Gelände und Himmel in Dämmerung und Nacht auf. Die Wohnung bleibt unverändert, damit Lampen weiter wirken."
+    "settings.parkMinBrightnessHint": "Hellt Park, Gelände und Himmel in Dämmerung und Nacht auf. Die Wohnung bleibt unverändert, damit Lampen weiter wirken.",
+    "settings.sensitivity.rotate": "Drehen",
+    "settings.sensitivity.rotateHint": "Seitlich ziehen: um den Plan herum drehen",
+    "settings.sensitivity.tilt": "Kippen",
+    "settings.sensitivity.tiltHint": "Hoch/runter ziehen: Blickwinkel flacher oder steiler",
+    "settings.sensitivity.zoom": "Zoomen",
+    "settings.sensitivity.zoomHint": "Mausrad und Zwei-Finger-Pinch",
+    "settings.sensitivity.pan": "Verschieben",
+    "settings.sensitivity.panHint": "Rechtsklick bzw. zwei Finger ziehen",
+    "settings.sensitivity.reset": "Empfindlichkeit zurücksetzen",
+    "settings.sensitivity.title": "Empfindlichkeit"
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -1677,6 +1687,16 @@
     "matching.saveFailed": "Saving failed.",
     "onboarding.sharedJoinedNotice": "The shared version of this home is already loaded – model, devices and settings are in place. Just connect this device to Home Assistant.",
     "settings.parkMinBrightness": "Minimum outdoor brightness",
-    "settings.parkMinBrightnessHint": "Brightens park, grounds and sky at dusk and night. The flat stays as it is, so lamps still show."
+    "settings.parkMinBrightnessHint": "Brightens park, grounds and sky at dusk and night. The flat stays as it is, so lamps still show.",
+    "settings.sensitivity.rotate": "Rotate",
+    "settings.sensitivity.rotateHint": "Drag sideways: turn around the plan",
+    "settings.sensitivity.tilt": "Tilt",
+    "settings.sensitivity.tiltHint": "Drag up/down: flatter or steeper view",
+    "settings.sensitivity.zoom": "Zoom",
+    "settings.sensitivity.zoomHint": "Mouse wheel and two-finger pinch",
+    "settings.sensitivity.pan": "Pan",
+    "settings.sensitivity.panHint": "Right-click or two-finger drag",
+    "settings.sensitivity.reset": "Reset sensitivity",
+    "settings.sensitivity.title": "Sensitivity"
   }
 }

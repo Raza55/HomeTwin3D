@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.6 – Kamera-Empfindlichkeit (30.09.2026)
+
+- Neue Regler unter Einstellungen → 3D-Ansicht → Kamerasteuerung → Empfindlichkeit: Drehen (seitlich ziehen), Kippen (hoch/runter ziehen), Zoomen (Mausrad und Pinch) und Verschieben, jeweils 25–300 %. Die Werte gelten pro Gerät; „Empfindlichkeit zurücksetzen“ stellt 100 % wieder her.
+- Einheitliche Bezeichnung „Verschieben“ statt „Schwenken“.
+
 ## 0.5.5 – Mindesthelligkeit für den Außenbereich (30.09.2026)
 
 - Neuer Regler unter Einstellungen → 3D-Ansicht → Qualität: „Mindesthelligkeit Außenbereich“ (Aus bis 100 %). Er hellt Park, Gelände, Nachbargebäude und Himmel in Dämmerung und Nacht auf; tagsüber bleibt alles wie gehabt. Die Wohnung selbst wird nicht aufgehellt, damit Lampen nachts weiter sichtbar wirken. Der Wert gilt pro Gerät (z. B. heller auf dem iPad).

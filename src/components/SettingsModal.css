@@ -243,6 +243,18 @@
 .settings-row-control { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .settings-row.stacked .settings-row-control { flex-shrink: 1; }
 
+.settings-subhead {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings-subhead + .settings-row { border-top: none; padding-top: 0; }
+
 .settings-note {
   margin: 0;
   font-size: 12px;

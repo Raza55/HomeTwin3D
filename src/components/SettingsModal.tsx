@@ -9,7 +9,7 @@ import { haSocketUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
 import SharedInstallationSettings from './SharedInstallationSettings';
 import { getConfig, getModelBlob, resetConfig, updateConfig, exportBackup, importBackup, uploadModel, restoreModel } from '../services/configApi';
-import { clearSettings, getSetting, getSettings, updateSettings } from '../services/settingsStore';
+import { clearSettings, getSetting, getSettings, updateSettings, DEFAULT_CAMERA_SENSITIVITY, type CameraSensitivity } from '../services/settingsStore';
 import { MODEL_SCALE_MAX, MODEL_SCALE_MIN, normalizeModelScale } from '../babylon/SceneScale';
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { useCameraControls, type CameraControlsFlags } from '../contexts/CameraControlsContext';
@@ -55,6 +55,8 @@ interface Props {
   /** Minimum outdoor (park) brightness in percent. */
   parkMinBrightness: number;
   onParkMinBrightnessChange: (percent: number) => void;
+  cameraSensitivity: CameraSensitivity;
+  onCameraSensitivityChange: (patch: Partial<CameraSensitivity>) => void;
   perspective: boolean;
   onPerspectiveChange: (enabled: boolean) => void;
 
@@ -179,7 +181,7 @@ export default function SettingsModal({
   northOffset, onNorthOffsetChange,
   edgeWidth, onEdgeWidthChange, edgeMode, onEdgeModeChange,
   groundGrid, onGroundGridChange, weatherEnabled, onWeatherEnabledChange, perspective, onPerspectiveChange,
-  parkMinBrightness, onParkMinBrightnessChange,
+  parkMinBrightness, onParkMinBrightnessChange, cameraSensitivity, onCameraSensitivityChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
   onEditGrid, onChangeHomeView, onStartTour,
@@ -683,6 +685,23 @@ export default function SettingsModal({
                     </div>
                   ))}
                 </div>
+                <div className="settings-subhead">{t('settings.sensitivity.title')}</div>
+                {(['rotate', 'tilt', 'zoom', 'pan'] as const).map(key => (
+                  <Row key={key} label={t(`settings.sensitivity.${key}`)} hint={t(`settings.sensitivity.${key}Hint`)} stacked htmlFor={`settings-sensitivity-${key}`}>
+                    <div className="settings-slider">
+                      <input id={`settings-sensitivity-${key}`} type="range" min={25} max={300} step={5} value={cameraSensitivity[key]}
+                        onChange={(e) => onCameraSensitivityChange({ [key]: parseInt(e.target.value) })} />
+                      <output>{cameraSensitivity[key]}%</output>
+                    </div>
+                  </Row>
+                ))}
+                {(Object.keys(DEFAULT_CAMERA_SENSITIVITY) as (keyof CameraSensitivity)[]).some(k => cameraSensitivity[k] !== DEFAULT_CAMERA_SENSITIVITY[k]) && (
+                  <div className="settings-actions">
+                    <button type="button" className="settings-btn" onClick={() => onCameraSensitivityChange(DEFAULT_CAMERA_SENSITIVITY)}>
+                      {t('settings.sensitivity.reset')}
+                    </button>
+                  </div>
+                )}
                 <Row label={t('settings.homeView')} hint={t('settings.homeViewHint')} stacked>
                   <div className="settings-actions">
                     <button type="button" className="settings-btn" onClick={() => { onChangeHomeView(); onClose(); }}>

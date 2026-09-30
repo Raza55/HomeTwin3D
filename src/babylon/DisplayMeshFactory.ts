@@ -433,10 +433,10 @@ function updateRoutedTV(entry: DisplayMeshEntry, states: Record<string, HAState>
     const prefix = import.meta.env.DEV ? `${import.meta.env.BASE_URL}${route}` : `/${route}`;
     url = `${location.origin}${prefix}${mediaUrl.pathname.slice(upstream.length)}${mediaUrl.search}`;
   }
-  // ADB snapshots can change without a state change or new image URL; the PC helper sends every 30 s.
+  // ADB snapshots and PC helper stills change without a state change or new image URL (both ~10 s).
   if (url && content.artworkKind === 'screenshot') {
     const refreshUrl = new URL(url);
-    refreshUrl.searchParams.set('_preview', String(Math.floor(Date.now() / (content.camera ? 30000 : 10000))));
+    refreshUrl.searchParams.set('_preview', String(Math.floor(Date.now() / 10000)));
     url = refreshUrl.href;
   }
   // Camera access tokens rotate; the entity, not the tokenised path, identifies the source.

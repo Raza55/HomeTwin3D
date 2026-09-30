@@ -33,7 +33,7 @@ export function attachITCamera(scene:Scene,mesh:AbstractMesh,material:PBRMateria
     if(!url){cancel();if(loaded)clear();return;}
     if(source!==url){cancel();clear();source=url;next=0;}
     if(request||Date.now()<next)return;
-    next=Date.now()+30000;
+    next=Date.now()+10000;  // matches the PC helper cadence (10 s)
     if(import.meta.env.DEV||import.meta.env.MODE==='addon'){
       const upstream=new URL(url),prefix=import.meta.env.DEV?`${import.meta.env.BASE_URL}ha-camera/`:'/ha-camera/';
       url=new URL(`${prefix}${device.screenshotEntityId}${upstream.search}`,location.origin).href;

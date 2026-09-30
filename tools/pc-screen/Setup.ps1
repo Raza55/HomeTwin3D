@@ -29,11 +29,14 @@ $screen = if ($screenInput) { [int]$screenInput } else { 0 }
 if ($screen -lt 0) { throw 'Screen muss mindestens 0 sein.' }
 $tvMonitor = (Read-Host 'Kennung des Fernsehers in eckigen Klammern (z. B. DON0074); leer = immer obiger Screen').Trim().ToUpperInvariant()
 if ($tvMonitor -and $tvMonitor -notmatch '^[A-Z0-9]{3,8}$') { throw 'Kennung besteht aus 3-8 Buchstaben/Ziffern.' }
+$intervalInput = Read-Host 'Sekunden zwischen zwei Bildern (2-300) [10]'
+$interval = if ($intervalInput) { [int]$intervalInput } else { 10 }
+if ($interval -lt 2 -or $interval -gt 300) { throw 'Intervall muss zwischen 2 und 300 Sekunden liegen.' }
 $mqttUser = Read-Host 'MQTT-Benutzer'
 $mqttPassword = Read-Host 'MQTT-Passwort' -AsSecureString
 $credential = New-Object System.Management.Automation.PSCredential($mqttUser, $mqttPassword)
 $credential | Export-Clixml -LiteralPath (Join-Path $dataDir 'mqtt.xml')
-@{ host=$broker; port=$port; tls=$tls; ca_file=$ca; screen=$screen; tv_monitor=$tvMonitor } |
+@{ host=$broker; port=$port; tls=$tls; ca_file=$ca; screen=$screen; tv_monitor=$tvMonitor; interval=$interval } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dataDir 'config.json') -Encoding UTF8
 Write-Host 'Gespeichert. Start.ps1 startet die Kamera; Stop.ps1 beendet sie.'
 Write-Host 'Passwort ist fuer diesen Windows-Benutzer verschluesselt gespeichert.'

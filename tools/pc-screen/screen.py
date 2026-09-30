@@ -19,6 +19,7 @@ import mss
 import paho.mqtt.client as mqtt
 
 MAX_BYTES = 200_000
+DEFAULT_INTERVAL = 10  # seconds between frames; config "interval" overrides
 BASE = "hometwin/desktop_main_screen"
 DISCOVERY = "homeassistant/camera/hometwin_desktop_main_screen/config"
 
@@ -118,6 +119,15 @@ def select_monitor(monitors, config):
     return monitors[index], "screen"
 
 
+def capture_interval(config):
+    """Seconds between frames, clamped to 2..300 so a typo cannot flood the broker or stall the camera."""
+    try:
+        value = int(config.get("interval", DEFAULT_INTERVAL))
+    except (TypeError, ValueError):
+        value = DEFAULT_INTERVAL
+    return min(300, max(2, value))
+
+
 def describe_monitor(monitor):
     return f"{monitor['width']}x{monitor['height']} at {monitor['left']},{monitor['top']}" +         (f" [{'+'.join(monitor['ids'])}]" if monitor["ids"] else "") + (" primary" if monitor["primary"] else "")
 
@@ -206,9 +216,11 @@ def run(config, data_dir):
     client.connect_async(config["host"], int(config["port"]), keepalive=30)
     client.loop_start()
     stop_file = data_dir / "stop"
+    interval = capture_interval(config)
     next_frame = 0.0
     locked = False
     source = None
+    logging.info("Capture interval: %d s", interval)
     try:
         while not stop_file.exists():
             if not ready.is_set():
@@ -227,7 +239,7 @@ def run(config, data_dir):
                 time.sleep(1)
                 continue
             refresh.clear()
-            next_frame = time.monotonic() + 30
+            next_frame = time.monotonic() + interval
             try:
                 with mss.MSS() as capture:
                     monitor, role = select_monitor(list_monitors(), config)

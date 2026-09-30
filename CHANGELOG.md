@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.8 – Schnellere Bildschirmvorschau (30.09.2026)
+
+- Modellmonitor und Wohnzimmer-TV laden das PC-Kamerabild alle 10 statt 30 Sekunden.
+- Der Screenshot-Helfer (`tools/pc-screen`) sendet standardmäßig alle 10 Sekunden; das Intervall ist im Setup und als `interval` in `config.json` einstellbar (2–300 Sekunden).
+
 ## 0.5.7 – PC-Desktop auf dem Wohnzimmer-TV (30.09.2026)
 
 - Steht der Receiver auf dem Eingang PC, zeigt das Fernsehermodell den Desktop der PC-Bildschirmkamera als Hintergrund (mit Beschriftung und HDMI-Badge darüber) statt der bisherigen Grafik. Ohne verfügbares Kamerabild bleibt die Grafik.

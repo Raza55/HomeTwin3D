@@ -58,6 +58,14 @@ class ScreenTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             screen.select_monitor([monitor], {'screen': 1})
 
+    def test_capture_interval_defaults_and_clamps(self):
+        self.assertEqual(screen.capture_interval({}), 10)
+        self.assertEqual(screen.capture_interval({'interval': 30}), 30)
+        self.assertEqual(screen.capture_interval({'interval': '5'}), 5)
+        self.assertEqual(screen.capture_interval({'interval': 0}), 2)
+        self.assertEqual(screen.capture_interval({'interval': 9999}), 300)
+        self.assertEqual(screen.capture_interval({'interval': 'abc'}), 10)
+
     def test_monitor_id_from_device_paths(self):
         self.assertEqual(screen.monitor_id(r'\?\DISPLAY#DON0074#5&263d68b9&0&UID4352#{e6f07b5f}'), 'DON0074')
         self.assertEqual(screen.monitor_id(r'MONITOR\GSM7754\{guid}\0001'), 'GSM7754')

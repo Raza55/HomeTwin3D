@@ -544,3 +544,15 @@
 .onboarding-hidden-input { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; }
 .onboarding-muted { color: var(--muted); margin-top: 12px; }
 .onboarding-error { color: var(--red); margin-top: 12px; }
+
+.onboarding-notice {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--green) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}

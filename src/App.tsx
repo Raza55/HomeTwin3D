@@ -6,6 +6,8 @@ import { CameraControlsProvider } from './contexts/CameraControlsContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { hasConfig, getConfig } from './services/configApi';
+import { getSetting } from './services/settingsStore';
+import { joinedSharedInstallation } from './services/sharedStore';
 
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
 const ConfigEditor = lazy(() => import('./pages/ConfigEditor/ConfigEditor'));
@@ -17,7 +19,11 @@ function AppRoutes() {
 
   // No config at all → onboarding. Config exists but not completed → onboarding.
   const configExists = hasConfig();
-  const onboardingDone = configExists && (getConfig().onboarding?.completed ?? false);
+  // The onboarding flag is per browser. A browser that took the shared
+  // installation and already has its own HA connection is set up as well.
+  const haSettings = getSetting('connection').haSettings;
+  const sharedReady = joinedSharedInstallation() && !!haSettings.url && !!haSettings.token;
+  const onboardingDone = configExists && ((getConfig().onboarding?.completed ?? false) || sharedReady);
 
   // Redirect to onboarding if not completed and not already there
   // (simulation mode bypasses onboarding)

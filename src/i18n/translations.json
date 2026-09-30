@@ -834,7 +834,8 @@
     "matching.footer": "Jede Bestätigung wird sofort gespeichert. Du kannst jederzeit schließen.",
     "matching.loadFailed": "Entities konnten nicht geladen werden.",
     "matching.chooseEntity": "Bitte eine passende Entity aus den Vorschlägen oder der Suche wählen.",
-    "matching.saveFailed": "Speichern fehlgeschlagen."
+    "matching.saveFailed": "Speichern fehlgeschlagen.",
+    "onboarding.sharedJoinedNotice": "Die gemeinsame Version dieses Zuhauses ist schon geladen – Modell, Geräte und Einstellungen sind da. Verbinde dieses Gerät nur noch mit Home Assistant."
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -1671,6 +1672,7 @@
     "matching.footer": "Every confirmation is saved at once. You can close at any time.",
     "matching.loadFailed": "Entities could not be loaded.",
     "matching.chooseEntity": "Please choose a matching entity from the suggestions or the search.",
-    "matching.saveFailed": "Saving failed."
+    "matching.saveFailed": "Saving failed.",
+    "onboarding.sharedJoinedNotice": "The shared version of this home is already loaded – model, devices and settings are in place. Just connect this device to Home Assistant."
   }
 }

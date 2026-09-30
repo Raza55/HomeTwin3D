@@ -7,6 +7,8 @@ import { useTranslation } from '../../../contexts/LanguageContext';
 interface Props {
   onComplete: () => void;
   initialHA?: { url: string; port: number; token: string; error?: string };
+  /** Shown above the form, e.g. when the shared installation is already loaded. */
+  notice?: string;
 }
 
 /** Test HA connection by opening a temporary WebSocket. */
@@ -35,7 +37,7 @@ export async function testHA(url: string, port: number, token: string): Promise<
   });
 }
 
-export default function HASetupStep({ onComplete, initialHA }: Props) {
+export default function HASetupStep({ onComplete, initialHA, notice }: Props) {
   const t = useTranslation();
   const [url, setUrl] = useState(initialHA?.url ?? '');
   const [port, setPort] = useState(initialHA?.port ?? 8123);
@@ -82,6 +84,7 @@ export default function HASetupStep({ onComplete, initialHA }: Props) {
         <h1>{t('onboarding.haTitle')}</h1>
         <h2>{t('onboarding.haSubtitle')}</h2>
       </div>
+      {notice && <div className="onboarding-notice" role="status">{notice}</div>}
 
       {window.location.protocol === 'https:' && (
         <div className="onboarding-tips">

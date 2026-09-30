@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.4 – Neue Geräte schneller eingerichtet (30.09.2026)
+
+- Ein neues Gerät (z. B. ein Tablet), das die gemeinsame Version des Zuhauses geladen hat, startet direkt beim Schritt „Home Assistant verbinden“ mit einem kurzen Hinweis statt bei der Begrüßung.
+- Hat der Browser bereits eine gespeicherte Home-Assistant-Verbindung, entfällt der Einrichtungsassistent ganz.
+
 ## 0.5.3 – Hellere Dämmerung (30.09.2026)
 
 - Nach Sonnenuntergang fällt das Umgebungslicht nicht mehr schlagartig auf Nachtniveau, sondern geht über die Dämmerung (bis 10° unter dem Horizont) mit bläulichem Ton allmählich zurück. Auch der Himmel bleibt länger hell.

@@ -71,9 +71,11 @@ export default function Onboarding() {
   const t = useTranslation();
   const navigate = useNavigate();
 
-  const [currentStep, setCurrentStep] = useState(0);
-  // A browser that received the shared installation only needs its own HA connection.
-  const [isImportMode, setIsImportMode] = useState(joinedSharedInstallation);
+  // A browser that received the shared installation only needs its own HA
+  // connection: it starts right at that step.
+  const [sharedJoined] = useState(joinedSharedInstallation);
+  const [currentStep, setCurrentStep] = useState(sharedJoined ? 2 : 0);
+  const [isImportMode, setIsImportMode] = useState(sharedJoined);
   const [hasModel, setHasModel] = useState(false);
   const [hasLocation, setHasLocation] = useState(false);
   const [importedHA, setImportedHA] = useState<{ url: string; port: number; token: string; error?: string } | null>(null);
@@ -257,6 +259,7 @@ export default function Onboarding() {
             key={importedHA ? `${importedHA.url}:${importedHA.port}` : 'empty'}
             onComplete={handleHAComplete}
             initialHA={importedHA ?? undefined}
+            notice={sharedJoined && !importReport ? t('onboarding.sharedJoinedNotice') : undefined}
           />
         </div>
 

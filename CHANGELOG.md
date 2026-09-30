@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.4.2 – Gemeinsame Startansicht und Texturen (30.09.2026)
+
+- Die Startansicht (Zentrieren-Knopf) gilt für die ganze Installation: „Startansicht ändern“ speichert sie zusätzlich in der gemeinsamen Version; eine eigene Startansicht eines Browsers hat Vorrang.
+- Texturierte Darstellung ist Standard; bestehende Browser wechseln einmalig dorthin, danach bleibt die Wahl frei.
+- Render-QA-Helfer im Browser (`?qa`): Pixelvergleich der zusammengefassten Meshes und Leerlauf-Prüfung.
+
 ## 0.4.1 – Vorgebaute Add-on-Images (30.09.2026)
 
 - Das Add-on wird nicht mehr auf dem Home-Assistant-Gerät gebaut: GitHub baut bei jeder Versionserhöhung Images für amd64 und aarch64 (ghcr.io), Home Assistant lädt sie nur noch herunter (Sekunden statt 20–30 Minuten auf einem Raspberry Pi). Die Web-App wird dabei einmal nativ gebaut und ist für alle Architekturen gleich.

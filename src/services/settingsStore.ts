@@ -62,6 +62,8 @@ export interface ControlsSettings {
 export interface MiscSettings {
   panelRatio: number | null;
   language: LanguageCode;
+  /** Changed defaults already applied to this browser (see applyDefaultChanges). */
+  defaultsVersion?: number;
 }
 
 /* ── Root interface ── */
@@ -112,7 +114,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     perspective: true,
     sunShadowRes: 512,
     pointShadowRes: 256,
-    showTextures: false,
+    showTextures: true,
     sketchColor: '#ffffff',
     sketchSpecular: 0.1,
   },
@@ -130,8 +132,24 @@ const DEFAULT_SETTINGS: AppSettings = {
   misc: {
     panelRatio: null,
     language: getDefaultLanguage(),
+    defaultsVersion: 1,
   },
 };
+
+/**
+ * Changed defaults that also reach browsers which stored the old value (every
+ * browser stores its whole settings). Each applies once; afterwards the choice
+ * is the user's again.
+ * 1: textured model instead of the sketch look.
+ */
+function applyDefaultChanges(parsed: Record<string, Record<string, unknown>>): boolean {
+  const misc = (parsed.misc ??= {});
+  const version = typeof misc.defaultsVersion === 'number' ? misc.defaultsVersion : 0;
+  if (version >= 1) return false;
+  (parsed.render ??= {}).showTextures = true;
+  misc.defaultsVersion = 1;
+  return true;
+}
 
 /** Migrate old flat localStorage structure into the new sectioned format. Runs once. */
 function migrate(): void {
@@ -141,7 +159,10 @@ function migrate(): void {
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      if (parsed.connection) return; // already sectioned
+      if (parsed.connection) { // already sectioned
+        if (applyDefaultChanges(parsed)) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return;
+      }
       // Flat format → convert to sectioned
       migrateFlatToSectioned(parsed);
       return;

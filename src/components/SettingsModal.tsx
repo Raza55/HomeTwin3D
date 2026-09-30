@@ -1194,13 +1194,14 @@ export default function SettingsModal({
                     >
                       {t('settings.changeHomeView')}
                     </button>
-                    {(getSetting('controls').homeView || homeViewReset === 'done') && (
+                    {(getSetting('controls').homeView || getConfig().homeView || homeViewReset === 'done') && (
                       <button
                         className={`settings-action-btn${homeViewReset === 'done' ? ' ha-ok' : ''}`}
                         style={homeViewReset === 'done' ? undefined : { borderColor: 'var(--red)', color: 'var(--red)' }}
                         disabled={homeViewReset === 'done'}
                         onClick={() => {
                           updateSettings('controls', { homeView: null });
+                          updateConfig({ homeView: undefined });
                           setHomeViewReset('done');
                           setTimeout(() => setHomeViewReset('idle'), 1500);
                         }}

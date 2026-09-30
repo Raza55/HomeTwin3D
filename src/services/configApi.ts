@@ -89,6 +89,7 @@ export function updateConfig(data: {
   location?: { latitude: number; longitude: number; northOffset?: number };
   sidePanel?: SidePanelConfig;
   tubes?: TubeConfig[];
+  homeView?: AppConfig['homeView'];
   onboarding?: { completed: boolean };
 }): void {
   if (isSimulationActive()) {

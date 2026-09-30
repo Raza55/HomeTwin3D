@@ -395,6 +395,11 @@ export interface AppConfig {
   rooms?: RoomConfig[];
   sidePanel?: SidePanelConfig;
   tubes?: TubeConfig[];
+  /**
+   * Home view for every browser of the installation (camera pose the centre
+   * button returns to). A browser's own home view (settings) takes precedence.
+   */
+  homeView?: { alpha: number; beta: number; radius: number; target: { x: number; y: number; z: number } };
   onboarding?: OnboardingState;
 }
 

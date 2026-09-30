@@ -1017,7 +1017,7 @@ export default function Dashboard() {
         walkthroughBoundsRef.current = { center: result.center.clone(), size: result.size.clone(), scale: modelScale };
         modelDiagonalRef.current = result.diagonal;
 
-        const savedPose = getSetting('controls').homeView;
+        const savedPose = getSetting('controls').homeView ?? configRef.current?.homeView ?? null;
         if (savedPose) {
           ctx.camera.target = new Vector3(savedPose.target.x, savedPose.target.y, savedPose.target.z);
           ctx.camera.alpha = savedPose.alpha;
@@ -1934,6 +1934,8 @@ export default function Dashboard() {
       target: { x: camera.target.x, y: camera.target.y, z: camera.target.z },
     };
     updateSettings('controls', { homeView: pose });
+    // Also the installation's home view: published to every browser with the PIN.
+    try { updateConfig({ homeView: pose }); if (configRef.current) configRef.current = { ...configRef.current, homeView: pose }; } catch { /* stays per browser */ }
     setHomeViewSetting(false);
   }, []);
 
@@ -1961,7 +1963,7 @@ export default function Dashboard() {
       return a;
     };
 
-    const saved = getSetting('controls').homeView;
+    const saved = getSetting('controls').homeView ?? configRef.current?.homeView ?? null;
     const targetRadius = saved ? saved.radius : computeIdealRadius();
     const targetAlpha = saved ? saved.alpha : Tools.ToRadians(270);
     const targetBeta = saved ? saved.beta : Tools.ToRadians(0.5);

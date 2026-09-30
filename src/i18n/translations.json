@@ -835,7 +835,9 @@
     "matching.loadFailed": "Entities konnten nicht geladen werden.",
     "matching.chooseEntity": "Bitte eine passende Entity aus den Vorschlägen oder der Suche wählen.",
     "matching.saveFailed": "Speichern fehlgeschlagen.",
-    "onboarding.sharedJoinedNotice": "Die gemeinsame Version dieses Zuhauses ist schon geladen – Modell, Geräte und Einstellungen sind da. Verbinde dieses Gerät nur noch mit Home Assistant."
+    "onboarding.sharedJoinedNotice": "Die gemeinsame Version dieses Zuhauses ist schon geladen – Modell, Geräte und Einstellungen sind da. Verbinde dieses Gerät nur noch mit Home Assistant.",
+    "settings.parkMinBrightness": "Mindesthelligkeit Außenbereich",
+    "settings.parkMinBrightnessHint": "Hellt Park, Gelände und Himmel in Dämmerung und Nacht auf. Die Wohnung bleibt unverändert, damit Lampen weiter wirken."
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -1673,6 +1675,8 @@
     "matching.loadFailed": "Entities could not be loaded.",
     "matching.chooseEntity": "Please choose a matching entity from the suggestions or the search.",
     "matching.saveFailed": "Saving failed.",
-    "onboarding.sharedJoinedNotice": "The shared version of this home is already loaded – model, devices and settings are in place. Just connect this device to Home Assistant."
+    "onboarding.sharedJoinedNotice": "The shared version of this home is already loaded – model, devices and settings are in place. Just connect this device to Home Assistant.",
+    "settings.parkMinBrightness": "Minimum outdoor brightness",
+    "settings.parkMinBrightnessHint": "Brightens park, grounds and sky at dusk and night. The flat stays as it is, so lamps still show."
   }
 }

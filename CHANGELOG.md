@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.5 – Mindesthelligkeit für den Außenbereich (30.09.2026)
+
+- Neuer Regler unter Einstellungen → 3D-Ansicht → Qualität: „Mindesthelligkeit Außenbereich“ (Aus bis 100 %). Er hellt Park, Gelände, Nachbargebäude und Himmel in Dämmerung und Nacht auf; tagsüber bleibt alles wie gehabt. Die Wohnung selbst wird nicht aufgehellt, damit Lampen nachts weiter sichtbar wirken. Der Wert gilt pro Gerät (z. B. heller auf dem iPad).
+
 ## 0.5.4 – Neue Geräte schneller eingerichtet (30.09.2026)
 
 - Ein neues Gerät (z. B. ein Tablet), das die gemeinsame Version des Zuhauses geladen hat, startet direkt beim Schritt „Home Assistant verbinden“ mit einem kurzen Hinweis statt bei der Begrüßung.

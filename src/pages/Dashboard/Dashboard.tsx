@@ -390,6 +390,15 @@ export default function Dashboard() {
   const [northOffset, setNorthOffset] = useState(0);
   const [groundGrid, setGroundGrid] = useState(() => getSetting('render').groundGrid);
   const [weatherEnabled, setWeatherEnabled] = useState(() => getSetting('environment').weatherEnabled);
+  const [parkMinBrightness, setParkMinBrightness] = useState(() => getSetting('environment').parkMinBrightness ?? 0);
+  const handleParkMinBrightnessChange = useCallback((percent: number) => {
+    setParkMinBrightness(percent);
+    updateSettings('environment', { parkMinBrightness: percent });
+    const ctx = sceneCtxRef.current;
+    if (!ctx) return;
+    ctx.scene.metadata = { ...ctx.scene.metadata, parkMinBrightness: percent / 100 };
+    ctx.requestRender();
+  }, []);
   const weatherEnabledRef = useRef(weatherEnabled);
   weatherEnabledRef.current = weatherEnabled;
   const [perspective, setPerspective] = useState(() => getSetting('render').perspective);
@@ -1072,6 +1081,7 @@ export default function Dashboard() {
         // Create invisible shadow wall meshes from config
         const wallMeshes = createShadowWalls(ctx.scene, configRef.current?.shadowWalls || [], entityScaleRootRef.current ?? undefined);
         const facadeCovers=configRef.current?.model?.floorplan?.objects.filter(o=>o.domain==='cover')??[];
+        ctx.scene.metadata = { ...ctx.scene.metadata, parkMinBrightness: (getSetting('environment').parkMinBrightness ?? 0) / 100 };
         if (!isDisabledForDebug('exterior')) createParkEnvironment(ctx.scene,result.center,result.size,facadeCovers.length?Math.min(...facadeCovers.map(o=>o.position.x))*modelScale-.12*modelScale:undefined,findFrontFacade(facadeCovers,modelScale));
         const modelCasters = [...result.shadowCasters, ...importedShadowCasters];
         const allCasters = [...modelCasters, ...wallMeshes];
@@ -2426,6 +2436,8 @@ export default function Dashboard() {
               groundGrid={groundGrid}
               onGroundGridChange={handleGroundGridChange}
               weatherEnabled={weatherEnabled}
+              parkMinBrightness={parkMinBrightness}
+              onParkMinBrightnessChange={handleParkMinBrightnessChange}
               onWeatherEnabledChange={handleWeatherEnabledChange}
               perspective={perspective}
               onPerspectiveChange={handlePerspectiveChange}

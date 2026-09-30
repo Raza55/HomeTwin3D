@@ -10,20 +10,25 @@ export function createParkAtmosphereUpdater(
   const dryColors = terrain.map(material => material.diffuseColor.clone());
   const clearWeather = { clouds: 0, wet: 0, snow: 0, fog: 0 };
   let lastElevation = NaN, lastRoundedElevation = NaN;
-  let lastClouds = NaN, lastWet = NaN, lastSnow = NaN, lastFog = NaN;
-  let daylight = 0, cloudTint = Color3.Black(), horizon = Color3.Black();
+  let lastClouds = NaN, lastWet = NaN, lastSnow = NaN, lastFog = NaN, lastFloor = NaN;
+  let daylight = 0, skyLight = 0, cloudTint = Color3.Black(), horizon = Color3.Black();
 
   return () => {
     const elevation = Number(scene.metadata?.sunAltitudeDeg ?? -20);
     const weather = scene.metadata?.outdoorWeather ?? clearWeather;
     const { clouds, wet, snow, fog } = weather;
-    const weatherChanged = clouds !== lastClouds || wet !== lastWet || snow !== lastSnow || fog !== lastFog;
-    if (elevation !== lastElevation || clouds !== lastClouds || fog !== lastFog) {
+    // User setting "minimum outdoor brightness" (0..1): lifts sky and park at dusk and night.
+    const floor = Math.max(0, Math.min(1, Number(scene.metadata?.parkMinBrightness ?? 0)));
+    const floorChanged = floor !== lastFloor;
+    lastFloor = floor;
+    const weatherChanged = clouds !== lastClouds || wet !== lastWet || snow !== lastSnow || fog !== lastFog || floorChanged;
+    if (elevation !== lastElevation || clouds !== lastClouds || fog !== lastFog || floorChanged) {
       // Twilight keeps the sky light until the sun is well below the horizon.
       daylight = Math.max(0, Math.min(1, (elevation + 10) / 26));
-      cloudTint = Color3.Lerp(new Color3(.025, .03, .045), new Color3(.42, .47, .51), daylight);
+      skyLight = Math.max(daylight, floor * SKY_FLOOR);
+      cloudTint = Color3.Lerp(new Color3(.025, .03, .045), new Color3(.42, .47, .51), skyLight);
       horizon = Color3.Lerp(
-        Color3.Lerp(new Color3(.045, .055, .10), new Color3(.78, .85, .89), daylight),
+        Color3.Lerp(new Color3(.045, .055, .10), new Color3(.78, .85, .89), skyLight),
         cloudTint, Math.max(clouds * .55, fog),
       );
     }
@@ -42,7 +47,7 @@ export function createParkAtmosphereUpdater(
     if (!weatherChanged && roundedElevation === lastRoundedElevation) return;
     lastRoundedElevation = roundedElevation;
     sky.setColor3('zenith', Color3.Lerp(
-      Color3.Lerp(new Color3(.015, .024, .06), new Color3(.19, .43, .68), daylight),
+      Color3.Lerp(new Color3(.015, .024, .06), new Color3(.19, .43, .68), skyLight),
       cloudTint, Math.max(clouds, fog),
     ));
     // Keep the original sky refresh granularity; horizon is replaced, never mutated.
@@ -52,6 +57,11 @@ export function createParkAtmosphereUpdater(
       material.specularColor = new Color3(.18, .2, .22).scale(wet);
       material.specularPower = 48;
     });
-    for (const material of materials) material.emissiveColor = material.diffuseColor.scale(.025 + .09 * daylight);
+    const glow = Math.max(.025 + .09 * daylight, floor * PARK_FLOOR);
+    for (const material of materials) material.emissiveColor = material.diffuseColor.scale(glow);
   };
 }
+
+/** At 100 % the night sky looks like late dusk and the park glows at about a third of its colour. */
+const SKY_FLOOR = .55;
+const PARK_FLOOR = .32;

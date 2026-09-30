@@ -42,6 +42,8 @@ export interface RenderSettings {
 export interface EnvironmentSettings {
   sunLiveMode: boolean;
   weatherEnabled: boolean;
+  /** Minimum brightness of the park/outdoor area in percent (0 = natural night). */
+  parkMinBrightness: number;
 }
 
 export interface HomeViewPose {
@@ -123,6 +125,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   environment: {
     sunLiveMode: true,
     weatherEnabled: true,
+    parkMinBrightness: 0,
   },
   controls: {
     cameraControls: {

@@ -334,6 +334,7 @@ export const SIMULATION_SETTINGS: AppSettings = {
   environment: {
     sunLiveMode: true,
     weatherEnabled: true,
+    parkMinBrightness: 0,
   },
   controls: {
     cameraControls: {

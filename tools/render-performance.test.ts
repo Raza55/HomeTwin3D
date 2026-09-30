@@ -63,6 +63,29 @@ test('atmosphere cache preserves day/night, weather and sub-step fog colors with
   } finally { Color3.Lerp = originalLerp; scene.dispose(); engine.dispose(); }
 });
 
+test('minimum outdoor brightness lifts park and sky at night and is re-applied when changed', () => {
+  const engine = new NullEngine(), scene = new Scene(engine);
+  const sky = new ShaderMaterial('sky', scene, {}, {});
+  const uniforms = new Map<string, Color3>();
+  sky.setColor3 = (name, color) => { uniforms.set(name, color); return sky; };
+  const park = new StandardMaterial('park', scene);
+  park.diffuseColor = new Color3(.3, .5, .2);
+  const update = createParkAtmosphereUpdater(scene, sky, [park], []);
+  scene.metadata = { sunAltitudeDeg: -20 };
+  update();
+  assert.ok(park.emissiveColor.equals(park.diffuseColor.scale(.025)));
+  const darkZenith = uniforms.get('zenith')!.clone();
+  scene.metadata = { sunAltitudeDeg: -20, parkMinBrightness: 1 };
+  update();
+  assert.ok(park.emissiveColor.equals(park.diffuseColor.scale(.32)));
+  assert.ok(uniforms.get('zenith')!.b > darkZenith.b);
+  // Daylight above the floor wins; the floor never darkens the day.
+  scene.metadata = { sunAltitudeDeg: 40, parkMinBrightness: .1 };
+  update();
+  assert.ok(park.emissiveColor.equals(park.diffuseColor.scale(.025 + .09)));
+  engine.dispose();
+});
+
 test('unchanged light updates do not resync meshes or invalidate shadow maps', () => {
   const engine = new NullEngine(), scene = new Scene(engine);
   try {

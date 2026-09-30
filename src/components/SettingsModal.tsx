@@ -52,6 +52,9 @@ interface Props {
   onGroundGridChange: (enabled: boolean) => void;
   weatherEnabled: boolean;
   onWeatherEnabledChange: (enabled: boolean) => void;
+  /** Minimum outdoor (park) brightness in percent. */
+  parkMinBrightness: number;
+  onParkMinBrightnessChange: (percent: number) => void;
   perspective: boolean;
   onPerspectiveChange: (enabled: boolean) => void;
 
@@ -176,6 +179,7 @@ export default function SettingsModal({
   northOffset, onNorthOffsetChange,
   edgeWidth, onEdgeWidthChange, edgeMode, onEdgeModeChange,
   groundGrid, onGroundGridChange, weatherEnabled, onWeatherEnabledChange, perspective, onPerspectiveChange,
+  parkMinBrightness, onParkMinBrightnessChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
   onEditGrid, onChangeHomeView, onStartTour,
@@ -607,6 +611,13 @@ export default function SettingsModal({
                 </Row>
                 <Row label={t('settings.weatherEffects')} hint={t('settings.weatherEffectsHint')}>
                   <Switch label={t('settings.weatherEffects')} checked={weatherEnabled} onChange={onWeatherEnabledChange} />
+                </Row>
+                <Row label={t('settings.parkMinBrightness')} hint={t('settings.parkMinBrightnessHint')} stacked htmlFor="settings-park-brightness">
+                  <div className="settings-slider">
+                    <input id="settings-park-brightness" type="range" min={0} max={100} step={5} value={parkMinBrightness}
+                      onChange={(e) => onParkMinBrightnessChange(parseInt(e.target.value))} />
+                    <output>{parkMinBrightness === 0 ? t('common.off') : `${parkMinBrightness}%`}</output>
+                  </div>
                 </Row>
                 <Row label={t('settings.groundGrid')}>
                   <Switch label={t('settings.groundGrid')} checked={groundGrid} onChange={onGroundGridChange} />

@@ -22,3 +22,17 @@ export function reducedEffects(): boolean {
   if (typeof window === 'undefined') return false;
   return isTabletClass() && new URLSearchParams(window.location.search).get('fx') !== 'full';
 }
+
+/**
+ * Map marker size factor: tablets are used at arm's length and tapped with a
+ * finger, so markers grow with the screen (short side / 760 CSS px, at most
+ * 1.4; an iPad Pro in landscape gets ~1.35). Desktops keep 1. `?iconscale=`
+ * overrides (0.5-2).
+ */
+export function markerSizeScale(): number {
+  if (typeof window === 'undefined') return 1;
+  const requested = Number(new URLSearchParams(window.location.search).get('iconscale'));
+  if (requested >= 0.5 && requested <= 2) return requested;
+  if (!isTabletClass()) return 1;
+  return Math.min(1.4, Math.max(1, Math.min(window.innerWidth, window.innerHeight) / 760));
+}

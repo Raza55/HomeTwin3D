@@ -15,6 +15,13 @@ export function useMapMarkers(scene: Scene, build: () => MapMarkerSpec[], deps: 
   return group;
 }
 
+/** Ref to the latest render's value, for callbacks registered once (marker primary actions). */
+export function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
 /** Calls `apply` after every marker layout with the placement of marker `id` (popups that follow their marker). */
 export function useMarkerPlacement(scene: Scene, group: { current: MarkerGroup | null }, id: string | null | undefined,
   apply: (placement: MarkerPlacement) => void, deps: DependencyList = []) {

@@ -1,5 +1,6 @@
 import { markerCenterToRef } from '../babylon/MarkerProjection';
-import { useMapMarkers } from './useMapMarkers';
+import { useLatest, useMapMarkers } from './useMapMarkers';
+import { getActiveHAConnection } from '../services/haWebSocket';
 import {useRef} from 'react';
 import {Blinds} from 'lucide-react';
 import {Vector3,type Scene} from '@babylonjs/core';
@@ -11,8 +12,17 @@ import './BlindQuickControls.css';
 export default function BlindMarkers({scene,meshes,config,states,onAssign,onOpen}:{scene:Scene;meshes:BlindMeshMap;config:AppConfig;states:Record<string,HAState>;onAssign:(id:string)=>void;onOpen:(id:string,x?:number,y?:number)=>void}){
  const buttons=useRef<Record<string,HTMLButtonElement|null>>({});
  const free=(config.model?.floorplan?.objects??[]).filter(o=>o.domain==='cover'&&!o.entityId);
+ const latestStates=useLatest(states);
+ // Long press: stop a moving blind, open a closed one, otherwise close.
+ const toggleBlind=(id:string)=>{
+  const ha=getActiveHAConnection(),state=latestStates.current[id];
+  if(!ha?.isConnected||!state||state.state==='unavailable')return false;
+  const closed=state.state==='closed'||state.attributes.current_position===0;
+  void ha.callService('cover',['opening','closing'].includes(state.state)?'stop_cover':closed?'open_cover':'close_cover',id);
+  return true;
+ };
  useMapMarkers(scene,()=>[
-  ...Object.entries(meshes).map(([id,entry])=>({id,element:()=>buttons.current[id],occlude:true,display:'grid',anchor:(out:Vector3)=>out.copyFrom(entry.frame.getAbsolutePosition())})),
+  ...Object.entries(meshes).map(([id,entry])=>({id,element:()=>buttons.current[id],occlude:true,display:'grid',primaryAction:()=>toggleBlind(id),anchor:(out:Vector3)=>out.copyFrom(entry.frame.getAbsolutePosition())})),
   ...free.map(o=>{
    const parts=scene.meshes.filter(m=>floorplanId(m)===o.id&&m.getTotalVertices()>0),fallback=new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1);
    return {id:o.id,element:()=>buttons.current[o.id],occlude:true,display:'grid',anchor:(out:Vector3)=>markerCenterToRef(parts,fallback,out)};

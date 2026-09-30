@@ -8,3 +8,5 @@
 .blind-map-marker[data-map-marker=hover] .blind-marker-caption{display:block}
 /* Same hover growth for the DOM fallback (?markers=dom). */
 @media(hover:hover){.door-marker:hover,.fan-map-marker:hover,.coffee-marker:hover,.it-marker:hover,.echo-map-marker:hover,.appliance-marker:hover,.battery-warning-marker:hover{transform:translate(-50%,-50%) scale(1.25);z-index:45}}
+/* Long press ran the marker's primary action: a short grow as confirmation. */
+[data-map-marker=action]{transform:translate(-50%,-50%) scale(1.55)!important;z-index:46!important}

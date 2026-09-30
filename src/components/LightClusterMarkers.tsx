@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useMapMarkers } from './useMapMarkers';
+import { useLatest, useMapMarkers } from './useMapMarkers';
+import { getActiveHAConnection } from '../services/haWebSocket';
 import { Lightbulb, LockKeyhole } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState, LightConfig } from '../types';
@@ -49,6 +50,7 @@ export default function LightClusterMarkers({scene,config,meshes,states,onOpen,o
     const canvas=scene.getEngine().getRenderingCanvas();canvas?.addEventListener('pointerleave',clearModelHover);
     return()=>{document.removeEventListener('pointerdown',trackTouch,true);document.removeEventListener('pointermove',trackTouch,true);document.removeEventListener('pointerup',endTouch);document.removeEventListener('pointercancel',endTouch);window.removeEventListener('blur',cancel);canvas?.removeEventListener('pointerleave',clearModelHover);};
   },[scene,key,meshes]);
+  const latestStates=useLatest(states);
   const hidden=useRef(new Set<NonNullable<MeshMap[string]['touchIconMesh']>>());
   useMapMarkers(scene,()=>{
     const scale=config.model?.scale ?? 1;
@@ -60,6 +62,14 @@ export default function LightClusterMarkers({scene,config,meshes,states,onOpen,o
     });
     return [...unassignedMarkers,...groups.map(group=>({
       id:group[0].entityId,element:()=>buttons.current[group[0].entityId],occlude:true,display:'grid',
+      // Long press: the whole group on or off (off when any member is on).
+      primaryAction:()=>{
+        const ha=getActiveHAConnection(),current=latestStates.current;
+        if(!ha?.isConnected||group.some(l=>isHueSyncLocked(l.entityId,current))||group.every(l=>!current[l.entityId]||current[l.entityId].state==='unavailable'))return false;
+        const on=group.some(l=>current[l.entityId]?.state==='on');
+        for(const l of group)void ha.callService(l.entityId.split('.')[0],on?'turn_off':'turn_on',l.entityId);
+        return true;
+      },
       anchor:(out:Vector3)=>{
         out.setAll(0);
         let count=0,hovered=false;

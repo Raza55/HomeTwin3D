@@ -3,7 +3,7 @@ import {Tv,Monitor,Gamepad2,Play,Power,X} from 'lucide-react';
 import {type Scene,type Vector3} from '@babylonjs/core';
 import type {HAState} from '../types';
 import {floorplanId} from '../babylon/FloorplanBindings';
-import {useMapMarkers} from './useMapMarkers';
+import {useLatest,useMapMarkers} from './useMapMarkers';
 import {getActiveHAConnection} from '../services/haWebSocket';
 import {TV_DIAL_AUTOMATION,TV_DIAL_CHOICES,tvDialRequest,tvDialSelected,type TVDialChoice} from '../services/tvDial';
 import './ITMarkers.css';
@@ -14,11 +14,14 @@ export default function TVDialControl({scene,states,connected,onCommand}:{scene:
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[feedback,setFeedback]=useState(''),[error,setError]=useState('');
   const selected=tvDialSelected(states,connected),enabled=connected&&states[TV_DIAL_AUTOMATION]?.state==='on';
   const running=Number(states[TV_DIAL_AUTOMATION]?.attributes.current??0)>0;
+  const latest=useLatest({selected,enabled,send:(choice:TVDialChoice)=>send(choice)});
   useMapMarkers(scene,()=>{
     const find=()=>scene.meshes.find(m=>floorplanId(m)==='4784bb9f-40cd-5e6b-9165-63d8ffbe0dc1'&&/Fernseher_Bildschirm/.test(m.name)&&m.getTotalVertices()>0);
     let screen=find(),nextLookup=0;
     // TV controls remain accessible even when the screen is occluded.
-    return [{id:'tv-dial',element:()=>marker.current,display:'flex',anchor:(out:Vector3)=>{
+    // Long press: TV on with the first source (SHIELD), off when it is on.
+    const primaryAction=()=>{const {selected,enabled,send}=latest.current;if(!enabled)return false;void send(selected&&selected!=='aus'?'aus':TV_DIAL_CHOICES[0].id);return true;};
+    return [{id:'tv-dial',element:()=>marker.current,display:'flex',primaryAction,anchor:(out:Vector3)=>{
       if(!screen||screen.isDisposed()){
         if(performance.now()<nextLookup)return null;nextLookup=performance.now()+1000;
         screen=find();if(!screen)return null;

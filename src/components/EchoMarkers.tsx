@@ -5,7 +5,7 @@ import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
-import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
+import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { echoState, type EchoService } from '../services/echoState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './EchoMarkers.css';
@@ -33,11 +33,20 @@ export default function EchoMarkers({ scene, config, states, connected, open, on
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, [onOpen]);
+  const latest = useLatest({ states, connected });
   const markers = useMapMarkers(scene, () => objects.map(o => {
     const fallback = new Vector3(o.position.x, o.position.y, o.position.z).scale(config.model?.scale ?? 1);
     const meshes = scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0);
     return {
       id: o.id, element: () => refs.current[o.id], occlude: true, display: 'flex',
+      // Long press: play / pause.
+      primaryAction: o.entityId ? () => {
+        const value = echoState(latest.current.states[o.entityId], latest.current.connected), ha = getActiveHAConnection();
+        const service = value.active ? 'media_pause' : 'media_play';
+        if (!value.available || !value.supports(service) || !ha?.isConnected) return false;
+        void ha.callService('media_player', service, o.entityId);
+        return true;
+      } : undefined,
       stack: { group: 'echo', width: 28, height: 28 },
       anchor: (out: Vector3) => markerCenterToRef(meshes, fallback, out),
     };

@@ -4,7 +4,7 @@ import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
-import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
+import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { fanState, statusIndicatorActive } from '../services/fanState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './FanMarkers.css';
@@ -32,11 +32,19 @@ export default function FanMarkers({ scene, config, states, connected, open, onO
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, [onOpen]);
+  const latest = useLatest({ states, connected });
   const markers = useMapMarkers(scene, () => objects.map(o => {
     const fallback = new Vector3(o.position.x, o.position.y, o.position.z).scale(config.model?.scale ?? 1);
     const meshes = scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0);
     return {
       id: o.id, element: () => refs.current[o.id], occlude: true, display: 'flex',
+      // Long press: fan on / off.
+      primaryAction: o.entityId && !o.statusIndicator ? () => {
+        const value = fanState(latest.current.states[o.entityId], latest.current.connected), ha = getActiveHAConnection();
+        if (!value.available || !ha?.isConnected) return false;
+        void ha.callService('fan', value.on ? 'turn_off' : 'turn_on', o.entityId);
+        return true;
+      } : undefined,
       interactive: !o.statusIndicator,
       stack: { group: 'fan', width: o.statusIndicator ? 100 : 44, height: 54 },
       anchor: (out: Vector3) => markerCenterToRef(meshes, fallback, out),

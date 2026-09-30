@@ -4,6 +4,7 @@ import {
 } from '@babylonjs/core';
 import { getMarkerProjection, setMarkerStyle } from './MarkerProjection';
 import { rasterizeMarker, type MarkerRaster } from './MarkerRaster';
+import { markerSizeScale } from './DeviceClass';
 
 /**
  * Map markers (lights, doors, blinds, devices, warnings) drawn by WebGL in the
@@ -35,6 +36,12 @@ export interface MapMarkerSpec {
   display: string;
   /** False for status displays that let pointer input through to the model. */
   interactive?: boolean;
+  /**
+   * Long press runs this instead of the element's click (e.g. light on/off).
+   * Returning false (nothing to do: unassigned, unavailable, offline) lets the
+   * release open the popup as a normal tap would.
+   */
+  primaryAction?: () => boolean;
 }
 
 export interface MarkerPlacement { x: number; y: number; visible: boolean }
@@ -66,6 +73,9 @@ const PROXY_ATTRIBUTE = 'data-map-marker';
 const PARKED = '-10000px';
 const STACK_GAP = 6;
 const TOUCH_SLOP = 6;
+/** Hold time and allowed finger travel for a long press. */
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_SLOP = 10;
 
 export function markerLayerMode(): 'webgl' | 'dom' {
   return typeof location !== 'undefined' && new URLSearchParams(location.search).get('markers') === 'dom' ? 'dom' : 'webgl';
@@ -89,6 +99,8 @@ export function getMarkerLayer(scene: Scene): MarkerLayer {
 
 export class MarkerLayer {
   readonly onLayoutObservable = new Observable<void>();
+  /** Drawn marker size relative to CSS (tablets: larger, see markerSizeScale). */
+  sizeScale = 1;
   private groups = new Set<Marker[]>();
   private point = Vector3.Zero();
   private overlay: MarkerOverlay | null = null;
@@ -135,6 +147,8 @@ export class MarkerLayer {
   /** Projects, occludes and stacks every marker for the current frame. */
   layout(): void {
     const projection = getMarkerProjection(this.scene);
+    const size = this.mode === 'webgl' ? markerSizeScale() : 1;
+    if (size !== this.sizeScale) { this.sizeScale = size; for (const marker of this.markers()) marker.dirty = true; }
     const stacks = new Map<string, Array<{ x: number; y: number; width: number; height: number }>>();
     for (const group of this.groups) {
       for (const marker of group) {
@@ -150,12 +164,12 @@ export class MarkerLayer {
         const { rect, width, height } = projection;
         const p = projection.project(point, spec.occlude ? element : undefined);
         const visible = p.z >= 0 && p.z <= 1 && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height;
-        const x = rect.left + p.x / width * rect.width + (spec.offset?.x ?? 0);
-        let y = rect.top + p.y / height * rect.height + (spec.offset?.y ?? 0);
+        const x = rect.left + p.x / width * rect.width + (spec.offset?.x ?? 0) * size;
+        let y = rect.top + p.y / height * rect.height + (spec.offset?.y ?? 0) * size;
         if (spec.stack) {
           const placed = stacks.get(spec.stack.group) ?? [];
           stacks.set(spec.stack.group, placed);
-          const { width: w, height: h } = spec.stack;
+          const w = spec.stack.width * size, h = spec.stack.height * size;
           for (const prior of placed) {
             if (Math.abs(x - prior.x) < (w + prior.width) / 2 + STACK_GAP && Math.abs(y - prior.y) < (h + prior.height) / 2 + STACK_GAP)
               y = prior.y + (h + prior.height) / 2 + STACK_GAP;
@@ -347,7 +361,7 @@ class MarkerOverlay {
       const size = this.atlas.size;
       const snap = (value: number) => Math.round(value * pixelRatio) / pixelRatio;
       visible.forEach((marker, i) => {
-        const raster = marker.raster!, slot = marker.slot!, scale = raster.scale;
+        const raster = marker.raster!, slot = marker.slot!, scale = raster.scale * this.layer.sizeScale;
         const left = snap(marker.placement.x - raster.centerX * scale), top = snap(marker.placement.y - raster.centerY * scale);
         const right = left + raster.width * scale, bottom = top + raster.height * scale;
         const nx = (x: number) => (x - rect.left) / rect.width * 2 - 1, ny = (y: number) => 1 - (y - rect.top) / rect.height * 2;
@@ -366,8 +380,8 @@ class MarkerOverlay {
     const raster = rasterizeMarker(marker.element!);
     marker.raster = raster;
     if (!raster) { marker.slot = null; return; }
-    // Rasterized at the displayed scale: one texel per device pixel, also when hovered.
-    const ratio = pixelRatio * raster.scale;
+    // Rasterized at the displayed scale: one texel per device pixel, also when hovered or enlarged.
+    const ratio = pixelRatio * raster.scale * this.layer.sizeScale;
     const width = Math.max(1, Math.ceil(raster.width * ratio)), height = Math.max(1, Math.ceil(raster.height * ratio));
     if (!marker.slot || marker.slot.width < width || marker.slot.height < height) {
       marker.slot = this.allocate(width, height, all, marker);
@@ -438,6 +452,7 @@ class MarkerInput {
   private hovered: Marker | null = null;
   private pressed: { marker: Marker; pointerId: number } | null = null;
   private suppressClick = false;
+  private longPress: { marker: Marker; timer: number; x: number; y: number; fired: boolean } | null = null;
   private canvas: HTMLCanvasElement | null;
   private cursor = '';
   private title = '';
@@ -462,6 +477,9 @@ class MarkerInput {
       event.stopPropagation();
       event.preventDefault();
     });
+    // A long press on a marker must not open the system callout or context menu.
+    on('contextmenu', event => { if (this.pressed || this.longPress?.fired) event.preventDefault(); });
+    this.canvas?.style.setProperty('-webkit-touch-callout', 'none');
     this.canvas?.addEventListener('pointerleave', this.leave);
   }
 
@@ -480,7 +498,8 @@ class MarkerInput {
     for (let i = this.order.length - 1; i >= 0; i--) {
       const marker = this.order[i], raster = marker.raster!;
       if (marker.spec.interactive === false) continue;
-      const halfWidth = raster.boxWidth * raster.scale / 2 + slop, halfHeight = raster.boxHeight * raster.scale / 2 + slop;
+      const scale = raster.scale * this.layer.sizeScale;
+      const halfWidth = raster.boxWidth * scale / 2 + slop, halfHeight = raster.boxHeight * scale / 2 + slop;
       if (Math.abs(event.clientX - marker.placement.x) <= halfWidth && Math.abs(event.clientY - marker.placement.y) <= halfHeight) return marker;
     }
     return null;
@@ -527,12 +546,40 @@ class MarkerInput {
     // Touch has no hover: the pressed marker grows instead, as a mouse-hovered one does.
     if (event.pointerType === 'touch') this.setAttribute(marker, 'hover');
     this.forward(marker, 'pointerdown', event);
+    this.cancelLongPress();
+    if (marker.spec.primaryAction && event.button === 0) {
+      this.longPress = { marker, x: event.clientX, y: event.clientY, fired: false, timer: window.setTimeout(() => this.runPrimaryAction(), LONG_PRESS_MS) };
+    }
     this.layer.requestRender();
+  }
+
+  private cancelLongPress(): void {
+    if (this.longPress && !this.longPress.fired) window.clearTimeout(this.longPress.timer);
+    this.longPress = null;
+  }
+
+  /** Long press: the marker's primary action instead of its popup, with a short grow as confirmation. */
+  private runPrimaryAction(): void {
+    const press = this.longPress;
+    if (!press || press.marker !== this.pressed?.marker) return;
+    const { marker } = press;
+    let handled = false;
+    try { handled = marker.spec.primaryAction!(); } catch (error) { console.error('[MarkerLayer] Primary action failed:', error); }
+    if (!handled) { this.longPress = null; return; }
+    press.fired = true;
+    this.setAttribute(marker, 'action');
+    (navigator as Navigator & { vibrate?: (ms: number) => boolean }).vibrate?.(15);
+    window.setTimeout(() => {
+      if (marker.element?.getAttribute(PROXY_ATTRIBUTE) !== 'action') return;
+      this.setAttribute(marker, marker === this.hovered || marker === this.pressed?.marker ? 'hover' : 'proxy');
+    }, 250);
   }
 
   private move(event: PointerEvent): void {
     if (this.pressed && event.pointerId === this.pressed.pointerId) {
       event.stopPropagation();
+      const press = this.longPress;
+      if (press && !press.fired && Math.hypot(event.clientX - press.x, event.clientY - press.y) > LONG_PRESS_SLOP) this.cancelLongPress();
       this.forward(this.pressed.marker, 'pointermove', event);
       return;
     }
@@ -557,9 +604,16 @@ class MarkerInput {
     event.stopPropagation();
     this.pressed = null;
     const { marker } = pressed;
+    const longPressed = this.longPress?.fired ?? false;
+    this.cancelLongPress();
     this.forward(marker, event.type, event);
-    if (event.pointerType === 'touch' && marker !== this.hovered) this.setAttribute(marker, 'proxy');
-    if (event.type === 'pointerup' && this.hit(event) === marker && marker.element) {
+    // After a long press the confirmation grow resets itself.
+    if (event.pointerType === 'touch' && marker !== this.hovered && !longPressed) this.setAttribute(marker, 'proxy');
+    if (longPressed) {
+      // The action ran already; neither the element nor the scene gets a click.
+      this.suppressClick = true;
+      setTimeout(() => { this.suppressClick = false; }, 400);
+    } else if (event.type === 'pointerup' && this.hit(event) === marker && marker.element) {
       this.dispatch(marker.element, new MouseEvent('click', {
         bubbles: true, cancelable: true, composed: true, detail: 1,
         clientX: event.clientX, clientY: event.clientY, screenX: event.screenX, screenY: event.screenY,
@@ -603,7 +657,7 @@ class MarkerInput {
   }
 
   /** Hover state on the proxy; a changed state re-rasterizes it (size, captions). */
-  private setAttribute(marker: Marker, state: 'proxy' | 'hover'): void {
+  private setAttribute(marker: Marker, state: 'proxy' | 'hover' | 'action'): void {
     const element = marker.element;
     if (!element?.hasAttribute(PROXY_ATTRIBUTE) || element.getAttribute(PROXY_ATTRIBUTE) === state) return;
     element.setAttribute(PROXY_ATTRIBUTE, state);

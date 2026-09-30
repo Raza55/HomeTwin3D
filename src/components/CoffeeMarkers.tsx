@@ -4,7 +4,7 @@ import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
-import { useMapMarkers, useMarkerPlacement } from './useMapMarkers';
+import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { coffeeState, coffeeProgram } from '../services/coffeeState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './CoffeeMarkers.css';
@@ -37,11 +37,19 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, [onOpen]);
+  const latest = useLatest({ states, connected });
   const markers = useMapMarkers(scene, () => objects.map(o => {
     const fallback = new Vector3(o.position.x, o.position.y, o.position.z).scale(config.model?.scale ?? 1);
     const meshes = scene.meshes.filter(m => floorplanId(m) === o.id && m.getTotalVertices() > 0);
     return {
       id: o.id, element: () => refs.current[o.id], occlude: false, display: 'flex',
+      // Long press: power on / off, never while a program runs.
+      primaryAction: o.entityId ? () => {
+        const value = coffeeState(o, latest.current.states, latest.current.connected, Date.now()), ha = getActiveHAConnection();
+        if (!value.canPower || value.inProgress || !ha?.isConnected) return false;
+        void ha.callService('switch', value.on ? 'turn_off' : 'turn_on', o.entityId);
+        return true;
+      } : undefined,
       stack: { group: 'coffee', width: 140, height: 72 },
       anchor: (out: Vector3) => markerCenterToRef(meshes, fallback, out),
     };

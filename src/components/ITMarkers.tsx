@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Monitor, Server, Pencil, X, Power } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState, ITConfig, ITDevice, ITAction } from '../types';
-import { useMapMarkers } from './useMapMarkers';
+import { useLatest, useMapMarkers } from './useMapMarkers';
 import { itStatus, itStatusLabel, itMetric, itActionAvailable, itCommand, validateIT } from '../services/itState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import EntityPicker from './EntityPicker';
@@ -28,9 +28,20 @@ export default function ITMarkers({scene,config,states,connected,open,onOpen,onS
     window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);
   },[onOpen]);
   // PCs and the shared server/network control remain visible through walls and furniture.
+  const latest=useLatest({states,connected,send:(device:ITDevice,action:ITAction)=>send(device,action,true)});
   useMapMarkers(scene,()=>objects.map(o=>{
     const center=new Vector3(o.position.x,o.position.y,o.position.z).scale(config.model?.scale??1);
-    return {id:o.id,element:()=>refs.current[o.id],display:'flex',anchor:(out:Vector3)=>out.copyFrom(center)};
+    const device=o.it!.kind==='pc'&&o.it!.devices.length===1?o.it!.devices[0]:null;
+    // Long press on a PC: sleep when on, main switch on when off; no action while the state is unknown.
+    const primaryAction=device?()=>{
+      const {states,connected,send}=latest.current,status=itStatus(device,states,connected);
+      const action=status==='on'?device.actions.find(a=>a.kind==='button'&&/schlaf|ruhe|hibern|sleep|standby/i.test(a.label))
+        :status==='off'?device.actions.find(a=>a.kind==='toggle'||a.kind==='wake'):undefined;
+      if(!action||!itActionAvailable(action,device,states,connected))return false;
+      void send(device,action);
+      return true;
+    }:undefined;
+    return {id:o.id,element:()=>refs.current[o.id],display:'flex',primaryAction,anchor:(out:Vector3)=>out.copyFrom(center)};
   }),[config]);
   const send=async(device:ITDevice,action:ITAction,confirmed=false)=>{
     const command=itCommand(action,device,states,connected),ha=getActiveHAConnection();

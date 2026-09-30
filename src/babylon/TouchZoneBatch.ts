@@ -12,7 +12,7 @@ import { Color3, Constants, Mesh, StandardMaterial, VertexBuffer, type Observer,
  * zones, so the zones' glow is exactly as before. Zones are rebuilt when one is added, removed,
  * enabled, disabled or moved.
  */
-interface Zone { mesh: Mesh; material: StandardMaterial; start: number; count: number; rgba: [number, number, number, number] }
+interface Zone { mesh: Mesh; material: StandardMaterial; start: number; count: number; rgba: [number, number, number, number]; matrix: Float64Array }
 
 const batches = new WeakMap<Scene, TouchZoneBatch>();
 
@@ -111,7 +111,8 @@ class TouchZoneBatch {
     this.hookEffectLayers();
     const candidates = this.candidates();
     if (!this.structureDirty && (candidates.length !== this.zones.length || candidates.some((mesh, i) => this.zones[i].mesh !== mesh))) this.structureDirty = true;
-    if (!this.structureDirty && this.zones.some(zone => zone.mesh.computeWorldMatrix().updateFlag !== (zone as Zone & { flag?: number }).flag)) this.structureDirty = true;
+    // A moved zone rebuilds (values compared: matrices recompute without changing).
+    if (!this.structureDirty && this.zones.some(zone => { const m = zone.mesh.computeWorldMatrix().m; for (let k = 0; k < 16; k++) if (m[k] !== zone.matrix[k]) return true; return false; })) this.structureDirty = true;
     if (this.structureDirty) this.rebuild(candidates);
     if (!this.merged) return;
     let changed = false;
@@ -141,8 +142,7 @@ class TouchZoneBatch {
     let start = 0;
     this.zones = candidates.map(mesh => {
       const count = mesh.getTotalVertices();
-      const zone: Zone & { flag?: number } = { mesh, material: this.materials.get(mesh)!, start, count, rgba: [-1, -1, -1, -1] };
-      zone.flag = mesh.computeWorldMatrix().updateFlag;
+      const zone: Zone = { mesh, material: this.materials.get(mesh)!, start, count, rgba: [-1, -1, -1, -1], matrix: Float64Array.from(mesh.computeWorldMatrix().m) };
       start += count;
       // Still pickable and stateful; drawn by the merged mesh.
       mesh.visibility = 0;

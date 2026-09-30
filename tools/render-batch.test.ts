@@ -225,6 +225,10 @@ test('light touch zones draw as one mesh that follows each zone color and alpha'
     scene.onBeforeRenderObservable.notifyObservers(scene);
     const merged = scene.getMeshByName('touch-zones')!;
     assert.ok(merged && zones.every(z => isBatchedTouchZone(z.mesh) && z.mesh.visibility === 0 && z.mesh.isPickable), 'zones stay pickable, merged draws them');
+    // Unchanged zones keep the merged mesh (a rebuild each frame kept the app out of idle).
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.equal(scene.getMeshByName('touch-zones'), merged);
     const perZone = zones[0].mesh.getTotalVertices() * 4;
     const colors = () => merged.getVerticesData('color')!;
     assert.deepEqual(Array.from(colors().slice(perZone, perZone + 4)).map(v => +v.toFixed(2)), [.2, .4, .6, .06]);

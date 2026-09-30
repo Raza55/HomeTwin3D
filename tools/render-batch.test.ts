@@ -178,3 +178,32 @@ test('sources of one batch share the lamps chosen for the whole batch', () => {
     assert.ok(candidates(scene).includes(proxy) && !candidates(scene).includes(strips[0]), 'the batch stays merged');
   } finally { scene.dispose(); engine.dispose(); }
 });
+
+import { PBRMaterial } from '@babylonjs/core';
+
+test('dielectrics merge across metallic and roughness via vertex data; metals stay apart', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const pbr = (name: string, metallic: number, roughness: number, color: Color3) => {
+      const m = new PBRMaterial(name, scene); m.metallic = metallic; m.roughness = roughness; m.albedoColor = color; return m;
+    };
+    const materials = [pbr('matte', 0, .9, new Color3(1, 0, 0)), pbr('satin', .1, .4, new Color3(0, 1, 0)), pbr('metal', .9, .3, new Color3(0, 0, 1)), pbr('steel', .95, .3, new Color3(1, 1, 1))];
+    const boxes = materials.map((material, i) => { const m = MeshBuilder.CreateBox(`part${i}`, {}, scene); m.position.x = i * .5; m.material = material; return m; });
+    const set = batchStaticRendering(scene, boxes, []);
+    const proxies = scene.meshes.filter(m => m.metadata?.renderBatch);
+    const dielectric = proxies.find(p => set.sourcesOf(p)?.includes(boxes[0]))!;
+    assert.deepEqual([...set.sourcesOf(dielectric)!], [boxes[0], boxes[1]]);
+    const values = dielectric.getVerticesData('metalRough')!;
+    const perBox = boxes[0].getTotalVertices() * 2;
+    assert.deepEqual([values[0], +values[1].toFixed(2)], [0, .9]);
+    assert.deepEqual([+values[perBox].toFixed(2), +values[perBox + 1].toFixed(2)], [.1, .4]);
+    assert.ok(dielectric.material?.pluginManager?.getPlugin('VertexMetalRough'), 'proxy material reads them per vertex');
+    assert.ok(!set.isBatchedSource(boxes[2]) || set.proxyOf(boxes[2]) !== dielectric, 'metals are never merged with dielectrics');
+    // A later roughness change on a source dissolves its batch.
+    (materials[1] as PBRMaterial).roughness = .2;
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.ok(!set.isBatchedSource(boxes[1]));
+    set.dispose();
+  } finally { scene.dispose(); engine.dispose(); }
+});

@@ -1,3 +1,4 @@
+import { METAL_ROUGH_KIND, metalRoughOf, useVertexMetalRough } from './VertexMetalRough';
 import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, type AbstractMesh, type Material, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
 
 /**
@@ -25,7 +26,7 @@ import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, t
 interface RenderBatch {
   proxy: Mesh;
   sources: Mesh[];
-  snapshots: Array<{ material: unknown; matrix: Matrix; receiveShadows: boolean; color: Color3 | null }>;
+  snapshots: Array<{ material: unknown; matrix: Matrix; receiveShadows: boolean; color: Color3 | null; metalRough: [number, number] | null }>;
   /** Proxy drawn (true) or sources drawn individually (false). */
   active: boolean;
   lights: Map<Mesh, Light[]>;
@@ -53,8 +54,19 @@ function baseColor(material: Material | null): Color3 | null {
   return material instanceof PBRMaterial ? material.albedoColor : material instanceof StandardMaterial ? material.diffuseColor : null;
 }
 
-/** Everything but the base color, for materials whose surfaces can share one vertex-colored proxy; null otherwise. */
-function colorMergeKey(material: Material): string | null {
+/**
+ * Below this metallic value MetalReflections leaves a material without
+ * reflections; only such dielectrics merge across metallic/roughness.
+ */
+const METAL_MIN = 0.5;
+
+/**
+ * Everything but the base color, for materials whose surfaces can share one
+ * vertex-colored proxy; null otherwise. With `vertexMetalRough`, dielectric PBR
+ * materials also leave out metallic and roughness: the proxy carries them per
+ * vertex (VertexMetalRough), so their shading stays exact.
+ */
+function colorMergeKey(material: Material, vertexMetalRough: boolean): string | null {
   const color = baseColor(material);
   if (!color || material.alpha !== 1 || material.getAlphaTestTexture()) return null;
   const emissive = (material as PBRMaterial | StandardMaterial).emissiveColor;
@@ -62,6 +74,12 @@ function colorMergeKey(material: Material): string | null {
   const serialized = material.serialize() as Record<string, unknown>;
   for (const [key, value] of Object.entries(serialized)) if (value && typeof value === 'object' && !Array.isArray(value) && /texture/i.test(key)) return null;
   for (const key of ['name', 'id', 'uniqueId', 'albedo', 'diffuse', 'metadata', 'tags']) delete serialized[key];
+  const metalRough = vertexMetalRough ? metalRoughOf(material) : null;
+  if (metalRough && metalRough[0] < METAL_MIN) {
+    delete serialized.metallic;
+    delete serialized.roughness;
+    serialized.vertexMetalRough = true;
+  }
   return JSON.stringify(serialized);
 }
 /** Grid size (scene units, metres at scale 1) for grouping leftover meshes by area. */
@@ -99,6 +117,9 @@ class RenderBatchSetImpl implements RenderBatchSet {
   private observers: Array<() => void> = [];
   private disposed = false;
   version = 0;
+
+  /** The VertexMetalRough plugin is GLSL only. */
+  private get vertexMetalRough(): boolean { return !this.scene.getEngine().isWebGPU; }
 
   constructor(private scene: Scene, meshes: AbstractMesh[], floorplanLights: Light[]) {
     this.build(meshes, floorplanLights);
@@ -217,7 +238,7 @@ class RenderBatchSetImpl implements RenderBatchSet {
         if (Vector3.DistanceSquared(position, nearest) <= rangeSquared) reach.push(source.uniqueId);
       }
       const material = mesh.material!;
-      if (!colorKeys.has(material)) colorKeys.set(material, colorMergeKey(material));
+      if (!colorKeys.has(material)) colorKeys.set(material, colorMergeKey(material, this.vertexMetalRough));
       const colorKey = colorKeys.get(material);
       const renderKey = [
         colorKey ? `color:${colorKey}` : material.uniqueId, mesh.getVerticesDataKinds().sort().join(','),
@@ -262,6 +283,7 @@ class RenderBatchSetImpl implements RenderBatchSet {
           matrix: source.getWorldMatrix().clone(),
           receiveShadows: source.receiveShadows,
           color: shared ? null : baseColor(source.material)!.clone(),
+          metalRough: shared ? null : metalRoughOf(source.material),
         })),
       };
       this.batches.push(batch);
@@ -288,6 +310,20 @@ class RenderBatchSetImpl implements RenderBatchSet {
     proxy.setVerticesData('color', colors, false, 4);
     const material = sources[0].material!.clone(`${sources[0].material!.name}:vertex-color`)!;
     baseColor(material)!.set(1, 1, 1);
+    // Sources that differ in metallic/roughness (dielectrics only, see colorMergeKey).
+    const metalRough = sources.map(source => metalRoughOf(source.material));
+    const first = metalRough[0];
+    if (first && metalRough.some(value => !value || value[0] !== first[0] || value[1] !== first[1])) {
+      if (metalRough.some(value => !value)) { proxy.dispose(false, false); material.dispose(); return null; }
+      const values = new Float32Array(proxy.getTotalVertices() * 2);
+      let at = 0;
+      sources.forEach((source, i) => {
+        const [metallic, roughness] = metalRough[i]!;
+        for (let v = source.getTotalVertices(); v > 0; v--, at += 2) { values[at] = metallic; values[at + 1] = roughness; }
+      });
+      proxy.setVerticesData(METAL_ROUGH_KIND, values, false, 2);
+      useVertexMetalRough(material);
+    }
     proxy.material = material;
     return proxy;
   }
@@ -337,6 +373,10 @@ class RenderBatchSetImpl implements RenderBatchSet {
     if (!source.isVisible || source.visibility !== 1 || !source.isEnabled()) return 'visibility';
     if (source.material !== snapshot.material) return 'material';
     if (snapshot.color && !baseColor(source.material)?.equals(snapshot.color)) return 'color';
+    if (snapshot.metalRough) {
+      const current = metalRoughOf(source.material);
+      if (!current || current[0] !== snapshot.metalRough[0] || current[1] !== snapshot.metalRough[1]) return 'metalRough';
+    }
     if (source.layerMask !== 0x0FFFFFFF) return 'layerMask';
     if (source.edgesRenderer || source.renderOutline || source.renderOverlay) return 'outline';
     if (source.receiveShadows !== snapshot.receiveShadows) return 'shadows';

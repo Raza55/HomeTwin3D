@@ -522,3 +522,25 @@
     height: 28px;
   }
 }
+
+/* Welcome: app icon and wordmark */
+.onboarding-logo {
+  width: 112px;
+  height: 112px;
+  border-radius: 26px;
+  box-shadow: 0 12px 40px color-mix(in srgb, #72e6ff 18%, transparent);
+}
+
+.onboarding-wordmark {
+  margin: 14px 0 4px;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.onboarding-wordmark span { color: var(--accent); }
+
+.onboarding-hidden-input { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; }
+.onboarding-muted { color: var(--muted); margin-top: 12px; }
+.onboarding-error { color: var(--red); margin-top: 12px; }

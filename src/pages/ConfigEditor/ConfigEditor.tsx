@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Activity, Box, BrickWall, Crosshair, Eraser, House, Image as ImageIcon, ImageOff, LampCeiling, MapPin, Minus, Monitor, Move3d, PanelTopClose, Plus, Rotate3d, Scale3d, Scissors, Square, Trash2, Cpu } from 'lucide-react';
 import { generateUUID } from '../../utils/uuid';
 import {
@@ -108,8 +108,6 @@ import {
 } from '../../utils/roomZoneBoolean';
 import { rankRoomEntities } from '../../utils/roomEntityPriority';
 import { useTranslation } from '../../contexts/LanguageContext';
-import GuidedTour from '../../components/GuidedTour/GuidedTour';
-import { editorTourSteps } from '../../components/GuidedTour/tourSteps';
 import { discoverHAAreas, type HAAreaRegistryEntry, type HARoomEntity } from '../../services/haAreaRegistry';
 import type { LightConfig, LightGroup, DisplayConfig, BlindConfig, ShadowWallConfig, SmartDeviceConfig, TubeConfig, LightPosition, ImportedModelObjectConfig, ModelObjectOverride, ModelObjectTransform, RoomConfig, RoomVirtualWall, RoomZonePoint } from '../../types';
 import './ConfigEditor.css';
@@ -321,8 +319,6 @@ function setUtilityMeshAlpha(utilLayer: UtilityLayerRenderer, alpha = 0.5): void
 export default function ConfigEditor() {
   const t = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [showGuidedTour, setShowGuidedTour] = useState(() => searchParams.get('guided') === 'true');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneCtxRef = useRef<SceneContext | null>(null);
   const homingRef = useRef(false);
@@ -1025,13 +1021,6 @@ export default function ConfigEditor() {
   }, [attachModelObjectGizmo, detachModelObjectGizmo, editorMode, selectedModelObjectId, transformMode]);
 
 
-  // Tour event: switch back to lights tab
-  useEffect(() => {
-    const handler = () => setEditorMode('lights');
-    document.addEventListener('tour:switch-to-lights', handler);
-    return () => document.removeEventListener('tour:switch-to-lights', handler);
-  }, []);
-
   // Preview mesh management
   const clearPreview = useCallback(() => {
     const scene = sceneCtxRef.current?.scene;
@@ -1320,7 +1309,6 @@ export default function ConfigEditor() {
       };
       const onDragEnd = () => {
         draggingGizmoRef.current = false;
-        document.dispatchEvent(new Event('tour:gizmo-used'));
         const attached = gizmo.attachedMesh;
         if (!attached) return;
 
@@ -1781,7 +1769,6 @@ export default function ConfigEditor() {
     });
     gizmo.onDragEndObservable.add(() => {
       draggingGizmoRef.current = false;
-      document.dispatchEvent(new Event('tour:gizmo-used'));
       if (activeMode === 'rotate') {
         roomFormRef.current?.updateRotation(rotationFromMesh(root));
       } else if (activeMode === 'scale') {
@@ -2527,7 +2514,6 @@ export default function ConfigEditor() {
         }
 
         setPlacingMode(false);
-        document.dispatchEvent(new Event('tour:entity-placed'));
         // Re-enable camera
         ctx.camera.inputs.addPointers();
         applyCameraControlSensitivity(ctx.camera);
@@ -3125,7 +3111,6 @@ export default function ConfigEditor() {
       setPanelOpen(false);
       exitPlacingMode();
       setEditIdx(null);
-      document.dispatchEvent(new Event('tour:entity-saved'));
 
       // Auto-save to server
       try {
@@ -3341,7 +3326,6 @@ export default function ConfigEditor() {
         } else {
           flushGizmoPosition();
         }
-        document.dispatchEvent(new Event('tour:gizmo-used'));
       };
       gizmo.onDragStartObservable.add(onDragStart);
       gizmo.onDragObservable.add(onDrag);
@@ -3549,7 +3533,6 @@ export default function ConfigEditor() {
         } else {
           flushGizmoPosition();
         }
-        document.dispatchEvent(new Event('tour:gizmo-used'));
       };
       gizmo.onDragStartObservable.add(onDragStart);
       gizmo.onDragObservable.add(onDrag);
@@ -4549,7 +4532,6 @@ export default function ConfigEditor() {
     const onDragEnd = () => {
       draggingGizmoRef.current = false;
       flushGizmoPosition();
-      document.dispatchEvent(new Event('tour:gizmo-used'));
     };
     for (const ax of [gizmo.xGizmo, gizmo.zGizmo]) {
       ax.dragBehavior.onDragStartObservable.add(onDragStart);
@@ -5201,17 +5183,6 @@ export default function ConfigEditor() {
           onCancel={cancelRoomSplit}
         />
       </div>
-
-      {showGuidedTour && (
-        <GuidedTour
-          steps={editorTourSteps}
-          onComplete={() => {
-            setShowGuidedTour(false);
-            // Clean the URL param
-            navigate('/editor', { replace: true });
-          }}
-        />
-      )}
     </div>
   );
 }

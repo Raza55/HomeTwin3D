@@ -3,6 +3,7 @@ import { isDaytime } from '../babylon/SunController';
 import { getSetting, getSettings, updateSettings } from '../services/settingsStore';
 import type { AppSettings } from '../services/settingsStore';
 import { SYSTEM_LOCATION } from '../constants/location';
+import { isTabletClass } from '../babylon/DeviceClass';
 
 type ThemeMode = 'dark' | 'light' | 'auto' | 'system';
 type ResolvedTheme = 'dark' | 'light';
@@ -88,8 +89,6 @@ function lightenHex(hex: string, amount: number): string {
   return `#${[r, g, b].map(c => Math.round(c + (255 - c) * amount).toString(16).padStart(2, '0')).join('')}`;
 }
 
-const CORNER_MAP = { sharp: '0px', soft: '8px', round: '24px' } as const;
-
 /* ── apply appearance CSS variables ── */
 
 function applyAppearance(resolved: ResolvedTheme) {
@@ -107,9 +106,8 @@ function applyAppearance(resolved: ResolvedTheme) {
   const accentDim = resolved === 'dark' ? darkenHex(accent, 0.7) : lightenHex(accent, 0.85);
   root.setProperty('--accent-dim', accentDim);
 
-  // Status accent
-  const status = s.statusAccent || d.green;
-  root.setProperty('--green', status);
+  // Status colour is fixed (it also marks success states); older stored choices are ignored.
+  root.setProperty('--green', d.green);
 
   // Panel / surface
   const surface = s.panelBgColor || d.surface;
@@ -123,37 +121,21 @@ function applyAppearance(resolved: ResolvedTheme) {
   const alpha = s.panelOpacity / 100;
   root.setProperty('--side-panel-bg', `rgba(${sr}, ${sg}, ${sb}, ${alpha})`);
 
-  // Panel dots
-  if (s.panelDots) {
-    const dotColor = resolved === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    root.setProperty('--panel-dots', `radial-gradient(circle at 1px 1px, ${dotColor} 1px, transparent 0)`);
-    root.setProperty('--panel-dots-size', '24px 24px');
-  } else {
-    root.setProperty('--panel-dots', 'none');
-    root.setProperty('--panel-dots-size', 'auto');
-  }
-
-  // Backdrop
-  root.setProperty('--backdrop-bg', s.backdropObscure ? 'rgba(0,0,0,0.5)' : 'transparent');
-  root.setProperty('--backdrop-blur', s.backdropBlur ? 'blur(4px)' : 'none');
+  // Panel dots, border style, corner radius and backdrop are no longer user
+  // options: one consistent look. Tablets skip the backdrop blur (a full-screen
+  // filter over the WebGL canvas costs GPU time on every frame it is visible).
+  root.setProperty('--panel-dots', 'none');
+  root.setProperty('--panel-dots-size', 'auto');
+  root.setProperty('--backdrop-bg', resolved === 'dark' ? 'rgba(2,6,14,0.55)' : 'rgba(15,23,42,0.28)');
+  root.setProperty('--backdrop-blur', isTabletClass() ? 'none' : 'blur(6px)');
 
   // Borders — --border/--border2 always available for inputs/sliders;
   // --panel-border controls panel/card/modal borders separately
   root.setProperty('--border', d.border);
   root.setProperty('--border2', d.border2);
-  if (s.borderStyle === 'none') {
-    root.setProperty('--panel-border', 'transparent');
-    root.setProperty('--panel-border-width', '0px');
-  } else if (s.borderStyle === 'large') {
-    root.setProperty('--panel-border', d.border);
-    root.setProperty('--panel-border-width', '2px');
-  } else {
-    root.setProperty('--panel-border', d.border);
-    root.setProperty('--panel-border-width', '1px');
-  }
-
-  // Corner radius
-  root.setProperty('--corner-radius', CORNER_MAP[s.cornerRadius]);
+  root.setProperty('--panel-border', d.border);
+  root.setProperty('--panel-border-width', '1px');
+  root.setProperty('--corner-radius', '12px');
 
   // Notify listeners (e.g. 3D scene) that appearance changed
   window.dispatchEvent(new CustomEvent('appearance-changed'));

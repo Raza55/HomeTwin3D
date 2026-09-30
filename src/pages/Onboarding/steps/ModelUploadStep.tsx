@@ -112,7 +112,7 @@ export default function ModelUploadStep({ onComplete }: Props) {
       <div className="onboarding-tips">
         <div className="onboarding-tips-title">{t('onboarding.tips')}</div>
         <ul>
-          <li>Blender: Datei → Exportieren → 3Dash Floorplan. Geräte-Zuordnungen danach unter Einstellungen → 3D-Modell bearbeiten.</li>
+          <li>{t('onboarding.modelTipBlender')}</li>
           <li>{t('onboarding.modelTip1')}</li>
           <li>{t('onboarding.modelTip2')}</li>
           <li>{t('onboarding.modelTip3')}</li>

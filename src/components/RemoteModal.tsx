@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { X } from 'lucide-react';
 import type { RemoteButton, HAState } from '../types';
 import './RemoteModal.css';
 
@@ -124,9 +125,7 @@ export default function RemoteModal({
               <div className="modal-entity-id">{toggleEntityId}</div>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            &#10005;
-          </button>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="remote-body">

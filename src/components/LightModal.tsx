@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { X } from 'lucide-react';
 import ColorWheel, { hslToRgb } from './ColorWheel';
 import { miredToKelvin } from '../utils/color';
 import type { HAState, LightSceneOption } from '../types';
@@ -290,9 +291,7 @@ export default function LightModal({
               <div className="modal-entity-id">{entityId}</div>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            &#10005;
-          </button>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="modal-body">

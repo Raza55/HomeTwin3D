@@ -64,54 +64,62 @@ export default function SharedInstallationSettings() {
       case 'empty': return t('settings.shared.empty');
       case 'readonly': return t('settings.shared.readonly');
       case 'error': return status.message === t('settings.shared.pinRejected') ? status.message : `${t('common.failed')}: ${status.message}`;
-      case 'published': return t('settings.shared.published').replace('{revision}', String(status.revision));
-      case 'conflict': return t('settings.shared.newer').replace('{revision}', String(status.revision));
-      default: return t('settings.shared.version').replace('{revision}', String(status.revision));
+      case 'published': return t('settings.shared.published', { revision: status.revision });
+      case 'conflict': return t('settings.shared.newer', { revision: status.revision });
+      default: return t('settings.shared.version', { revision: status.revision });
     }
   })();
 
   return (
-    <div className="settings-section">
-      <div className="settings-section-label">{t('settings.shared.title')}</div>
-      <div className="settings-checkbox-group">
-        <label className="settings-checkbox">
-          <input type="checkbox" checked={enabled} onChange={(e) => { setSharedEnabled(e.target.checked); setEnabled(e.target.checked); }} />
-          <span>{t('settings.shared.follow')}</span>
-        </label>
-      </div>
-      <div className="settings-ha-fields">
-        <div style={{ fontSize: 11, opacity: .8 }} role="status">{statusText}</div>
-        <div className="settings-ha-row">
-          <div className="settings-ha-field" style={{ flex: 3 }}>
-            <label className="settings-ha-label">{t('settings.shared.pin')}</label>
-            <input
-              className="settings-ha-input"
-              type="password"
-              autoComplete="off"
-              value={pin}
-              placeholder={t('settings.shared.pinPlaceholder')}
-              onChange={(e) => { setPin(e.target.value); setPinStatus('idle'); if (!e.target.value) setSharedPin(''); }}
-            />
+    <section className="settings-group">
+      <h3 className="settings-group-title">{t('settings.shared.title')}</h3>
+      <div className="settings-group-body">
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <span className="settings-row-label">{t('settings.shared.follow')}</span>
+            <span className="settings-row-hint" role="status">{statusText}</span>
           </div>
-          <button
-            className={`settings-action-btn${pinStatus === 'ok' ? ' ha-ok' : pinStatus === 'error' ? ' ha-err' : ''}`}
-            style={{ alignSelf: 'flex-end' }}
-            disabled={!pin || pinStatus === 'testing'}
-            onClick={() => { void savePin(); }}
-          >
-            {pinStatus === 'testing' ? t('common.testing') : pinStatus === 'ok' ? `✓ ${t('common.save')}` : pinStatus === 'error' ? `✗ ${t('common.failed')}` : t('common.save')}
-          </button>
+          <div className="settings-row-control">
+            <button type="button" role="switch" aria-checked={enabled} aria-label={t('settings.shared.follow')}
+              className="settings-switch"
+              onClick={() => { setSharedEnabled(!enabled); setEnabled(!enabled); }}>
+              <span className="settings-switch-knob" />
+            </button>
+          </div>
         </div>
-        <div className="settings-actions">
-          <button className="settings-action-btn" disabled={busy || !enabled || !pin || pinStatus === 'testing'} onClick={() => { void publish(); }}>
-            {busy ? t('common.testing') : t('settings.shared.publish')}
-          </button>
-          <button className="settings-action-btn" disabled={busy || !enabled} onClick={() => run(loadLatestShared, ['updated'])}>
-            {t('settings.shared.load')}
-          </button>
+        <div className="settings-fields">
+          <div className="settings-field-row">
+            <div className="settings-field grow">
+              <label htmlFor="settings-shared-pin">{t('settings.shared.pin')}</label>
+              <input
+                id="settings-shared-pin"
+                className="settings-input"
+                type="password"
+                autoComplete="off"
+                value={pin}
+                placeholder={t('settings.shared.pinPlaceholder')}
+                onChange={(e) => { setPin(e.target.value); setPinStatus('idle'); if (!e.target.value) setSharedPin(''); }}
+              />
+            </div>
+            <button
+              type="button"
+              className={`settings-btn align-end${pinStatus === 'ok' ? ' ok' : pinStatus === 'error' ? ' err' : ''}`}
+              disabled={!pin || pinStatus === 'testing'}
+              onClick={() => { void savePin(); }}
+            >
+              {pinStatus === 'testing' ? t('common.testing') : pinStatus === 'ok' ? `✓ ${t('settings.shared.pinOk')}` : pinStatus === 'error' ? `✗ ${t('common.failed')}` : t('common.save')}
+            </button>
+          </div>
+          <div className="settings-actions">
+            <button type="button" className="settings-btn primary" disabled={busy || !enabled || !pin || pinStatus === 'testing'} onClick={() => { void publish(); }}>
+              {busy ? t('settings.shared.working') : t('settings.shared.publish')}
+            </button>
+            <button type="button" className="settings-btn" disabled={busy || !enabled} onClick={() => run(loadLatestShared, ['updated'])}>
+              {t('settings.shared.load')}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
-

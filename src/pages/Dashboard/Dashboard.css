@@ -33,44 +33,39 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(8, 12, 24, 0.82);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 5px;
-  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-.dashboard-render-toggle button {
+.dashboard-render-toggle .dashboard-icon-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 9px;
   color: var(--muted);
   cursor: pointer;
-  font-family: inherit;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  padding: 4px 8px;
-  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.dashboard-render-toggle button.active {
-  border-color: var(--accent);
+.dashboard-render-toggle .dashboard-icon-btn.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-.dashboard-render-toggle .dashboard-icon-btn,
-.dashboard-render-toggle .dashboard-recenter-btn,
-.dashboard-render-toggle .dashboard-texture-btn {
-  align-items: center;
-  display: inline-flex;
-  justify-content: center;
-  min-width: 28px;
-  padding: 4px;
-}
+.dashboard-render-toggle .dashboard-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.dashboard-render-toggle .dashboard-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.dashboard-render-toggle button:hover {
-  color: var(--text);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-render-toggle .dashboard-icon-btn:hover:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
 }
 
 /* Home view setting overlay */

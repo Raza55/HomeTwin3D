@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { X } from 'lucide-react';
 import type { DisplayConfig, HAState, HAHistoryPoint } from '../types';
 import { fetchHistory, generateDemoHistory } from '../services/haHistoryApi';
 import { useDemoMode } from '../contexts/DemoModeContext';
@@ -531,7 +532,7 @@ export default function DisplayModal({
               </div>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>&#10005;</button>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="im-body">

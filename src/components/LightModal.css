@@ -68,19 +68,27 @@
 }
 
 .modal-close-btn {
+  width: 40px;
+  height: 40px;
+  margin: -8px -10px -8px 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
+  border-radius: 10px;
   color: var(--muted);
-  font-size: 16px;
   cursor: pointer;
-  font-family: inherit;
-  padding: 4px;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
+
+.modal-close-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 @media (hover: hover) and (pointer: fine) {
   .modal-close-btn:hover {
     color: var(--text);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
   }
 }
 

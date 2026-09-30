@@ -61,6 +61,8 @@ export interface ControlsSettings {
 
 export interface MiscSettings {
   panelRatio: number | null;
+  /** Side panel folded away (kept across reloads, e.g. on the wall tablet). */
+  panelCollapsed?: boolean;
   language: LanguageCode;
   /** Changed defaults already applied to this browser (see applyDefaultChanges). */
   defaultsVersion?: number;

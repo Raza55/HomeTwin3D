@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PencilRuler, Settings } from 'lucide-react';
+import { LayoutTemplate, PencilRuler, Plus, Settings } from 'lucide-react';
 import type { SidePanelConfig, SidePanelCard, HAState, CardLayout } from '../../types';
 import type { HALike } from '../../services/haWebSocket';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -12,7 +12,8 @@ interface Props {
   ha: HALike | null;
   cardStates: Record<string, HAState>;
   onSettingsOpen?: () => void;
-  onMatchLights?: () => void;
+  /** Enter the card layout mode (used by the empty state). */
+  onStartEdit?: () => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
   /** Current panel size in px (width on desktop, height on mobile). */
@@ -32,24 +33,12 @@ interface Props {
 
 const PANEL_PADDING = 24; // 12px each side
 
-export default function SidePanel({ config, ha, cardStates, onSettingsOpen, onMatchLights, collapsed=false, onToggleCollapsed, panelSize, onPanelResize, editMode, onEditDone, onLayoutChange, onSetTemperature, onSetHvacMode, onCardEdit, onCardDelete, onCardAdd, onExitSimulation }: Props) {
+export default function SidePanel({ config, ha, cardStates, onSettingsOpen, onStartEdit, collapsed=false, onToggleCollapsed, panelSize, onPanelResize, editMode, onEditDone, onLayoutChange, onSetTemperature, onSetHvacMode, onCardEdit, onCardDelete, onCardAdd, onExitSimulation }: Props) {
   const t = useTranslation();
   const navigate = useNavigate();
-  const innerRef = useRef<HTMLDivElement>(null);
   const gridWidth = panelSize - PANEL_PADDING;
-  const [gridHeight, setGridHeight] = useState(200);
   const dragging = useRef(false);
   const moved = useRef(false);
-
-  useEffect(() => {
-    const el = innerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) setGridHeight(entry.contentRect.height);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Detect mobile layout (matches CSS media query)
   const isMobile = useCallback(() => window.matchMedia('(max-width: 768px)').matches, []);
@@ -110,69 +99,77 @@ export default function SidePanel({ config, ha, cardStates, onSettingsOpen, onMa
     }
   }, [onDragStart]);
 
+  const hasCards = !!config && config.cards.length > 0;
+
   return (
     <div className={`side-panel${collapsed?' side-panel--collapsed':''}`} style={{ width: `${collapsed?0:panelSize}px` }}>
-      <div className="side-panel-inner" ref={innerRef} style={collapsed?{visibility:'hidden',padding:0}:undefined}>
+      <div className="side-panel-inner" style={collapsed?{visibility:'hidden',padding:0}:undefined}>
         <div className="side-panel-content">
-          {!editMode && (
-            <div className="side-panel-top-actions">
-              <button
-                className="side-panel-editor-btn"
-                onClick={() => navigate('/editor')}
-              >
-                <PencilRuler size={14} strokeWidth={1.8} />
-                <span>{t('settings.openEditor')}</span>
-              </button>
-              {onMatchLights && <button className="side-panel-editor-btn" onClick={onMatchLights}>Lampen visuell zuordnen</button>}
-            </div>
-          )}
-          {config && config.cards.length > 0 && (
+          {hasCards && (
             <CardGrid
               config={config}
               ha={ha}
               cardStates={cardStates}
               width={gridWidth}
-              height={gridHeight}
               editMode={editMode}
-              onLayoutChange={onLayoutChange}
+              onLayoutChange={editMode ? onLayoutChange : undefined}
               onSetTemperature={onSetTemperature}
               onSetHvacMode={onSetHvacMode}
               onCardEdit={onCardEdit}
               onCardDelete={onCardDelete}
             />
           )}
-          {editMode ? (
-            <>
-              <button className="side-panel-add-btn" onClick={onCardAdd}>
+          {!hasCards && !editMode && (
+            <div className="side-panel-empty">
+              <LayoutTemplate size={28} strokeWidth={1.4} aria-hidden="true" />
+              <strong>{t('cards.emptyTitle')}</strong>
+              <span>{t('cards.emptyBody')}</span>
+              {onStartEdit && (
+                <button type="button" className="side-panel-btn primary" onClick={onStartEdit}>
+                  <Plus size={16} strokeWidth={1.8} aria-hidden="true" />
+                  {t('cards.addCard')}
+                </button>
+              )}
+            </div>
+          )}
+          {editMode && (
+            <div className="side-panel-edit-actions">
+              <button type="button" className="side-panel-btn dashed" onClick={onCardAdd}>
+                <Plus size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t('cards.addCard')}
               </button>
-              <button className="side-panel-done-btn" onClick={onEditDone}>
+              <button type="button" className="side-panel-btn solid" onClick={onEditDone}>
                 {t('cards.done')}
               </button>
-            </>
-          ) : (
-            <>
-              {onSettingsOpen && (
-                <button className="side-panel-settings-btn" onClick={onSettingsOpen}>
-                  <Settings size={13} strokeWidth={1.8} />
-                  <span>{t('cards.settings')}</span>
-                </button>
-              )}
-              {onExitSimulation && (
-                <button className="side-panel-exit-sim-btn" onClick={onExitSimulation}>
-                  {t('cards.exitSimulation')}
-                </button>
-              )}
-            </>
+            </div>
           )}
         </div>
+        {!editMode && (
+          <div className="side-panel-footer">
+            {onExitSimulation && (
+              <button type="button" className="side-panel-btn warn wide" onClick={onExitSimulation}>
+                {t('cards.exitSimulation')}
+              </button>
+            )}
+            <button type="button" className="side-panel-btn" onClick={() => navigate('/editor')}>
+              <PencilRuler size={16} strokeWidth={1.7} aria-hidden="true" />
+              <span>{t('cards.editor')}</span>
+            </button>
+            {onSettingsOpen && (
+              <button type="button" className="side-panel-btn side-panel-settings-btn" onClick={onSettingsOpen}>
+                <Settings size={16} strokeWidth={1.7} aria-hidden="true" />
+                <span>{t('cards.settings')}</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <button
         type="button"
         className="side-panel-handle"
-        aria-label={collapsed?'Seitenleiste öffnen':'Seitenleiste schließen'}
+        aria-label={collapsed?t('cards.panelOpen'):t('cards.panelClose')}
         aria-expanded={!collapsed}
-        title={collapsed?'Seitenleiste öffnen':'Klicken zum Schließen · Ziehen zum Vergrößern'}
+        title={collapsed?t('cards.panelOpen'):t('cards.panelHandleHint')}
         onClick={e=>{if(e.detail===0||!moved.current)onToggleCollapsed?.();}}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}

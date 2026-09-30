@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { IndicatorCard, HAState, HAHistoryPoint } from '../../../types';
 import { fetchHistory, generateDemoHistory } from '../../../services/haHistoryApi';
@@ -258,7 +259,7 @@ export default function IndicatorModal({
               <div className="im-value-inline">{display}{card.unit && <span className="im-unit">{card.unit}</span>}</div>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>&#10005;</button>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Schließen"><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="im-body">

@@ -160,8 +160,9 @@ export default function Onboarding() {
       });
 
       goTo(1); // Import Report
-    } catch {
-      // TODO: surface error to user
+    } catch (err) {
+      // The welcome step shows the failure next to the import button.
+      throw err;
     }
   }, [goTo, t]);
 

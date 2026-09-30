@@ -185,13 +185,6 @@ const LightForm = forwardRef<LightFormHandle, Props>(function LightForm({
   const [hbRotation, setHbRotation] = useState<LightPosition>(() => cloneVector(undefined, ZERO_ROTATION));
   const [hbScale, setHbScale] = useState<LightPosition>(() => cloneVector(undefined, UNIT_SCALE));
 
-  // Notify tour when required fields are filled (fires on every change so Back navigation works)
-  useEffect(() => {
-    if (label.trim() && entityId.trim()) {
-      document.dispatchEvent(new Event('tour:form-filled'));
-    }
-  }, [label, entityId]);
-
   // Expose imperative methods for gizmo-driven position updates
   useImperativeHandle(ref, () => ({
     updatePartPosition: (index: number, pos: LightPosition) => {

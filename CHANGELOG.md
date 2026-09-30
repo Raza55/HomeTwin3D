@@ -1,5 +1,17 @@
 # Änderungsverlauf
 
+## 0.5.0 – Aufgeräumte Oberfläche (30.09.2026)
+
+- **Einstellungen neu gegliedert:** vier Bereiche statt acht (Verbindung, Darstellung, 3D-Ansicht, Einrichtung) mit kurzer Beschreibung und Verbindungsstatus. Einheitliche Schalter, Segmente und Knöpfe in Tablet-Größe (mind. 40 px), Hinweise direkt an den Optionen.
+- **Entfernt:** wirkungslose Standortfelder, doppelte Texturen-/Zentrieren-Schalter, Debug-Eintrag, Statuschips, Panel-Punkte, Rahmen-, Ecken- und Hintergrund-Optionen sowie die separate Statusfarbe (jetzt ein einheitlicher Look).
+- **Schatten:** eine Stufe (Aus/Niedrig/Mittel/Hoch) statt zweier Pixelwerte. Kamerasteuerung als beschriftete Tabelle (Maus/Touch).
+- **Seitenpanel:** „Lampen visuell zuordnen“ ist aus dem Panel in Einstellungen → Einrichtung gewandert. Editor und Einstellungen stehen fest unten; ohne Karten gibt es einen Hinweis mit „Karte hinzufügen“. Der eingeklappte Zustand bleibt nach dem Neuladen erhalten.
+- **Rundgang:** fünf kurze Schritte statt zwölf, erneut startbar in den Einstellungen. „Überspringen“ öffnet nicht mehr ungefragt den Editor; der defekte Editor-Rundgang ist entfernt.
+- **Begrüßung** mit dem neuen HomeTwin3D-Logo statt des alten animierten Logos. Fehler beim Backup-Import werden angezeigt.
+- **Texte:** echte Umlaute statt „ae/oe/ue“, bisher fest verdrahtete deutsche Texte übersetzt, Ansichtsmodi auf Deutsch (Übersicht/Gehen/Fliegen).
+- **Bedienung:** größere Werkzeugleiste oben rechts und größere Schließen-Knöpfe in den Geräte-Popups. Skript-Karten reagieren ohne 300-ms-Verzögerung, wenn kein Doppeltipp belegt ist. Die Tasten „C“ und „G“ lösen nichts mehr versehentlich aus.
+- **Leistung:** Das Dashboard rendert nicht mehr bei jeder Lichtänderung komplett neu (Lampenzähler entfernt), das Debug-Panel wird nur noch bei Bedarf geladen, Karten-Layouts werden nur im Bearbeitungsmodus gespeichert, die Panelbreite wird beim Ziehen nicht mehr bei jeder Bewegung gespeichert, und Tablets verzichten auf den Unschärfe-Hintergrund hinter Dialogen.
+
 ## 0.4.7 – Kompakte Wetteranzeige (30.09.2026)
 
 - Sonne und Wetter oben rechts deutlich schmaler: keine Beschriftungen mehr, der Zustand steckt im Symbol, Bewölkung und Niederschlag mit kleinen Symbolen (z. B. „29° ☁ 78%“). Der volle Text bleibt als Tooltip erhalten.

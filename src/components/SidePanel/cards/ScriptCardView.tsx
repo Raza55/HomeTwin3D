@@ -75,6 +75,12 @@ export default function ScriptCardView({ card, ha }: Props) {
     // If long-press already fired, skip tap handling
     if (longPressFired.current) return;
 
+    // Without a double-press action there is nothing to wait for.
+    if (!card.doublePressEntityId) {
+      handleTap();
+      return;
+    }
+
     tapCount.current += 1;
 
     if (tapCount.current === 1) {
@@ -88,7 +94,7 @@ export default function ScriptCardView({ card, ha }: Props) {
       tapCount.current = 0;
       handleDoubleTap();
     }
-  }, [handleTap, handleDoubleTap]);
+  }, [card.doublePressEntityId, handleTap, handleDoubleTap]);
 
   const handlePointerCancel = useCallback(() => {
     clearTimeout(longPressTimer.current);

@@ -87,7 +87,6 @@ import RemoteModal from '../../components/RemoteModal';
 import BlindModal from '../../components/BlindQuickControls';
 import BlindMarkers from '../../components/BlindMarkers';
 import DisplayModal from '../../components/DisplayModal';
-import DebugPanel from '../../components/DebugPanel';
 import SidePanel from '../../components/SidePanel/SidePanel';
 import { dashboardTourSteps } from '../../components/GuidedTour/tourSteps';
 import { SIMULATION_CONFIG, SIMULATION_MODEL_URL } from '../../data/simulationData';
@@ -99,6 +98,7 @@ import { enableTouchZoneBatching } from '../../babylon/TouchZoneBatch';
 // Rarely used dialogs load on demand to keep the dashboard chunk small.
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
 const SettingsModal = lazy(() => import('../../components/SettingsModal'));
+const DebugPanel = lazy(() => import('../../components/DebugPanel'));
 const GuidedTour = lazy(() => import('../../components/GuidedTour/GuidedTour'));
 const CardPropertiesPanel = lazy(() => import('../../components/SidePanel/CardPropertiesPanel'));
 
@@ -190,7 +190,6 @@ export default function Dashboard() {
   const matchingRef = useRef(false); matchingRef.current = matchingOpen;
   const matchingChanged = useRef(false);
 
-  const [lightsOnCount, setLightsOnCount] = useState(0);
   const [coffeeOpen, setCoffeeOpen] = useState<string | null>(null);
   const [itOpen, setITOpen] = useState<string | null>(null);
   const [echoOpen, setEchoOpen] = useState<string | null>(null);
@@ -282,16 +281,22 @@ export default function Dashboard() {
     return mobile ? 280 : 350;
   });
 
+  // Resizing fires per pointer move: the size follows at once, storing waits for a pause.
+  const panelRatioSaveRef = useRef<number | undefined>(undefined);
   const handlePanelResize = useCallback((size: number) => {
     setPanelSize(size);
-    const mobile = window.matchMedia('(max-width: 768px)').matches;
-    const ratio = mobile ? size / window.innerHeight : size / window.innerWidth;
-    updateSettings('misc', { panelRatio: ratio });
+    window.clearTimeout(panelRatioSaveRef.current);
+    panelRatioSaveRef.current = window.setTimeout(() => {
+      const mobile = window.matchMedia('(max-width: 768px)').matches;
+      const ratio = mobile ? size / window.innerHeight : size / window.innerWidth;
+      updateSettings('misc', { panelRatio: ratio });
+    }, 300);
   }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cardStates, setCardStates] = useState<Record<string, HAState>>({});
   const [gridEditMode, setGridEditMode] = useState(false);
-  const [panelCollapsed,setPanelCollapsed]=useState(false);
+  const [panelCollapsed,setPanelCollapsed]=useState(()=>getSetting('misc').panelCollapsed ?? false);
+  useEffect(()=>{updateSettings('misc',{panelCollapsed});},[panelCollapsed]);
   const [cardPanelOpen, setCardPanelOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<SidePanelCard | null>(null);
   // Snapshot the entity list when the card panel opens — keeps a stable ref for EntityPicker memoization.
@@ -676,16 +681,6 @@ export default function Dashboard() {
     setSketchAppearance(scene, getSetting('render').sketchColor, value);
   }, []);
 
-  // Count lights that are on
-  const updateLightsOnCount = useCallback(() => {
-    const meshMap = meshMapRef.current;
-    let count = 0;
-    for (const key of Object.keys(meshMap)) {
-      if (meshMap[key].light && meshMap[key].light!.intensity > 0) count++;
-    }
-    setLightsOnCount(count);
-  }, []);
-
   // Parse hex color string to Color3
   const hexToColor3 = useCallback((hex: string) => {
     const h = hex.replace('#', '');
@@ -747,7 +742,6 @@ export default function Dashboard() {
         const color = applyFloorplanLightState(entry.floorplanRig, config, state);
         entry.mat.emissiveColor.copyFrom(color);
         updateLightInteractionVisual(entry, color, state.state === 'on');
-        updateLightsOnCount();
         return;
       }
 
@@ -766,7 +760,6 @@ export default function Dashboard() {
         }
         mat.emissiveColor = new Color3(0, 0, 0);
         updateLightInteractionVisual(entry, new Color3(0.22, 0.42, 0.58), false);
-        updateLightsOnCount();
         return;
       }
 
@@ -830,10 +823,8 @@ export default function Dashboard() {
         col.b * bulbGlow,
       ).clampToRef(0, 1, mat.emissiveColor);
       updateLightInteractionVisual(entry, col, true);
-
-      updateLightsOnCount();
     },
-    [updateLightsOnCount],
+    [],
   );
 
   // ── Pending-command highlight feedback ──────────────────────────
@@ -2003,61 +1994,6 @@ export default function Dashboard() {
     });
   }, [defaultTarget, computeIdealRadius]);
 
-  const recenterModelView = useCallback(() => {
-    if (walkthroughRef.current && walkthroughRef.current.mode !== 'normal') { walkthroughRef.current.recenter(); return; }
-    const ctx = sceneCtxRef.current;
-    if (!ctx || !defaultTarget || homingRef.current) return;
-    const { camera, scene } = ctx;
-    const fps = 60;
-    const frames = 45;
-
-    homingRef.current = true;
-    camera.detachControl();
-
-    const ease = new CubicEase();
-    ease.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
-
-    const makeAnim = (prop: string, from: number, to: number) => {
-      const a = new Animation(`recenter_${prop}`, prop, fps, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
-      a.setKeys([{ frame: 0, value: from }, { frame: frames, value: to }]);
-      a.setEasingFunction(ease);
-      return a;
-    };
-
-    const targetRadius = computeIdealRadius();
-    const targetAlpha = Tools.ToRadians(270);
-    const targetBeta = Tools.ToRadians(0.5);
-    const targetPos = new Vector3(defaultTarget.x, defaultTarget.y, defaultTarget.z);
-
-    const EPS = 0.002;
-    if (
-      Math.abs(camera.radius - targetRadius) < EPS &&
-      Math.abs(camera.alpha - targetAlpha) < EPS &&
-      Math.abs(camera.beta - targetBeta) < EPS &&
-      Vector3.Distance(camera.target, targetPos) < EPS
-    ) {
-      homingRef.current = false;
-      camera.attachControl(true);
-      return;
-    }
-
-    const targetAnim = new Animation('recenter_target', 'target', fps, Animation.ANIMATIONTYPE_VECTOR3, Animation.ANIMATIONLOOPMODE_CONSTANT);
-    targetAnim.setKeys([{ frame: 0, value: camera.target.clone() }, { frame: frames, value: targetPos }]);
-    targetAnim.setEasingFunction(ease);
-
-    camera.animations = [
-      makeAnim('radius', camera.radius, targetRadius),
-      makeAnim('alpha', camera.alpha, targetAlpha),
-      makeAnim('beta', camera.beta, targetBeta),
-      targetAnim,
-    ];
-
-    scene.beginAnimation(camera, 0, frames, false, 1, () => {
-      camera.attachControl(true);
-      homingRef.current = false;
-    });
-  }, [defaultTarget, computeIdealRadius]);
-
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2088,10 +2024,6 @@ export default function Dashboard() {
         setDebugOpen(v => !v);
       } else if (e.key === 's') {
         setSettingsOpen(v => !v);
-      } else if (e.key === 'c') {
-        navigate('/editor');
-      } else if (e.key === 'g') {
-        setGridEditMode(v => !v);
       }
     };
     document.addEventListener('keydown', handler);
@@ -2249,10 +2181,10 @@ export default function Dashboard() {
         ha={haRef.current}
         cardStates={cardStates}
         onSettingsOpen={() => setSettingsOpen(true)}
+        onStartEdit={() => setGridEditMode(true)}
         panelSize={panelSize}
         collapsed={panelCollapsed}
         onToggleCollapsed={()=>setPanelCollapsed(value=>!value)}
-        onMatchLights={sceneReady && configRef.current?.model?.floorplan?.objects.some(o=>o.domain==='light') && !matchingOpen ? ()=>{closeQuick();setSettingsOpen(false);setMatchingCategory('light');setMatchingObjectId(undefined);setMatchingObjectIds(undefined);setMatchingOpen(true);} : undefined}
         onPanelResize={size=>{setPanelCollapsed(false);handlePanelResize(size);}}
         editMode={gridEditMode}
         onEditDone={handleEditGridDone}
@@ -2316,30 +2248,30 @@ export default function Dashboard() {
             title={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
           >
             {showTextures
-              ? <ImageIcon size={14} strokeWidth={1.8} aria-hidden="true" />
-              : <ImageOff size={14} strokeWidth={1.8} aria-hidden="true" />}
+              ? <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
+              : <ImageOff size={18} strokeWidth={1.7} aria-hidden="true" />}
           </button>
           <button
-            className="dashboard-icon-btn dashboard-recenter-btn"
+            className="dashboard-icon-btn"
             onClick={resetView}
             aria-label={t('common.recenter')}
             title={t('common.recenter')}
           >
-            <Crosshair size={12} strokeWidth={1.8} aria-hidden="true" />
+            <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
           </button>
           <button
             className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}
             disabled={!sceneReady || homeViewSetting}
             onClick={() => changeNavigationMode(nextNavigationMode(navigationMode))}
-            aria-label={`Ansicht: ${navigationMode === 'normal' ? 'Normal' : navigationMode === 'walk' ? 'Walk' : 'Fly'}. Wechsel zu ${nextNavigationMode(navigationMode)}`}
-            title={`${navigationMode === 'normal' ? 'Normal' : navigationMode === 'walk' ? 'Walk' : 'Fly'} → ${nextNavigationMode(navigationMode)}`}
+            aria-label={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
+            title={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
           >
-            {navigationMode === 'normal' ? <Orbit size={15} aria-hidden="true" /> : navigationMode === 'walk' ? <Footprints size={15} aria-hidden="true" /> : <Move3d size={15} aria-hidden="true" />}
+            {navigationMode === 'normal' ? <Orbit size={18} strokeWidth={1.7} aria-hidden="true" /> : navigationMode === 'walk' ? <Footprints size={18} strokeWidth={1.7} aria-hidden="true" /> : <Move3d size={18} strokeWidth={1.7} aria-hidden="true" />}
           </button>
         </div>
 
         {navigationMode !== 'normal' && <div className="walkthrough-controls" aria-label="Rundgang-Steuerung">
-          <span><strong>{navigationMode === 'walk' ? 'Walk' : 'Fly'}</strong> · WASD / Pfeiltasten · Rechts ziehen: umsehen{navigationMode === 'fly' ? ' · Q/E: ab/auf' : ' · Tür anklicken: öffnen/schließen'} · Esc: Normal</span>
+          <span><strong>{t(`dashboard.nav.${navigationMode}`)}</strong> · WASD / Pfeiltasten · Rechts ziehen: umsehen{navigationMode === 'fly' ? ' · Q/E: ab/auf' : ' · Tür anklicken: öffnen/schließen'} · Esc: Normal</span>
           <div className="walkthrough-buttons">
             {([['KeyA', '←', 'Links'], ['KeyW', '↑', 'Vorwärts'], ['KeyS', '↓', 'Rückwärts'], ['KeyD', '→', 'Rechts'], ...(navigationMode === 'fly' ? [['KeyQ', '−', 'Abwärts'], ['KeyE', '+', 'Aufwärts']] : [])]).map(([key, icon, label]) => <button key={key} aria-label={label}
               onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); canvasRef.current?.focus({ preventScroll: true }); walkthroughRef.current?.keys.add(key); }}
@@ -2348,8 +2280,9 @@ export default function Dashboard() {
           </div>
         </div>}
 
-        <DebugPanel
-          open={debugOpen}
+        {/* Developer render panel (key D): mounted only while open. */}
+        {debugOpen && <Suspense fallback={null}><DebugPanel
+          open
           onClose={() => setDebugOpen(false)}
           sceneCtxRef={sceneCtxRef}
           meshMapRef={meshMapRef}
@@ -2361,7 +2294,7 @@ export default function Dashboard() {
             setCloudCoverFactor(ccf);
           }}
           currentWeather={currentWeather}
-        />
+        /></Suspense>}
 
         {quickLight && quickMembers.length > 1 && <LightClusterControls key={quickMembers.map(l=>l.entityId).join('|')}
           label={isEnsis(quickMembers[0].label) ? 'Ensis · Tisch & Decke' : quickMembers[0].group ? configRef.current?.lightGroups?.find(g=>g.id===quickMembers[0].group)?.name ?? 'Leuchtengruppe' : /kueche|küche/i.test(quickMembers[0].label) ? 'Küchenspots' : 'Spotgruppe'}
@@ -2491,13 +2424,10 @@ export default function Dashboard() {
               pointShadowRes={pointShadowRes}
               onPointShadowResChange={handlePointShadowResChange}
               showTextures={showTextures}
-              onShowTexturesChange={handleShowTexturesChange}
-              onRecenterView={recenterModelView}
               sketchColor={sketchColor}
               onSketchColorChange={handleSketchColorChange}
               sketchSpecular={sketchSpecular}
               onSketchSpecularChange={handleSketchSpecularChange}
-              onDebugToggle={() => setDebugOpen((v) => !v)}
               onEditGrid={() => setGridEditMode(true)}
               onChangeHomeView={() => { changeNavigationMode('normal'); setHomeViewSetting(true); }}
               haSettings={getSetting('connection').haSettings}
@@ -2505,12 +2435,12 @@ export default function Dashboard() {
                 updateSettings('connection', { haSettings: settings });
                 setHaSettingsVersion(v => v + 1);
               }}
-              lightsOnCount={lightsOnCount}
               haStatus={haStatus}
               modelStatus={modelStatus}
               modelStatusColor={modelStatusColor}
               onStartVisualMatching={(category='light') => { closeQuick(); setSettingsOpen(false); setMatchingCategory(category); setMatchingObjectId(undefined); setMatchingOpen(true); }}
               onReloadModel={handleReloadModel}
+              onStartTour={() => { setSettingsOpen(false); setShowTour(true); }}
             />
           </Suspense>
         )}
@@ -2534,10 +2464,7 @@ export default function Dashboard() {
           <Suspense fallback={null}>
             <GuidedTour
               steps={dashboardTourSteps}
-              onComplete={() => {
-                setShowTour(false);
-                navigate('/editor?guided=true');
-              }}
+              onComplete={() => setShowTour(false)}
             />
           </Suspense>
         )}

@@ -26,6 +26,7 @@ import { debugDevicePixelRatio } from './DebugFlags';
 import { setupSnapshotRendering } from './SnapshotRendering';
 import { setMarkerRenderRequest } from './MarkerLayer';
 import { isTabletClass, reducedEffects } from './DeviceClass';
+import { installRenderQa } from './RenderQa';
 import { shareIdenticalShaderVariants } from './ShaderVariantCache';
 
 export const CAMERA_CONTROL_SENSITIVITY = {
@@ -380,6 +381,7 @@ export function createScene(
 
   startRenderLoop();
   const disposePerfOverlay = new URLSearchParams(location.search).has('perf') ? createPerfOverlay(engine, scene) : null;
+  installRenderQa(scene);
 
   const onResize = () => { engine.resize(); wakeLoop(); };
   window.addEventListener('resize', onResize);

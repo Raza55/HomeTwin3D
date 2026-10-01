@@ -95,6 +95,7 @@ import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, Ligh
 import './Dashboard.css';
 import { markStartup } from '../../babylon/StartupTiming';
 import { enableTouchZoneBatching } from '../../babylon/TouchZoneBatch';
+import { indexByEntity } from '../../utils/entityIndex';
 
 // Rarely used dialogs load on demand to keep the dashboard chunk small.
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
@@ -174,6 +175,7 @@ export default function Dashboard() {
   const meshMapRef = useRef<MeshMap>({});
   const blindMeshMapRef = useRef<BlindMeshMap>({});
   const smartDeviceMeshMapRef = useRef<SmartDeviceMeshMap>({});
+  const smartDevicesByEntityRef = useRef<Map<string, SmartDeviceMeshMap[string][]>>(new Map());
   const displayMeshMapRef = useRef<DisplayMeshMap>({});
   const tubeMapRef = useRef<TubeMap>({});
   const panelEntityIdsRef = useRef<Set<string>>(new Set());
@@ -371,6 +373,7 @@ export default function Dashboard() {
     }
 
     panelEntityIdsRef.current = panelEntityIds;
+    smartDevicesByEntityRef.current = indexByEntity(Object.values(smartDeviceMeshMapRef.current), entry => entry.config.entityId);
     sceneEntityIdsRef.current = collectEntityIds(config);
     displayIdsByEntityRef.current = displayIdsByEntity;
     tubeIdsBySensorRef.current = tubeIdsBySensor;
@@ -1530,7 +1533,7 @@ export default function Dashboard() {
       onStateChanged: (entityId: string, state: HAState) => {
         // Scene-bound entities render promptly instead of at the static floor rate;
         // other sensors only affect DOM overlays or the side panel.
-        if (sceneEntityIdsRef.current.has(entityId) || /^(light|cover|fan|media_player)\./.test(entityId) || isHueSyncControl(entityId)) {
+        if (sceneEntityIdsRef.current.has(entityId) || displayIdsByEntityRef.current.has(entityId) || isHueSyncControl(entityId)) {
           sceneCtxRef.current?.requestRender();
         }
         stopPendingFeedback(entityId);
@@ -1558,9 +1561,7 @@ export default function Dashboard() {
           // The frame spans every position the panel can take, old and new.
           if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
         }
-        for (const entry of Object.values(smartDeviceMeshMapRef.current)) {
-          if (entry.config.entityId === entityId) updateSmartDeviceState(entry, state);
-        }
+        for (const entry of smartDevicesByEntityRef.current.get(entityId) ?? []) updateSmartDeviceState(entry, state);
         if (entityId === modalEntityIdRef.current) setModalState(state);
         if (quickRef.current && quickLightCluster(configRef.current?.lights ?? [], quickRef.current.entityId).some(l => l.entityId === entityId)) refreshQuickStates(n=>n+1);
         if (entityId === modalDoubleTapEntityIdRef.current) setModalDoubleTapState(state);
@@ -1616,9 +1617,7 @@ export default function Dashboard() {
             const blind = blindMeshMapRef.current[state.entity_id];
             if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
           }
-          for (const entry of Object.values(smartDeviceMeshMapRef.current)) {
-            if (entry.config.entityId === state.entity_id) updateSmartDeviceState(entry, state);
-          }
+          for (const entry of smartDevicesByEntityRef.current.get(state.entity_id) ?? []) updateSmartDeviceState(entry, state);
           if (panelEntityIdsRef.current.has(state.entity_id)) newCardStates[state.entity_id] = state;
         });
         if (Object.keys(newCardStates).length > 0) {

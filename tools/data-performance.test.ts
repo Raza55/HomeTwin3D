@@ -10,6 +10,19 @@ import { setActiveHAConnection, type HALike } from '../src/services/haWebSocket'
 import { computeGraphGeometry } from '../src/utils/graphGeometry';
 import { iconLoaders } from '../src/services/iconLoaders.generated';
 import { loadLucideIcon } from '../src/services/lucideIcons';
+import { indexByEntity } from '../src/utils/entityIndex';
+
+test('entity index preserves shared targets and excludes unrelated HA states', () => {
+  const a = { id: 'a', entity: 'sensor.temperature' }, b = { id: 'b', entity: 'sensor.temperature' };
+  const other = { id: 'c', entity: 'sensor.power' };
+  const index = indexByEntity([a, other, b, { id: 'unassigned', entity: '' }], e => e.entity);
+  assert.deepEqual(index.get(a.entity), [a, b]);
+  assert.deepEqual(index.get(other.entity), [other]);
+  assert.equal(index.has(''), false);
+  assert.equal(index.get('missing'), undefined);
+  const rebuilt = indexByEntity([other], e => e.entity);
+  assert.equal(rebuilt.has(a.entity), false, 'removed targets cannot survive an index rebuild');
+});
 
 const connection = (request: HALike['request']): HALike => ({ request, isConnected: true, callService: async () => {}, forceReconnect() {}, dispose() {} });
 

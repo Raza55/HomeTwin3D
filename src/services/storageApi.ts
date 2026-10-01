@@ -9,6 +9,35 @@ const STORE_NAME = 'assets';
 const MODEL_KEY = 'model';
 const OBJECT_PREFIX = 'object:';
 
+export interface AssetChanges {
+  model?: Blob | null;
+  objects: Map<string, Blob>;
+  deleted: string[];
+}
+
+/** Commit a complete shared download together; quota/abort never leaves half a model set. */
+export async function replaceAssets(changes: AssetChanges): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    let failure: unknown;
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onabort = () => { db.close(); reject(failure ?? tx.error ?? new Error('Asset transaction aborted')); };
+    const store = tx.objectStore(STORE_NAME);
+    try {
+      if (changes.model !== undefined) {
+        if (changes.model === null) store.delete(MODEL_KEY);
+        else store.put(changes.model, MODEL_KEY);
+      }
+      for (const id of changes.deleted) store.delete(`${OBJECT_PREFIX}${id}`);
+      for (const [id, blob] of changes.objects) store.put(blob, `${OBJECT_PREFIX}${id}`);
+    } catch (error) {
+      failure = error;
+      tx.abort();
+    }
+  });
+}
+
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);

@@ -45,6 +45,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
   const browserEngine = 'userAgentData' in navigator ? 'Chromium' : /AppleWebKit/.test(navigator.userAgent) ? 'WebKit' : 'other';
 
   let frames = 0, cpu = 0, draws = 0, worstGap = 0, last = performance.now(), loopStart = engine.frameId;
+  const frameTimes: number[] = [];
   const onFrame = scene.onAfterRenderObservable.add(() => {
     // First frame with every shader ready (checked only until then).
     if (startupPhase('ready') && !startupPhase('frame') && scene.isReady(false)) markStartup('frame');
@@ -53,6 +54,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     last = now;
     frames++;
     cpu += instrumentation.frameTimeCounter.current;
+    if (frameTimes.length < 512) frameTimes.push(instrumentation.frameTimeCounter.current);
     evaluation += instrumentation.activeMeshesEvaluationTimeCounter.current;
     targets += instrumentation.renderTargetsRenderTimeCounter.current;
     camera += instrumentation.cameraRenderTimeCounter.current;
@@ -76,9 +78,12 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     const seconds = (now - windowStart) / 1000;
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
     const per = (total: number) => (frames ? total / frames : 0).toFixed(1);
+    frameTimes.sort((a, b) => a - b);
+    const p95 = frameTimes[Math.max(0, Math.ceil(frameTimes.length * .95) - 1)] ?? 0;
     panel.textContent = [
       // loop: render-loop passes per second (idle frames the app skipped count too; ~2 while it sleeps).
-      `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   worst ${worstGap.toFixed(0)} ms   loop ${((engine.frameId - loopStart) / seconds).toFixed(0)}/s`,
+      // The frame gap also contains intentional idle pauses; p95 measures work per rendered frame.
+      `FPS ${(frames / seconds).toFixed(1)}   CPU ${(frames ? cpu / frames : 0).toFixed(1)} ms   p95 ${p95.toFixed(1)} ms   gap ${worstGap.toFixed(0)} ms   loop ${((engine.frameId - loopStart) / seconds).toFixed(0)}/s`,
       `draws ${frames ? Math.round(draws / frames) : 0}   JS heap ${memory ? `${Math.round(memory.usedJSHeapSize / 1e6)} MB` : 'n/a'}`,
       `${engine.getRenderWidth()}×${engine.getRenderHeight()}   UBO ${engine.isWebGPU || (engine as Engine).supportsUniformBuffers ? 'on' : 'off'}   ${browserEngine}`,
       `eval ${per(evaluation)}  targets ${per(targets)}  main ${per(camera)}  other ${per(cpu - camera - evaluation)}  shaders ${(engineInstrumentation.shaderCompilationTimeCounter.total - compileStart).toFixed(0)} ms`,
@@ -88,6 +93,7 @@ export function createPerfOverlay(engine: AbstractEngine, scene: Scene): () => v
     ].join('\n');
     compileStart = engineInstrumentation.shaderCompilationTimeCounter.total;
     frames = 0; cpu = 0; draws = 0; worstGap = 0; evaluation = 0; targets = 0; camera = 0; windowStart = now; loopStart = engine.frameId;
+    frameTimes.length = 0;
   }, 2000);
 
   return () => {

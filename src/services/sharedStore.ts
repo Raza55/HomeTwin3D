@@ -1,7 +1,8 @@
 import type { AppConfig } from '../types';
 import { getConfig, writeStoredConfig } from './configApi';
-import { deleteObjectAsset, getModel, getObjectAsset, saveModel, saveObjectAsset } from './storageApi';
+import { getModel, getObjectAsset, replaceAssets, type AssetChanges } from './storageApi';
 import { publishableInstallation, storeInstallation, type InstallationConfig } from './installationConfig';
+import { generateUUID } from '../utils/uuid';
 
 /**
  * Shared installation: one published version of the configuration (entity
@@ -25,6 +26,7 @@ const KEYS = {
   objects: 'shared:objectRevisions',
   pending: 'shared:pending',
   joined: 'shared:joined',
+  change: 'shared:change',
 } as const;
 
 export interface SharedState {
@@ -90,37 +92,78 @@ export async function checkSharedPin(pin: string): Promise<boolean> {
   }
 }
 
-let applying = false;
+// Keep the existing nginx/DAV protocol. Serialize this browser's transfers;
+// Web Locks also cover other tabs on the same origin when available (Safari included).
+let transferQueue: Promise<unknown> = Promise.resolve();
+function transfer<T>(run: () => Promise<T>): Promise<T> {
+  const next = transferQueue.then(() => {
+    if (typeof navigator !== 'undefined' && navigator.locks) return navigator.locks.request('hometwin-shared-transfer', run);
+    return run();
+  });
+  transferQueue = next.catch(() => undefined);
+  return next;
+}
+
+const changed = () => localStorage.getItem(KEYS.change);
+const conflict = (revision: number) => Object.assign(new Error('Shared installation changed during transfer'), { revision });
+
+async function download(path: string): Promise<Blob> {
+  // A large apartment GLB can need longer than the small state.json request.
+  const response = await fetch(`${storeBase()}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(120_000) });
+  if (!response.ok) throw new Error(`${path} ${response.status}`);
+  return response.blob();
+}
 
 /** Store a received version locally. The onboarding flag stays this browser's own. */
 async function apply(state: SharedState): Promise<void> {
-  applying = true;
+  const stamp = changed();
+  const known = read<Record<string, number>>(KEYS.objects, {});
+  const next: Record<string, number> = {};
+  const changes: AssetChanges = { objects: new Map(), deleted: [] };
+  if (state.model && (state.model.revision !== read(KEYS.model, 0) || !(await getModel()))) {
+    changes.model = await download('model.glb');
+    if (changes.model.size !== state.model.size) throw new Error('Incomplete shared model');
+  }
+  for (const object of state.objects) {
+    if (known[object.id] !== object.revision || !(await getObjectAsset(object.id))) {
+      changes.objects.set(object.id, await download(objectPath(object.id, object.format)));
+    }
+    next[object.id] = object.revision;
+  }
+  changes.deleted = Object.keys(known).filter(id => !(id in next));
+  // No local writes until every download has succeeded and the manifest is still current.
+  const latest = await fetchSharedState();
+  if (!latest || latest === 'unavailable') throw new Error('Shared installation unavailable');
+  if (latest.revision !== state.revision || latest.updatedAt !== state.updatedAt || changed() !== stamp) throw conflict(latest.revision);
+  const backup: AssetChanges = { objects: new Map(), deleted: [] };
+  if (changes.model !== undefined) backup.model = await getModel();
+  for (const id of new Set([...changes.objects.keys(), ...changes.deleted])) {
+    const blob = await getObjectAsset(id);
+    if (blob) backup.objects.set(id, blob); else backup.deleted.push(id);
+  }
+  const storageKeys = ['config', 'hometwin:installation', KEYS.model, KEYS.objects, KEYS.revision, KEYS.joined];
+  const before = storageKeys.map(key => [key, localStorage.getItem(key)] as const);
+  await replaceAssets(changes);
   try {
-    if (state.model && state.model.revision !== read(KEYS.model, 0)) {
-      const response = await fetch(`${storeBase()}model.glb`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`model ${response.status}`);
-      await saveModel(await response.blob());
-      write(KEYS.model, state.model.revision);
-    }
+    if (changed() !== stamp) throw conflict(state.revision);
+    if (state.model) write(KEYS.model, state.model.revision);
     if (state.installation) storeInstallation(state.installation);
-    const known = read<Record<string, number>>(KEYS.objects, {});
-    const next: Record<string, number> = {};
-    for (const object of state.objects) {
-      if (known[object.id] !== object.revision || !(await getObjectAsset(object.id))) {
-        const response = await fetch(`${storeBase()}${objectPath(object.id, object.format)}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`object ${response.status}`);
-        await saveObjectAsset(object.id, await response.blob());
-      }
-      next[object.id] = object.revision;
-    }
-    for (const id of Object.keys(known)) if (!(id in next)) await deleteObjectAsset(id);
     write(KEYS.objects, next);
     const local = getConfig();
     writeStoredConfig({ ...state.config, onboarding: local.onboarding ?? { completed: false } } as AppConfig);
     write(KEYS.revision, state.revision);
     write(KEYS.joined, true);
-  } finally {
-    applying = false;
+  } catch (error) {
+    await replaceAssets(backup);
+    // Edits made while the IndexedDB transaction was running must survive rollback.
+    if (changed() === stamp) {
+      // Restore the module's live installation before restoring its raw storage value.
+      storeInstallation(JSON.parse(before.find(([key]) => key === 'hometwin:installation')?.[1] ?? '{}'));
+      for (const [key, value] of before) {
+        if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+      }
+    }
+    throw error;
   }
 }
 
@@ -128,7 +171,11 @@ async function apply(state: SharedState): Promise<void> {
  * Take a newer published version, unless this browser has unpublished changes
  * of its own (those are published first, see publishShared).
  */
-export async function syncFromShared(timeoutMs = 4000): Promise<SharedStatus> {
+export function syncFromShared(timeoutMs = 4000): Promise<SharedStatus> {
+  return transfer(() => syncFromSharedNow(timeoutMs));
+}
+
+async function syncFromSharedNow(timeoutMs: number): Promise<SharedStatus> {
   if (!isSharedEnabled()) return { kind: 'disabled' };
   const state = await fetchSharedState(timeoutMs);
   if (state === 'unavailable') return { kind: 'unavailable' };
@@ -140,6 +187,7 @@ export async function syncFromShared(timeoutMs = 4000): Promise<SharedStatus> {
     localStorage.removeItem(KEYS.pending);
     return { kind: 'updated', revision: state.revision };
   } catch (error) {
+    if (typeof (error as { revision?: number }).revision === 'number') return { kind: 'conflict', revision: (error as { revision: number }).revision };
     return { kind: 'error', message: String((error as Error)?.message ?? error) };
   }
 }
@@ -154,15 +202,19 @@ const notify = (status: SharedStatus) => listeners.forEach(listener => listener(
 
 /** Called by configApi whenever the local configuration, model or objects change. */
 export function markSharedChange(part: 'config' | 'model' | { object: string } | { deleted: string }): void {
-  if (applying || !isSharedEnabled() || !getSharedPin()) return;
+  if (!isSharedEnabled() || !getSharedPin()) return;
   const pending = read<Pending>(KEYS.pending, {});
   if (part === 'config') pending.config = true;
   else if (part === 'model') pending.model = true;
   else if ('object' in part) pending.objects = [...new Set([...(pending.objects ?? []), part.object])];
   else pending.deleted = [...new Set([...(pending.deleted ?? []), part.deleted])];
   write(KEYS.pending, pending);
+  write(KEYS.change, generateUUID());
   if (publishTimer) clearTimeout(publishTimer);
-  publishTimer = setTimeout(() => { void publishShared().then(notify); }, 1500);
+  publishTimer = setTimeout(() => {
+    publishTimer = null;
+    void transfer(() => hasPendingSharedChanges() ? publishSharedNow(false) : Promise.resolve({ kind: 'current', revision: getSharedRevision() } as SharedStatus)).then(notify);
+  }, 1500);
 }
 
 /**
@@ -170,7 +222,11 @@ export function markSharedChange(part: 'config' | 'model' | { object: string } |
  * never see a state that points at missing files. `force` publishes the whole
  * local version even if someone else published in the meantime.
  */
-export async function publishShared(force = false): Promise<SharedStatus> {
+export function publishShared(force = false): Promise<SharedStatus> {
+  return transfer(() => publishSharedNow(force));
+}
+
+async function publishSharedNow(force: boolean): Promise<SharedStatus> {
   if (!isSharedEnabled()) return { kind: 'disabled' };
   if (!getSharedPin()) return { kind: 'readonly' };
   const current = await fetchSharedState();
@@ -180,9 +236,10 @@ export async function publishShared(force = false): Promise<SharedStatus> {
   const pending: Pending = force || !current
     ? { config: true, model: true, objects: (getConfig().model?.importedObjects ?? []).map(o => o.id) }
     : read<Pending>(KEYS.pending, {});
+  const stamp = changed();
   const revision = base + 1;
   const put = async (file: string, body: Blob | string, type: string) => {
-    const response = await fetch(`${storeBase()}${file}`, withPin({ method: 'PUT', body, headers: { 'Content-Type': type } }));
+    const response = await fetch(`${storeBase()}${file}`, withPin({ method: 'PUT', body, headers: { 'Content-Type': type }, signal: AbortSignal.timeout(120_000) }));
     if (response.status === 403) throw Object.assign(new Error('PIN'), { readonly: true });
     if (!response.ok) throw new Error(`${file} ${response.status}`);
   };
@@ -216,7 +273,7 @@ export async function publishShared(force = false): Promise<SharedStatus> {
     write(KEYS.revision, revision);
     if (model) write(KEYS.model, model.revision);
     write(KEYS.objects, Object.fromEntries(objects.map(o => [o.id, o.revision])));
-    localStorage.removeItem(KEYS.pending);
+    if (changed() === stamp) localStorage.removeItem(KEYS.pending);
     return { kind: 'published', revision };
   } catch (error) {
     if ((error as { readonly?: boolean }).readonly) return { kind: 'readonly' };
@@ -234,17 +291,20 @@ export function watchSharedUpdates(intervalMs = 60_000, quietMs = 20_000): () =>
   const events = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
   events.forEach(type => window.addEventListener(type, onInput, { passive: true, capture: true }));
   let waiting = false;
+  let stopped = false;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
   const check = async () => {
-    if (document.hidden || !isSharedEnabled()) return;
+    if (stopped || waiting || document.hidden || !isSharedEnabled()) return;
     const state = await fetchSharedState();
     if (!state || state === 'unavailable' || state.revision === getSharedRevision()) return;
     if (hasPendingSharedChanges() && getSharedPin()) { notify({ kind: 'conflict', revision: state.revision }); return; }
-    if (waiting) return;
+    if (stopped || waiting) return;
     waiting = true;
     const tryReload = async () => {
-      if (Date.now() - lastInput < quietMs || document.hidden) { setTimeout(tryReload, 5000); return; }
+      if (stopped) return;
+      if (Date.now() - lastInput < quietMs || document.hidden) { retryTimer = setTimeout(tryReload, 5000); return; }
       const status = await syncFromShared();
-      if (status.kind === 'updated') window.location.reload();
+      if (!stopped && status.kind === 'updated') window.location.reload();
       waiting = false;
     };
     void tryReload();
@@ -253,6 +313,8 @@ export function watchSharedUpdates(intervalMs = 60_000, quietMs = 20_000): () =>
   const onVisible = () => { if (!document.hidden) void check(); };
   document.addEventListener('visibilitychange', onVisible);
   return () => {
+    stopped = true;
+    clearTimeout(retryTimer);
     window.clearInterval(timer);
     document.removeEventListener('visibilitychange', onVisible);
     events.forEach(type => window.removeEventListener(type, onInput, { capture: true }));
@@ -261,9 +323,11 @@ export function watchSharedUpdates(intervalMs = 60_000, quietMs = 20_000): () =>
 
 /** Drop this browser's unpublished changes and take the published version. */
 export async function loadLatestShared(): Promise<SharedStatus> {
-  localStorage.removeItem(KEYS.pending);
-  localStorage.removeItem(KEYS.revision);
-  return syncFromShared();
+  return transfer(() => {
+    localStorage.removeItem(KEYS.pending);
+    localStorage.removeItem(KEYS.revision);
+    return syncFromSharedNow(4000);
+  });
 }
 
 /**

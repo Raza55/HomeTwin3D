@@ -122,3 +122,124 @@ test('installation values travel with the shared version; only well-formed value
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+const fixtureConfig = (label: string) => ({ location: { latitude: 0, longitude: 0 }, lights: [], rooms: [{ id: 'room', label }], onboarding: { completed: true } });
+
+test('overlapping publishes are serialized and edits during upload remain pending', async () => {
+  const shared = await import('../src/services/sharedStore');
+  const configApi = await import('../src/services/configApi');
+  const writer = browser(); use(writer);
+  writer.values.set('config', JSON.stringify(fixtureConfig('Before')));
+  writer.values.set('shared:pin', JSON.stringify('test-pin'));
+  writer.values.set('shared:revision', '1');
+  writer.values.set('shared:pending', JSON.stringify({ config: true }));
+  const originalFetch = globalThis.fetch;
+  let state = { format: 1, revision: 1, updatedAt: 'test', config: fixtureConfig('Before'), model: null, objects: [] };
+  let release!: () => void, started!: () => void, puts = 0, active = 0, maxActive = 0;
+  const firstStarted = new Promise<void>(resolve => { started = resolve; });
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  globalThis.fetch = async (_url, init) => {
+    if (init?.method === 'PUT') {
+      active++; maxActive = Math.max(maxActive, active);
+      if (++puts === 1) { started(); await hold; }
+      else assert.equal(shared.hasPendingSharedChanges(), true, 'newer edit is still pending when the next upload begins');
+      state = JSON.parse(init.body as string);
+      active--;
+      return new Response(null, { status: 204 });
+    }
+    return Response.json(state);
+  };
+  try {
+    const first = shared.publishShared();
+    await firstStarted;
+    configApi.updateConfig({ rooms: [{ id: 'room', label: 'During upload' }] });
+    const second = shared.publishShared();
+    await Promise.resolve();
+    assert.equal(puts, 1, 'a second upload must wait');
+    release();
+    assert.deepEqual(await first, { kind: 'published', revision: 2 });
+    assert.deepEqual(await second, { kind: 'published', revision: 3 });
+    assert.equal(maxActive, 1);
+    assert.equal(state.config.rooms[0].label, 'During upload');
+    assert.equal(shared.hasPendingSharedChanges(), false);
+    await new Promise(resolve => setTimeout(resolve, 1600));
+    assert.equal(puts, 2, 'a stale debounce must not publish another identical revision');
+  } finally { release(); globalThis.fetch = originalFetch; }
+});
+
+test('a failed object download never replaces the working model or configuration', async () => {
+  const shared = await import('../src/services/sharedStore');
+  const reader = browser(); use(reader);
+  reader.values.set('config', JSON.stringify(fixtureConfig('Before')));
+  reader.values.set('shared:revision', '1');
+  reader.values.set('shared:modelRevision', '1');
+  reader.values.set('shared:objectRevisions', JSON.stringify({ old: 1 }));
+  reader.assets.set('model', new Blob(['OLD-MODEL']));
+  reader.assets.set('object:old', new Blob(['OLD-OBJECT']));
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith('state.json')) return Response.json({ format: 1, revision: 2, updatedAt: 'test', config: fixtureConfig('After'), model: { revision: 2, size: 9 }, objects: [{ id: 'new', format: 'glb', revision: 2 }] });
+    if (String(url).endsWith('model.glb')) return new Response('NEW-MODEL');
+    return new Response(null, { status: 503 });
+  };
+  try {
+    assert.equal((await shared.syncFromShared()).kind, 'error');
+    assert.equal(await reader.assets.get('model')!.text(), 'OLD-MODEL');
+    assert.equal(await reader.assets.get('object:old')!.text(), 'OLD-OBJECT');
+    assert.equal(JSON.parse(reader.values.get('config')!).rooms[0].label, 'Before');
+    assert.equal(reader.values.get('shared:modelRevision'), '1');
+    assert.equal(shared.getSharedRevision(), 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('manifest changes during download are rejected before touching local assets', async () => {
+  const shared = await import('../src/services/sharedStore');
+  const reader = browser(); use(reader);
+  reader.values.set('config', JSON.stringify(fixtureConfig('Before')));
+  reader.values.set('shared:revision', '1');
+  reader.assets.set('model', new Blob(['OLD-MODEL']));
+  const originalFetch = globalThis.fetch;
+  let manifests = 0;
+  globalThis.fetch = async url => String(url).endsWith('state.json')
+    ? Response.json({ format: 1, revision: ++manifests === 1 ? 2 : 3, updatedAt: 'test', config: fixtureConfig('After'), model: { revision: 2, size: 9 }, objects: [] })
+    : new Response('NEW-MODEL');
+  try {
+    assert.deepEqual(await shared.syncFromShared(), { kind: 'conflict', revision: 3 });
+    assert.equal(await reader.assets.get('model')!.text(), 'OLD-MODEL');
+    assert.equal(shared.getSharedRevision(), 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('a truncated model is rejected and localStorage failure rolls back assets', async () => {
+  const shared = await import('../src/services/sharedStore');
+  const installation = await import('../src/services/installationConfig');
+  const reader = browser(); use(reader);
+  installation.storeInstallation({ location: { label: 'Before', latitude: 0, longitude: 0 } });
+  reader.values.set('config', JSON.stringify(fixtureConfig('Before')));
+  reader.values.set('shared:revision', '1');
+  reader.assets.set('model', new Blob(['OLD-MODEL']));
+  const originalFetch = globalThis.fetch;
+  let body = 'SHORT';
+  globalThis.fetch = async url => String(url).endsWith('state.json')
+    ? Response.json({ format: 1, revision: 2, updatedAt: 'test', config: fixtureConfig('After'), model: { revision: 2, size: 9 }, objects: [], installation: { location: { label: 'After', latitude: 0, longitude: 0 } } })
+    : new Response(body);
+  try {
+    assert.equal((await shared.syncFromShared()).kind, 'error');
+    assert.equal(await reader.assets.get('model')!.text(), 'OLD-MODEL');
+    body = 'NEW-MODEL';
+    const setItem = localStorage.setItem;
+    let fail = true;
+    localStorage.setItem = (key, value) => {
+      if (key === 'config' && fail) { fail = false; throw new Error('Quota exceeded'); }
+      setItem(key, value);
+    };
+    assert.equal((await shared.syncFromShared()).kind, 'error');
+    assert.equal(await reader.assets.get('model')!.text(), 'OLD-MODEL');
+    assert.equal(JSON.parse(reader.values.get('config')!).rooms[0].label, 'Before');
+    assert.equal(shared.getSharedRevision(), 1);
+    assert.equal(reader.values.has('shared:modelRevision'), false);
+    assert.equal(installation.installation.location?.label, 'Before', 'the live installation must also roll back');
+    assert.equal((await shared.syncFromShared()).kind, 'updated', 'the complete transfer can retry');
+    assert.equal(await reader.assets.get('model')!.text(), 'NEW-MODEL');
+  } finally { globalThis.fetch = originalFetch; }
+});

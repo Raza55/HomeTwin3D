@@ -75,3 +75,10 @@ body {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.4; }
 }
+.app-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  font: 500 1.1rem system-ui, sans-serif;
+  color: var(--text, #e2e8f0);
+}

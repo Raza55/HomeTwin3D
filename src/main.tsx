@@ -5,13 +5,17 @@ import { registerSW } from 'virtual:pwa-register';
 import { startSharedInstallation, watchSharedUpdates } from './services/sharedStore';
 import './App.css';
 
+// Shared assets and lazy chunks can take a moment on the first visit.
+const root = document.getElementById('root')!;
+root.innerHTML = '<div class="app-loading" role="status">HomeTwin3D …</div>';
+
 // Take the newest shared installation (config, model, objects, installation
 // values) before the app reads its local copies; offline or without a server
 // this returns quickly. The app is imported afterwards: its modules read the
 // installation's entity IDs when they load.
 void startSharedInstallation().finally(async () => {
   const { default: App } = await import('./App');
-  createRoot(document.getElementById('root')!).render(
+  createRoot(root).render(
     <StrictMode>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <App />

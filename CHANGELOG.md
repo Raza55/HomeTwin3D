@@ -1,5 +1,14 @@
 # Änderungsverlauf
 
+## 0.5.9 – Stabilere Synchronisierung und weniger CPU-Arbeit (01.10.2026)
+
+- Übertragungen desselben Browsers laufen nacheinander; auf unterstützten sicheren Origins gilt das auch für mehrere Tabs. Änderungen während eines Uploads bleiben für die nächste Übertragung vorgemerkt.
+- Gemeinsame Modelle und Objekte werden erst nach vollständigem Download und erneuter Versionsprüfung zusammen gespeichert. Abgebrochene Downloads und Speicherfehler erhalten den vorherigen lokalen Stand.
+- Große Übertragungen besitzen eine Zeitbegrenzung; beim Start und beim Laden von Seiten erscheint eine Ladeanzeige.
+- Geräte werden bei HA-Updates über einen Entity-Index gefunden. Nicht zugeordnete Lampen, Rollos und Mediengeräte lösen keinen zusätzlichen Renderauftrag mehr aus.
+- Die Performance-Anzeige zeigt zusätzlich die CPU-Framezeit des 95. Perzentils; geplante Renderpausen werden als Frameabstand bezeichnet.
+- Add-on-Image-Build, WebGL-/Apple-Einstellungen und bestehende Datenformate bleiben kompatibel.
+
 ## 0.5.8 – Schnellere Bildschirmvorschau (30.09.2026)
 
 - Modellmonitor und Wohnzimmer-TV laden das PC-Kamerabild alle 10 statt 30 Sekunden.

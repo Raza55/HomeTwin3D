@@ -12,6 +12,7 @@ import { joinedSharedInstallation } from './services/sharedStore';
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
 const ConfigEditor = lazy(() => import('./pages/ConfigEditor/ConfigEditor'));
 const Onboarding = lazy(() => import('./pages/Onboarding/Onboarding'));
+const loading = <div className="app-loading" role="status">HomeTwin3D …</div>;
 
 function AppRoutes() {
   const location = useLocation();
@@ -33,9 +34,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Suspense fallback={null}><Dashboard /></Suspense>} />
-      <Route path="/editor" element={<Suspense fallback={null}><ConfigEditor /></Suspense>} />
-      <Route path="/onboarding" element={<Suspense fallback={null}><Onboarding /></Suspense>} />
+      <Route path="/" element={<Suspense fallback={loading}><Dashboard /></Suspense>} />
+      <Route path="/editor" element={<Suspense fallback={loading}><ConfigEditor /></Suspense>} />
+      <Route path="/onboarding" element={<Suspense fallback={loading}><Onboarding /></Suspense>} />
     </Routes>
   );
 }

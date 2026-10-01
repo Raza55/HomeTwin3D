@@ -12,7 +12,7 @@ import { prepareCurrentLightVariants, prerenderLampShadowMaps } from '../../baby
 import type { DayDemoCast } from './cast';
 import { renderDemoScreen } from './screens';
 import { ShotDirector, type WalkControl } from './shots';
-import { shotAt, type Shot } from './story';
+import { CHAPTER_FRAMING, SHOTS, shotAt, type Shot } from './story';
 import type { AbstractMesh } from '@babylonjs/core';
 
 export interface DayDemoSceneDeps {
@@ -35,6 +35,8 @@ export interface DayDemoSceneDeps {
 export interface ChapterResult { id: string; fps: number; p95: number; cpu: number; draws: number; frames: number }
 export interface BenchmarkResult {
   score: number; fps: number; p95: number; low1: number; cpu: number; draws: number;
+  /** Lowest and highest frame rate of any one second of playback. */
+  fpsMin: number; fpsMax: number;
   frames: number; seconds: number; renderer: string; resolution: string; speed: number; tour: boolean;
   chapters: ChapterResult[];
 }
@@ -53,18 +55,6 @@ export interface DayDemoViewState extends DayDemoSnapshot {
 
 interface Bucket { frames: number; ms: number; cpu: number; draws: number; gaps: number[] }
 
-/**
- * Camera framing per chapter: weather scenes pull back and lower the view so
- * the park, sky and precipitation show; indoor scenes move closer.
- */
-const CHAPTER_VIEW: Record<string, { zoom: number; tilt: number }> = {
-  night: { zoom: 1.3, tilt: .12 }, wake: { zoom: .88, tilt: 0 }, sunrise: { zoom: 1.2, tilt: .1 }, coffee: { zoom: .88, tilt: 0 },
-  bath: { zoom: .92, tilt: 0 }, breakfast: { zoom: .95, tilt: 0 }, away: { zoom: 1.1, tilt: .05 }, chores: { zoom: 1, tilt: 0 },
-  sunny: { zoom: 1.45, tilt: .16 }, shade: { zoom: 1.2, tilt: .08 }, warning: { zoom: 1.4, tilt: .16 },
-  storm: { zoom: 1.6, tilt: .2 }, clearing: { zoom: 1.4, tilt: .14 }, home: { zoom: 1, tilt: 0 }, cooking: { zoom: .9, tilt: 0 },
-  sunset: { zoom: 1.3, tilt: .14 }, cinema: { zoom: .88, tilt: 0 }, gaming: { zoom: .9, tilt: 0 }, goodnight: { zoom: 1.05, tilt: .05 },
-  nightlight: { zoom: .95, tilt: 0 }, snow: { zoom: 1.6, tilt: .2 }, dawn: { zoom: 1.35, tilt: .14 },
-};
 
 
 function rendererName(engine: AbstractEngine): string {
@@ -95,6 +85,8 @@ export class DayDemoController {
   private tour = true;
   private tourTime = 0;
   private framing = { zoom: 1, tilt: 0 };
+  private focusKey = '';
+  private focusPoint: Vector3 | null = null;
   private home: { alpha: number; beta: number; radius: number; target: Vector3 } | null = null;
   private instrumentation: SceneInstrumentation;
   private buckets = new Map<string, Bucket>();
@@ -193,6 +185,8 @@ export class DayDemoController {
       await new Promise(resolve => setTimeout(resolve, 0));
       if (this.disposed) return;
     }
+    // Camera shots: anchors, standing spots and window views need ray casts against the model.
+    if (this.director) for (const shot of SHOTS) this.director.warm(shot);
     // The first frame of each screen kind initialises canvas, fonts and gradients (30-200 ms).
     for (const kind of ['news', 'movie', 'work', 'game'] as const) renderDemoScreen(kind, { frame: 0, clock: 0, title: '', language: 'de-DE', progress: 0 });
     const t1 = performance.now();
@@ -359,7 +353,19 @@ export class DayDemoController {
     if (this.shotBlind && !this.disposed) this.engine.moveBlind(this.shotBlind.entityId, this.shotBlind.previous, 2);
     this.shotBlind = null;
     if (this.deps.walk?.active()) this.deps.walk.exit();
-    // The tour continues from the restored orbit pose.
+    // Leaving first person restores an orbit centre derived from the eye position.
+    // Behind the cut, start straight at the current chapter's room instead.
+    const camera = this.deps.scene.activeCamera;
+    if (camera instanceof ArcRotateCamera && this.home && !this.disposed) {
+      const framing = CHAPTER_FRAMING[this.engine.getSnapshot().chapter?.id ?? ''];
+      const focus = framing && this.director ? this.director.focus(framing) : null;
+      camera.target.copyFrom(focus ?? this.home.target);
+      this.focusKey = framing ? JSON.stringify(framing.at) : ''; this.focusPoint = focus;
+      this.framing.zoom = focus ? framing!.zoom : 1;
+      camera.radius = this.home.radius * this.framing.zoom;
+      camera.beta = Math.min(1.05, Math.max(.62, this.home.beta));
+    }
+    // The tour continues from there.
     this.tourTime = Math.max(this.tourTime, 5);
     if (cut) this.cut();
   }
@@ -371,27 +377,40 @@ export class DayDemoController {
     if (!this.tour || !this.home || !(camera instanceof ArcRotateCamera)) return;
     this.tourTime += dt / 1000;
     const t = this.tourTime;
-    const intro = Math.min(1, t / 5);
+    const intro = Math.min(1, t / 4);
     const smooth = intro * intro * (3 - 2 * intro);
-    // A slow orbit (~2.5 min per turn) with gentle tilt and zoom so walls, windows and the park all show.
-    const target = CHAPTER_VIEW[this.view.chapter?.id ?? ''] ?? { zoom: 1, tilt: 0 };
-    const follow = 1 - Math.exp(-dt / 2600);
-    this.framing.zoom += (target.zoom - this.framing.zoom) * follow;
-    this.framing.tilt += (target.tilt - this.framing.tilt) * follow;
+    // Each chapter frames the room where something happens (close up) or the whole site for weather.
+    const framing = CHAPTER_FRAMING[this.view.chapter?.id ?? ''] ?? { at: 'overview' as const, zoom: 1, tilt: 0 };
+    const key = JSON.stringify(framing.at);
+    if (key !== this.focusKey) { this.focusKey = key; this.focusPoint = this.director?.focus(framing) ?? null; }
+    const follow = 1 - Math.exp(-dt / 800);
+    const zoomGoal = this.focusPoint || framing.at === 'overview' ? framing.zoom : 1;
+    this.framing.zoom += (zoomGoal - this.framing.zoom) * follow;
+    this.framing.tilt += (framing.tilt - this.framing.tilt) * follow;
+    // Glide the orbit centre to the room (or back to the home view's centre).
+    const goal = this.focusPoint ?? this.home.target;
+    camera.target.addInPlace(goal.subtract(camera.target).scaleInPlace(follow * smooth));
     const cinematicBeta = Math.min(1.05, Math.max(.62, this.home.beta)) + this.framing.tilt;
-    const beta = this.home.beta + (cinematicBeta - this.home.beta) * smooth + .1 * Math.sin(t * Math.PI * 2 / 41) * smooth;
-    camera.alpha += dt / 1000 * .042 * smooth;
+    const beta = this.home.beta + (cinematicBeta - this.home.beta) * smooth + .08 * Math.sin(t * Math.PI * 2 / 29) * smooth;
+    // A slow orbit (about 1.5 minutes per turn) shows each room from changing sides.
+    camera.alpha += dt / 1000 * .07 * smooth;
     camera.beta = Math.max(camera.lowerBetaLimit ?? .05, Math.min(camera.upperBetaLimit ?? 1.5, beta));
     const zoom = 1 + (this.framing.zoom - 1) * smooth;
-    const radius = this.home.radius * zoom * (1 + .05 * Math.sin(t * Math.PI * 2 / 57) * smooth);
+    const radius = this.home.radius * zoom * (1 + .04 * Math.sin(t * Math.PI * 2 / 37) * smooth);
     camera.radius = Math.max(camera.lowerRadiusLimit ?? 0, Math.min(camera.upperRadiusLimit ?? Infinity, radius));
   }
 
+
   // --- Benchmark --------------------------------------------------------------------
+
+  private seconds: number[] = [];
+  private secondStart = 0;
+  private secondFrames = 0;
 
   private resetBenchmark(): void {
     this.buckets.clear();
     this.lastRender = 0;
+    this.seconds = []; this.secondStart = 0; this.secondFrames = 0;
   }
 
   private sample(): void {
@@ -400,9 +419,15 @@ export class DayDemoController {
     while (this.fpsWindow.length > 2 && now - this.fpsWindow[0] > 1000) this.fpsWindow.shift();
     const previous = this.lastRender;
     this.lastRender = now;
-    if (!previous || !this.engine.isPlaying || document.hidden) return;
+    if (!previous || !this.engine.isPlaying || document.hidden) { this.secondStart = 0; return; }
     const gap = now - previous;
-    if (gap > 1000) return;
+    if (gap > 1000) { this.secondStart = 0; return; }
+    if (!this.secondStart) { this.secondStart = now; this.secondFrames = 0; }
+    this.secondFrames++;
+    if (now - this.secondStart >= 1000) {
+      this.seconds.push(this.secondFrames * 1000 / (now - this.secondStart));
+      this.secondStart = now; this.secondFrames = 0;
+    }
     const chapter = CHAPTERS[Math.max(0, this.view.chapterIndex)]?.chapter.id ?? 'night';
     let bucket = this.buckets.get(chapter);
     if (!bucket) { bucket = { frames: 0, ms: 0, cpu: 0, draws: 0, gaps: [] }; this.buckets.set(chapter, bucket); }
@@ -434,6 +459,7 @@ export class DayDemoController {
     const engine = this.deps.engine;
     this.result = {
       score, fps: +fps.toFixed(1), p95: +percentile(gaps, .95).toFixed(1), low1: +low1.toFixed(1),
+      fpsMin: Math.round(this.seconds.length ? Math.min(...this.seconds) : fps), fpsMax: Math.round(this.seconds.length ? Math.max(...this.seconds) : fps),
       cpu: frames ? +(cpu / frames).toFixed(2) : 0, draws, frames, seconds: +(ms / 1000).toFixed(1),
       renderer: rendererName(engine), resolution: `${engine.getRenderWidth()} × ${engine.getRenderHeight()}`,
       speed: this.engine.getSnapshot().speed, tour: this.tour, chapters,

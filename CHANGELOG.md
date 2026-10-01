@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.19 – Schnellere Tagesdemo mit Raumfokus (01.10.2026)
+
+- Ein Tag dauert jetzt rund zwei Minuten (statt fünf); die Tempo-Auswahl entfällt. Die Außenansicht fährt pro Kapitel zum Raum, in dem etwas passiert (Bad, Küche, Schlafzimmer, Kammer …), zoomt nah heran und dreht sich langsam weiter; Wetterkapitel zeigen das ganze Gelände.
+- Neuer Einstieg in Ich-Perspektive: vom Wohnungseingang durchs Wohnzimmer zu den Fenstern – die Dämmerung wird heller, Bäume und Büsche biegen sich im Morgenwind –, dann Schwenk zur Küche und zur vorheizenden Kaffeemaschine. Die Kamera plant ihren Weg mit freier Sicht und hält eine natürliche Kopfneigung.
+- Saugroboter und Solar-Hinweise entfernt; das Kapitel heißt jetzt „Waschtag“ (Waschmaschine, danach Trockner).
+- Zum Schluss nur noch eine kompakte Zeile: Ø Bilder pro Sekunde (min/max), Lichtschaltungen, Rollofahrten und Updates.
+- Kamerastandpunkte und Fensterblicke werden in der Vorbereitung berechnet; der Kameramittelpunkt springt nach der Ich-Perspektive nicht mehr.
+
 ## 0.5.19 – App-Hintergrund auf dem Wohnzimmer-TV (01.10.2026)
 
 - Gibt die SHIELD kein Vorschaubild und kein Cover her (z. B. Netflix-Wiedergabe), zeigt das Fernsehermodell einen Hintergrund mit dem Schriftzug der laufenden App (Netflix, YouTube, Plex, Prime Video, Disney+, Spotify) statt der neutralen Grafik.

@@ -60,6 +60,8 @@ test('story is ordered, bilingual and spans one day', () => {
   for (let i = 1; i < STORY.length; i++) assert.ok(STORY[i].at >= STORY[i - 1].at);
   assert.ok(STORY.every(b => b.at >= 0 && b.at <= DAY_LENGTH));
   assert.ok(CHAPTERS.length >= 15);
+  // The robot vacuum can't be seen driving in the model: it is not part of the story.
+  assert.ok(!STORY.some(b => b.actions.some(a => a.type === 'vacuum')));
   for (const { chapter } of CHAPTERS) assert.ok(chapter.title.de && chapter.title.en && chapter.text.de && chapter.text.en);
   assert.equal(new Set(CHAPTERS.map(c => c.chapter.id)).size, CHAPTERS.length);
   assert.equal(virtualToClock(0), 5 * 60 + 30);
@@ -68,7 +70,8 @@ test('story is ordered, bilingual and spans one day', () => {
 });
 
 test('weather runs through fog, sun, thunderstorm, drizzle and snow', () => {
-  assert.equal(weatherAt(at('06:00')).weather_code, 45);
+  assert.equal(weatherAt(at('05:00')).weather_code, 45, 'fog before dawn');
+  assert.ok(weatherAt(at('06:00')).wind_gusts_10m >= 35, 'morning wind bends the trees');
   assert.ok(weatherAt(at('11:00')).cloud_cover < 15);
   const storm = weatherAt(at('15:20'));
   assert.equal(storm.weather_code, 95); assert.ok(storm.rain > 5); assert.ok(storm.thunder);
@@ -77,7 +80,7 @@ test('weather runs through fog, sun, thunderstorm, drizzle and snow', () => {
   assert.ok(weatherAt(at('03:15')).temperature_2m <= 0);
   assert.ok(!weatherAt(at('12:00')).thunder);
   assert.ok(storm.wind_gusts_10m > 60, 'storm gusts bend the trees');
-  assert.ok(weatherAt(at('06:00')).wind_speed_10m < 10, 'calm foggy dawn');
+
   // Precipitation fades in instead of switching on at full strength.
   assert.ok(weatherAt(at('15:01')).rain < weatherAt(at('15:20')).rain);
   assert.equal(WEATHER[0].clock, '05:30');
@@ -118,7 +121,7 @@ test('a full day plays through and ends with the home asleep', () => {
     h.tick(16);
     const t = virtualToClock(h.engine.time);
     if (Math.abs(t - (6 * 60 + 25)) < 2) seen.add('wake:' + h.states.get('light.schlafzimmer_decke').state);
-    if (Math.abs(t - (6 * 60 + 45)) < 1) seen.add('coffee:' + h.states.get('sensor.kaffee_operation_state').state);
+    if (Math.abs(t - (6 * 60 + 48)) < 1) seen.add('coffee:' + h.states.get('sensor.kaffee_operation_state').state);
     if (Math.abs(t - (21 * 60)) < 2) seen.add('tv:' + h.states.get('media_player.tv').state);
     if (Math.abs(t - (15 * 60 + 30)) < 2) seen.add('storm-lights:' + h.states.get('light.wohnzimmer_hue_play').state);
   }
@@ -196,7 +199,7 @@ test('a routed TV shows generated frames and a moving progress bar', () => {
   const h = harness(cast);
   h.engine.seek(at('20:14'));
   h.engine.play();
-  for (let i = 0; i < 400; i++) h.tick(50);
+  for (let i = 0; i < 80; i++) h.tick(50);
   assert.equal(h.states.get(route.receiver).attributes.source, 'SHIELD Media');
   assert.equal(h.states.get(route.shield).state, 'playing');
   assert.ok(h.states.get(route.shield).attributes.media_position > 0);
@@ -211,18 +214,25 @@ test('the coffee popup opens while the machine brews and closes afterwards', () 
   h.engine.seek(at('06:40'));
   popups.length = 0;
   h.engine.play();
-  while (virtualToClock(h.engine.time) < 6 * 60 + 52) h.tick(50);
+  while (virtualToClock(h.engine.time) < 6 * 60 + 56) h.tick(50);
   assert.deepEqual(popups, ['coffee:true', 'coffee:false']);
 });
 
 test('camera shots stay inside the day and their chapters', () => {
   for (const s of SHOTS) {
     assert.ok(s.from < s.to && s.to <= DAY_LENGTH);
-    assert.equal(s.segments[0].span[0], 0); assert.equal(s.segments.at(-1).span[1], 1);
+    assert.equal(s.keys[0].t, 0); assert.equal(s.keys.at(-1).t, 1);
+    for (let i = 1; i < s.keys.length; i++) assert.ok(s.keys[i].t > s.keys[i - 1].t);
     assert.equal(shotAt((s.from + s.to) / 2), s);
+    // Each moment is long enough to take in (real seconds at normal speed).
+    assert.ok(realSecondsUntil(s.to) - realSecondsUntil(s.from) >= 5, s.id);
   }
   assert.equal(shotAt(at('12:00')), undefined);
-  assert.deepEqual(SHOTS.map(s => s.id), ['night-window', 'storm-bedroom', 'cinema', 'gaming']);
+  assert.deepEqual(SHOTS.map(s => s.id), ['opening', 'storm-bedroom', 'cinema', 'gaming']);
+  // The opening ends on the coffee machine just before it starts brewing.
+  const opening = SHOTS[0];
+  assert.equal(opening.keys.at(-1).look.kind, 'coffee');
+  assert.ok(opening.to <= at('06:46'));
 });
 
 test('evening colour scenes change gently', () => {

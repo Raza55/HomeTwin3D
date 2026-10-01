@@ -33,6 +33,12 @@ export interface DayStats {
   minTemp: number;
   maxTemp: number;
   maxGust: number;
+  /** Lamps switched on or off. */
+  lightSwitches: number;
+  /** Blind movements started. */
+  blindMoves: number;
+  /** Entity state updates sent to the dashboard. */
+  updates: number;
 }
 
 export interface DayDemoSnapshot {
@@ -119,13 +125,28 @@ export class DayDemoEngine {
   private snapshotDirty = true;
   private seeking = false;
   private stats: DayStats = DayDemoEngine.emptyStats();
-  private static emptyStats(): DayStats { return { automations: 0, lightHours: 0, rainMinutes: 0, minTemp: Infinity, maxTemp: -Infinity, maxGust: 0 }; }
+  private static emptyStats(): DayStats { return { automations: 0, lightHours: 0, rainMinutes: 0, minTemp: Infinity, maxTemp: -Infinity, maxGust: 0, lightSwitches: 0, blindMoves: 0, updates: 0 }; }
   private lastNotify = 0;
   private structuralChange = false;
 
   constructor(cast: DayDemoCast, hooks: DayDemoHooks, language = 'de-DE') {
     this.cast = cast;
-    this.hooks = hooks;
+    // Count what the day does to the home (not the replay after a jump).
+    this.hooks = {
+      ...hooks,
+      setState: (entityId, state, attributes) => {
+        if (!this.seeking) {
+          this.stats.updates++;
+          if (entityId.startsWith('light.')) {
+            const before = hooks.getState(entityId)?.state;
+            if ((before === 'on') !== (state === 'on')) this.stats.lightSwitches++;
+          } else if (entityId.startsWith('cover.') && (state === 'opening' || state === 'closing') && !['opening', 'closing'].includes(hooks.getState(entityId)?.state ?? '')) {
+            this.stats.blindMoves++;
+          }
+        }
+        hooks.setState(entityId, state, attributes);
+      },
+    };
     this.language = language;
     this.snapshot = this.buildSnapshot();
   }

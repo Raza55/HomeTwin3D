@@ -5,7 +5,8 @@
  */
 import { Ray, Vector3, VertexBuffer, type AbstractMesh, type Scene } from '@babylonjs/core';
 import type { DayDemoCast, RoomRole } from './cast';
-import type { Shot, ShotAnchor } from './story';
+import type { Framing, Shot, ShotAnchor } from './story';
+import { floorplanId } from '../../babylon/FloorplanBindings';
 
 /** First-person camera the director drives (the dashboard's walk mode). */
 export interface WalkControl {
@@ -64,34 +65,106 @@ export class ShotDirector {
 
   constructor(private scene: Scene, private cast: DayDemoCast, private walk: WalkControl, private tvPlanes: () => AbstractMesh[]) {}
 
-  /** Eye and look-at point for a shot at virtual time `virtual`; null when its anchors are missing. */
+  /**
+   * Eye and look-at point for a shot at virtual time `virtual`; null when its
+   * anchors are missing. Between keys the eye glides and the view turns;
+   * `scene` counts the cuts passed so far (the overlay dips to black on change).
+   */
   pose(shot: Shot, virtual: number): { eye: Vector3; look: Vector3; segment: number } | null {
-    const f = Math.max(0, Math.min(.9999, (virtual - shot.from) / (shot.to - shot.from)));
-    const index = shot.segments.findIndex(s => f >= s.span[0] && f < s.span[1]);
-    const segment = shot.segments[index];
-    const anchor = segment && this.anchor(segment.at);
-    if (!segment || !anchor) return null;
-    const t = (f - segment.span[0]) / (segment.span[1] - segment.span[0]);
-    let eye = this.eyeAt(anchor, segment.eye[0] + (segment.eye[1] - segment.eye[0]) * ease(t));
-    let look = this.lookAt(anchor);
-    const pan = segment.pan && this.anchor(segment.pan.to);
-    if (segment.pan && pan && t > segment.pan.from) {
-      const u = ease((t - segment.pan.from) / (1 - segment.pan.from));
-      eye = Vector3.Lerp(eye, this.eyeAt(pan, segment.pan.eye), u);
+    const f = Math.max(0, Math.min(1, (virtual - shot.from) / (shot.to - shot.from)));
+    const keys = shot.keys;
+    let i = 0;
+    while (i < keys.length - 1 && keys[i + 1].t <= f) i++;
+    const a = keys[i], b = keys[Math.min(i + 1, keys.length - 1)];
+    const cuts = keys.slice(1, i + 1).filter(k => k.cut).length;
+    const eyeA = this.eyeOf(shot, i), lookA = this.lookOf(a);
+    if (!eyeA || !lookA) return null;
+    let eye = eyeA, look = lookA;
+    if (b !== a && !b.cut) {
+      const eyeB = this.eyeOf(shot, i + 1), lookB = this.lookOf(b);
+      if (!eyeB || !lookB) return null;
+      const u = ease(Math.max(0, Math.min(1, (f - a.t) / Math.max(1e-6, b.t - a.t))));
+      eye = Vector3.Lerp(eyeA, eyeB, u);
       // Turn the view direction rather than sliding the look-at point.
-      const from = look.subtract(eye).normalize(), to = this.lookAt(pan).subtract(eye).normalize();
+      const from = lookA.subtract(eyeA).normalize(), to = lookB.subtract(eyeB).normalize();
       look = eye.add(Vector3.Lerp(from, to, u).normalize().scale(4 * this.walk.unit()));
     }
-    // A slight breathing sway keeps the hand-held feel.
+    // A natural head angle: never more than ~25° down (or 20° up) while turning.
     const unit = this.walk.unit(), time = performance.now() / 1000;
+    eye = eye.clone(); look = look.clone();
+    const view = look.subtract(eye), flat = Math.hypot(view.x, view.z);
+    if (flat > 1e-6) look.y = eye.y + Math.max(-.47 * flat, Math.min(.36 * flat, view.y));
+    // A slight breathing sway keeps the hand-held feel.
     eye.y += Math.sin(time * 1.3) * .012 * unit;
     look.x += Math.sin(time * .7) * .03 * unit;
-    return { eye, look, segment: index };
+    return { eye, look, segment: cuts };
+  }
+
+  private eyes = new Map<string, Vector3 | null>();
+
+  /** Eye position of a key (cached: it depends only on the model). */
+  private eyeOf(shot: Shot, index: number): Vector3 | null {
+    const id = `${shot.id}:${index}`;
+    if (this.eyes.has(id)) return this.eyes.get(id)!;
+    const key = shot.keys[index], anchor = this.anchor(key.eye.at);
+    let eye: Vector3 | null = null;
+    if (anchor && key.eye.approach && index > 0) {
+      // Walk straight from the previous position towards the anchor; stop in front of it
+      // or where furniture is in the way.
+      const from = this.eyeOf(shot, index - 1);
+      if (from) {
+        const unit = this.walk.unit();
+        const target = new Vector3(anchor.center.x, from.y, anchor.center.z);
+        const path = target.subtract(from), length = path.length();
+        const direction = path.normalize();
+        const hit = this.scene.pickWithRay(new Ray(from, direction, length), mesh => this.blocks(mesh, anchor), true);
+        const free = hit?.hit ? hit.distance - .4 * unit : length;
+        eye = from.add(direction.scale(Math.max(0, Math.min(free, length - key.eye.metres * unit))));
+      }
+    } else if (anchor && key.eye.seeing) {
+      // Walk in until the other anchor is in clear view (no wardrobe or wall in front).
+      const view = this.anchor(key.eye.seeing);
+      eye = this.eyeAt(anchor, key.eye.metres);
+      if (view) {
+        const unit = this.walk.unit();
+        const { reach } = this.spots(anchor);
+        // A wide view: the target's centre and 0.8 m to either side must be visible,
+        // so no wardrobe or door frame cuts into the picture.
+        const clear = (p: Vector3) => {
+          const centre = view.center.subtract(p);
+          const side = new Vector3(-centre.z, 0, centre.x).normalize().scale(.8 * unit);
+          return [view.center, view.center.add(side), view.center.subtract(side)].every(target => {
+            const toTarget = target.subtract(p), distance = toTarget.length();
+            const hit = this.scene.pickWithRay(new Ray(p, toTarget.normalize(), distance - .2 * unit),
+              mesh => this.blocks(mesh, view) && !anchor.meshes.includes(mesh), true);
+            return !hit?.hit;
+          });
+        };
+        for (let d = key.eye.metres; d <= reach; d += .3) {
+          const p = this.eyeAt(anchor, d);
+          if (clear(p)) { eye = p; break; }
+        }
+      }
+    } else if (anchor) eye = this.eyeAt(anchor, key.eye.metres);
+    this.eyes.set(id, eye);
+    return eye;
+  }
+
+  private lookOf(key: { look: ShotAnchor }): Vector3 | null {
+    const anchor = this.anchor(key.look);
+    return anchor ? this.lookAt(anchor) : null;
+  }
+
+  /** Point the orbit camera centres on for a chapter (null: the whole site). */
+  focus(framing: Framing): Vector3 | null {
+    if (framing.at === 'overview') return null;
+    const anchor = this.anchor(framing.at);
+    return anchor ? new Vector3(anchor.center.x, this.walk.floorY() + .9 * this.walk.unit(), anchor.center.z) : null;
   }
 
   /** Blind entity at the shot's (first) window, found by its panel mesh next to the glass. */
   blindFor(shot: Shot): string | undefined {
-    const windowSpec = shot.segments.flatMap(s => [s.at, s.pan?.to]).find(a => a?.kind === 'window');
+    const windowSpec = shot.keys.flatMap(k => [k.look, k.eye.at]).find(a => a.kind === 'window');
     const anchor = windowSpec && this.anchor(windowSpec);
     if (!anchor) return undefined;
     let best: { entityId: string; distance: number } | undefined;
@@ -105,9 +178,15 @@ export class ShotDirector {
     return best && best.distance < 2.5 * this.walk.unit() ? best.entityId : undefined;
   }
 
+  /** Resolves every anchor, standing spot and view of a shot ahead of time (ray casts take ~0.1 s). */
+  warm(shot: Shot): void {
+    if (!this.playable(shot)) return;
+    shot.keys.forEach((key, i) => { this.eyeOf(shot, i); this.lookOf(key); });
+  }
+
   /** True when every anchor the shot needs exists in this model. */
   playable(shot: Shot): boolean {
-    return shot.segments.every(s => !!this.anchor(s.at));
+    return shot.keys.every(k => !!this.anchor(k.eye.at) && !!this.anchor(k.look));
   }
 
   /** Ray casts against the whole model are far too slow per frame: measure each anchor once. */
@@ -130,6 +209,7 @@ export class ShotDirector {
   private eyeAt(anchor: Anchor, metres: number): Vector3 {
     const unit = this.walk.unit();
     const height = this.walk.floorY() + 1.6 * unit;
+    if (anchor.inward.lengthSquared() === 0) return new Vector3(anchor.center.x, height, anchor.center.z);
     const { reach, floor } = this.spots(anchor);
     let d = Math.min(metres, reach);
     // Step back from furniture: the nearest spot with floor at or below the wanted distance.
@@ -190,14 +270,60 @@ export class ShotDirector {
   private resolve(spec: ShotAnchor): Anchor | null {
     if (spec.kind === 'pc') return this.screenAnchor(this.pcScreens());
     if (spec.kind === 'tv') return this.screenAnchor(this.tvPlanes().filter(m => !m.isDisposed()));
+    if (spec.kind === 'coffee') return this.objectAnchor(this.cast.coffee.map(c => c.objectId));
+    if (spec.kind === 'washer') return this.objectAnchor(this.cast.appliances.map(a => a.objectId));
+    if (spec.kind === 'entrance') return this.entranceAnchor();
+    if (spec.kind === 'room') {
+      const center = this.roomCenter(spec.room);
+      if (center) return { center: new Vector3(center.x, this.walk.floorY() + 1 * this.walk.unit(), center.z), inward: Vector3.Zero(), out: false, meshes: [] };
+      // Rooms without findable lamps: the device that stands there.
+      const stand: Partial<Record<RoomRole, ShotAnchor>> = { bedroom: { kind: 'pc' }, office: { kind: 'pc' }, kitchen: { kind: 'coffee' }, hall: { kind: 'entrance' }, living: { kind: 'tv' }, dining: { kind: 'tv' } };
+      const fallback = stand[spec.room];
+      return fallback ? this.anchor(fallback) : null;
+    }
     const windows = this.scene.meshes.filter(m => m.metadata?.windowGlass && !m.isDisposed());
     if (!windows.length) return null;
     // The room's lamps locate it; `near` (PC, TV) is the fallback or the only reference.
-    const reference = (spec.room ? this.roomCenter(spec.room) : null) ?? (spec.near ? this.anchor({ kind: spec.near })?.center : null);
+    const reference = (spec.room ? this.roomCenter(spec.room) : null) ?? (spec.near ? this.anchor({ kind: spec.near } as ShotAnchor)?.center : null);
     if (!reference) return null;
     const distance = (m: AbstractMesh) => { const c = bounds([m]).center; return Math.hypot(c.x - reference.x, c.z - reference.z); };
     const glass = windows.reduce((best, m) => distance(m) < distance(best) ? m : best);
     return this.flatAnchor([glass], true, reference);
+  }
+
+  /** Meshes of floorplan objects (by their exported id). */
+  private objectMeshes(ids: (string | undefined)[]): AbstractMesh[] {
+    const wanted = new Set(ids.filter((id): id is string => !!id));
+    if (!wanted.size) return [];
+    return this.scene.meshes.filter(m => !m.isDisposed() && m.getTotalVertices() > 0 && wanted.has(floorplanId(m) ?? ''));
+  }
+
+  /** A device on a counter or shelf: its front is the side with the longest free view. */
+  private objectAnchor(ids: (string | undefined)[]): Anchor | null {
+    const meshes = this.objectMeshes(ids);
+    if (!meshes.length) return null;
+    const { center } = bounds(meshes);
+    const unit = this.walk.unit();
+    const origin = new Vector3(center.x, this.walk.floorY() + 1.3 * unit, center.z);
+    let best: { dir: Vector3; free: number } | null = null;
+    for (let i = 0; i < 8; i++) {
+      const dir = new Vector3(Math.cos(i * Math.PI / 4), 0, Math.sin(i * Math.PI / 4));
+      const hit = this.scene.pickWithRay(new Ray(origin.add(dir.scale(.2 * unit)), dir, 5 * unit), mesh => this.blocks(mesh, { center, inward: dir, out: false, meshes }), true);
+      const free = hit?.hit ? hit.distance : 5 * unit;
+      if (!best || free > best.free + .05 * unit) best = { dir, free };
+    }
+    return { center, inward: best!.dir, out: false, meshes };
+  }
+
+  /** Inside the front door, facing into the apartment. */
+  private entranceAnchor(): Anchor | null {
+    const meshes = this.objectMeshes(this.cast.doors.filter(d => d.kind === 'entrance').map(d => d.objectId));
+    if (!meshes.length) return null;
+    const { center } = bounds(meshes);
+    const towards = this.apartmentCenter().subtract(center);
+    towards.y = 0;
+    if (towards.lengthSquared() < 1e-6) return null;
+    return { center, inward: towards.normalize(), out: false, meshes };
   }
 
   private pcScreens(): AbstractMesh[] {

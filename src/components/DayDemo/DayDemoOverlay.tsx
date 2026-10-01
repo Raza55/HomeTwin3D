@@ -2,7 +2,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import {
   AlarmClock, BedDouble, Blinds, Bot, CloudLightning, CloudSun, Coffee, DoorOpen, Droplets, Fan, Film, Footprints,
   Gamepad2, Gauge, House, Lightbulb, LightbulbOff, Lock, Monitor, Moon, Palette, Pause, Play, RotateCcw, Snowflake,
-  Speaker, Sun, Sunrise, Sunset, Thermometer, TriangleAlert, Trophy, Tv, Utensils, Video, VideoOff, WashingMachine, X,
+  Speaker, Sun, Sunrise, Sunset, Thermometer, TriangleAlert, Tv, Utensils, Video, VideoOff, WashingMachine, X,
   Cloud, CloudFog, CloudRain, CloudDrizzle, CloudSnow, type LucideIcon,
 } from 'lucide-react';
 import type { DayDemoController } from '../../services/dayDemo/controller';
@@ -21,7 +21,6 @@ const ICONS: Record<string, Icon> = {
   speaker: Speaker, palette: Palette,
 };
 
-const SPEEDS = [0.5, 1, 2, 4];
 
 function weatherIcon(code: number, clouds: number): Icon {
   if (code >= 95) return CloudLightning;
@@ -112,13 +111,6 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
             <button type="button" className="day-demo-btn" onClick={() => controller.togglePlay()} aria-label={view.playing ? t('dayDemo.pause') : t('dayDemo.play')} title={view.playing ? t('dayDemo.pause') : t('dayDemo.play')}>
               {view.playing ? <Pause size={16} /> : <Play size={16} />}
             </button>
-            <div className="day-demo-speed" role="group" aria-label={t('dayDemo.speed')}>
-              {SPEEDS.map(speed => (
-                <button key={speed} type="button" aria-pressed={view.speed === speed} className={view.speed === speed ? 'active' : ''} onClick={() => controller.setSpeed(speed)}>
-                  {speed === 0.5 ? '½' : speed}×
-                </button>
-              ))}
-            </div>
             <button type="button" className={`day-demo-btn${view.tour ? ' active' : ''}`} onClick={() => controller.setTour(!view.tour)} aria-pressed={view.tour} title={t('dayDemo.cameraTour')} aria-label={t('dayDemo.cameraTour')}>
               {view.tour ? <Video size={16} /> : <VideoOff size={16} />}
             </button>
@@ -128,6 +120,19 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
           </div>
         </div>
 
+        {result ? (
+          <div className="day-demo-end" role="status">
+            <span className="day-demo-end-title"><Sunrise size={16} aria-hidden /> {t('dayDemo.endTitle')}</span>
+            <span><strong>Ø {Math.round(result.fps)} FPS</strong> <small>(min {result.fpsMin} · max {result.fpsMax})</small></span>
+            <span><strong>{view.stats.lightSwitches.toLocaleString(language)}</strong> {t('dayDemo.endLights')}</span>
+            <span><strong>{view.stats.blindMoves.toLocaleString(language)}</strong> {t('dayDemo.endBlinds')}</span>
+            <span><strong>{view.stats.updates.toLocaleString(language)}</strong> {t('dayDemo.endUpdates')}</span>
+            <span className="day-demo-end-actions">
+              <button type="button" className="day-demo-btn" onClick={() => controller.restart()}><RotateCcw size={14} /> {t('dayDemo.again')}</button>
+              <button type="button" className="day-demo-btn primary" onClick={onExit}>{t('dayDemo.exit')}</button>
+            </span>
+          </div>
+        ) : (
         <div className="day-demo-body">
           <div className="day-demo-chapter" key={chapter?.id ?? 'none'}>
             <div className="day-demo-chapter-head">
@@ -150,6 +155,7 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
             })}
           </ol>
         </div>
+        )}
 
         <div className="day-demo-timeline" onPointerDown={seekTo} role="slider" aria-label={t('dayDemo.timeline')}
           aria-valuemin={0} aria-valuemax={DAY_LENGTH} aria-valuenow={Math.round(view.virtual)} aria-valuetext={clockLabel(view.clock)}>
@@ -169,56 +175,6 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
         </div>
       </div>
 
-      {result && (
-        <div className="day-demo-result" role="dialog" aria-modal="false" aria-label={t('dayDemo.resultTitle')}>
-          <div className="day-demo-result-head">
-            <Sunrise size={22} aria-hidden />
-            <div>
-              <h3>{t('dayDemo.summaryTitle')}</h3>
-              <p>{t('dayDemo.summaryText')}</p>
-            </div>
-          </div>
-          <dl className="day-demo-stats day-demo-day">
-            <div><dt>{t('dayDemo.statAutomations')}</dt><dd>{view.stats.automations}</dd></div>
-            <div><dt>{t('dayDemo.statLightHours')}</dt><dd>{view.stats.lightHours.toLocaleString(language, { maximumFractionDigits: 1 })} h</dd></div>
-            <div><dt>{t('dayDemo.statRain')}</dt><dd>{Math.round(view.stats.rainMinutes / 6) / 10} h</dd></div>
-            <div><dt>{t('dayDemo.statTemp')}</dt><dd>{Math.round(view.stats.minTemp)}–{Math.round(view.stats.maxTemp)} °C</dd></div>
-            <div><dt>{t('dayDemo.statGusts')}</dt><dd>{Math.round(view.stats.maxGust)} km/h</dd></div>
-            <div><dt>{t('dayDemo.statFps')}</dt><dd>{result.fps}</dd></div>
-          </dl>
-          <details className="day-demo-bench">
-            <summary><Trophy size={14} aria-hidden /> {t('dayDemo.resultTitle')} · {result.score.toLocaleString(language)} {t('dayDemo.points')}</summary>
-            <p className="day-demo-bench-meta">{result.renderer} · {result.resolution} · {result.speed}× · {result.tour ? t('dayDemo.withTour') : t('dayDemo.withoutTour')}</p>
-          <dl className="day-demo-stats">
-            <div><dt>Ø FPS</dt><dd>{result.fps}</dd></div>
-            <div><dt>1 % Low</dt><dd>{result.low1}</dd></div>
-            <div><dt>p95</dt><dd>{result.p95} ms</dd></div>
-            <div><dt>CPU</dt><dd>{result.cpu} ms</dd></div>
-            <div><dt>{t('dayDemo.drawCalls')}</dt><dd>{result.draws}</dd></div>
-            <div><dt>{t('dayDemo.frames')}</dt><dd>{result.frames.toLocaleString(language)}</dd></div>
-          </dl>
-          <div className="day-demo-bars">
-            {result.chapters.map(row => {
-              const c = CHAPTERS.find(item => item.chapter.id === row.id)?.chapter;
-              const max = Math.max(...result.chapters.map(r => r.fps), 1);
-              return (
-                <div key={row.id} className="day-demo-bar" title={`${c ? pick(c.title, language) : row.id}: ${row.fps} FPS · p95 ${row.p95} ms · CPU ${row.cpu} ms · ${row.draws} ${t('dayDemo.drawCalls')}`}>
-                  <span className="day-demo-bar-label">{c ? pick(c.title, language) : row.id}</span>
-                  <span className="day-demo-bar-track"><span style={{ width: `${row.fps / max * 100}%` }} /></span>
-                  <span className="day-demo-bar-value">{row.fps}</span>
-                </div>
-              );
-            })}
-          </div>
-          </details>
-          <div className="day-demo-result-actions">
-            <button type="button" onClick={() => controller.restart()}><RotateCcw size={15} /> {t('dayDemo.again')}</button>
-            <button type="button" onClick={() => void navigator.clipboard?.writeText(JSON.stringify(result, null, 2))}>{t('dayDemo.copy')}</button>
-            <button type="button" className="primary" onClick={onExit}>{t('dayDemo.exit')}</button>
-          </div>
-          <p className="day-demo-note">{t('dayDemo.simulationNote')}</p>
-        </div>
-      )}
     </div>
   );
 }

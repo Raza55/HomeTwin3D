@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 300;
+export const DAY_REAL_SECONDS = 130;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -91,8 +91,8 @@ const LIVING: RoomRole[] = ['living', 'dining'];
 export const STORY: StoryBeat[] = [
   beat('05:30', [], {
     id: 'night', icon: 'moon',
-    title: { de: 'Nacht über dem Haus', en: 'Night over the home' },
-    text: { de: 'Alles schläft, Nebel liegt über dem Park. Wer nachts ans Fenster tritt, löst den Bewegungsmelder aus: zwei Lichter glimmen sanft auf.', en: 'Everyone is asleep, fog lies over the park. Stepping up to the window at night triggers the motion sensor: two lights glow up softly.' },
+    title: { de: 'Dämmerung', en: 'Dawn' },
+    text: { de: 'Vom Eingang fällt der Blick durchs Wohnzimmer: Draußen wird es langsam hell, der Morgenwind biegt Bäume und Büsche. Ein Bewegungsmelder lässt zwei Lichter sanft aufglimmen.', en: 'From the entrance the view runs through the living room: outside it slowly gets light, the morning wind bends trees and bushes. A motion sensor lets two lights glow up softly.' },
   }),
   beat('05:41', [
     { type: 'light', target: { rooms: ['living'], fallback: 1 }, on: true, brightness: 14, kelvin: 2200, ramp: 2.5 },
@@ -127,8 +127,8 @@ export const STORY: StoryBeat[] = [
     title: { de: 'Kaffee ist fertig, bevor du es bist', en: 'Coffee is ready before you are' },
     text: { de: 'Die Kaffeemaschine heizt vor und bereitet einen Caffè Latte zu. Das Briefing warnt schon vor dem Nachmittag.', en: 'The coffee machine preheats and brews a caffè latte. The briefing already warns about the afternoon.' },
   }),
-  beat('06:43', [{ type: 'coffee', phase: 'brew', minutes: 4 }, { type: 'popup', target: 'coffee', open: true }]),
-  beat('06:49', [{ type: 'popup', target: 'coffee', open: false }]),
+  beat('06:46', [{ type: 'coffee', phase: 'brew', minutes: 4 }, { type: 'popup', target: 'coffee', open: true }]),
+  beat('06:53', [{ type: 'popup', target: 'coffee', open: false }]),
   beat('06:56', [{ type: 'light', target: { rooms: ['hall'] }, on: false }]),
   beat('07:00', [
     { type: 'light', target: { rooms: ['bath'], fallback: 1 }, on: true, brightness: 100, kelvin: DAYLIGHT },
@@ -164,16 +164,11 @@ export const STORY: StoryBeat[] = [
     text: { de: 'Die Haustür fällt ins Schloss: Abwesenheitsmodus. Alle Lichter, der Fernseher und die Kaffeemaschine gehen aus.', en: 'The front door shuts: away mode. All lights, the TV and the coffee machine switch off.' },
   }),
   beat('08:16', [{ type: 'lock', locked: true }]),
-  beat('08:30', [
-    { type: 'vacuum', phase: 'cleaning' },
-  ], {
-    id: 'chores', icon: 'robot',
-    title: { de: 'Saugroboter & Solar-Waschgang', en: 'Robot vacuum & solar laundry' },
-    text: { de: 'Niemand zu Hause: Der Saugroboter fährt los. Ab 9 Uhr startet die Waschmaschine mit Solarüberschuss.', en: 'Nobody home: the robot vacuum sets off. From 9 am the washer runs on surplus solar power.' },
+  beat('09:00', [{ type: 'appliance', kind: 'washer', running: true }], {
+    id: 'chores', icon: 'washer',
+    title: { de: 'Waschtag', en: 'Laundry day' },
+    text: { de: 'Niemand zu Hause: Die Waschmaschine startet nach Zeitplan, danach übernimmt der Trockner.', en: 'Nobody home: the washer starts on schedule, the dryer takes over afterwards.' },
   }),
-  beat('09:00', [{ type: 'appliance', kind: 'washer', running: true }]),
-  beat('09:40', [{ type: 'vacuum', phase: 'returning' }]),
-  beat('09:48', [{ type: 'vacuum', phase: 'docked' }]),
   beat('10:30', [], {
     id: 'sunny', icon: 'sun',
     title: { de: 'Sonniger Vormittag', en: 'Sunny morning' },
@@ -308,8 +303,8 @@ export interface WeatherKey { clock: string; code: number; clouds: number; rain?
 
 /** WMO codes (Open-Meteo): 0 clear, 1–3 clouds, 45 fog, 53 drizzle, 61 rain, 73 snow, 95 thunderstorm. */
 export const WEATHER: WeatherKey[] = [
-  { clock: '05:30', code: 45, clouds: 60, temp: 9, wind: 4, gusts: 8, dir: 220 },
-  { clock: '06:50', code: 2, clouds: 40, temp: 10, wind: 6, gusts: 11, dir: 230 },
+  { clock: '05:30', code: 2, clouds: 35, temp: 9, wind: 24, gusts: 44, dir: 250 },
+  { clock: '06:50', code: 2, clouds: 40, temp: 10, wind: 20, gusts: 36, dir: 250 },
   { clock: '08:00', code: 1, clouds: 15, temp: 12, wind: 8, gusts: 15, dir: 240 },
   { clock: '10:30', code: 0, clouds: 4, temp: 18, wind: 10, gusts: 18, dir: 250 },
   { clock: '12:45', code: 1, clouds: 18, temp: 22, wind: 14, gusts: 24, dir: 250 },
@@ -365,25 +360,25 @@ export function weatherAt(virtual: number): DemoWeather {
 
 /** Relative speed per part of the day: quiet hours pass faster than busy ones. */
 const PACE: { clock: string; speed: number }[] = [
-  // Night window shot: slow enough to walk to the window and watch the lights come up.
-  { clock: '05:30', speed: 0.45 },
-  { clock: '06:05', speed: 0.8 },
+  // Opening shot: dawn through the living-room windows, then kitchen and coffee machine.
+  { clock: '05:30', speed: 1.1 },
+  { clock: '06:28', speed: 0.38 },
   // Let the coffee machine's popup show its progress.
-  { clock: '06:42', speed: 0.35 },
-  { clock: '06:50', speed: 0.8 },
-  { clock: '08:35', speed: 1.8 },
-  { clock: '13:25', speed: 1 },
-  { clock: '14:55', speed: .6 },
-  { clock: '16:05', speed: 1 },
+  { clock: '06:45', speed: 0.2 },
+  { clock: '06:54', speed: 0.9 },
+  { clock: '08:35', speed: 2 },
+  { clock: '13:25', speed: 1.2 },
+  { clock: '15:00', speed: .55 },
+  { clock: '16:05', speed: 1.1 },
   { clock: '17:40', speed: 1.1 },
-  { clock: '20:15', speed: 0.7 },
-  { clock: '21:10', speed: 1.1 },
-  { clock: '22:20', speed: 0.8 },
-  { clock: '23:10', speed: 1.1 },
-  { clock: '23:45', speed: 2.6 },
-  { clock: '02:25', speed: 1 },
-  { clock: '03:40', speed: 2.6 },
-];
+  { clock: '20:15', speed: 0.6 },
+  { clock: '21:10', speed: 1.2 },
+  { clock: '22:20', speed: 0.5 },
+  { clock: '23:10', speed: 1.2 },
+  { clock: '23:45', speed: 3 },
+  { clock: '02:25', speed: 1.1 },
+  { clock: '03:40', speed: 3 },
+]
 const PACE_KEYS = PACE.map(p => ({ at: clockToVirtual(p.clock), speed: p.speed })).sort((a, b) => a.at - b.at);
 /** Normalised so a whole day takes DAY_REAL_SECONDS at 1×. */
 const PACE_SCALE = (() => {
@@ -420,46 +415,89 @@ export function pick(text: Text, language: string): string {
 
 /**
  * First-person moments during the camera tour. Anchors are found in the model:
- * a room's window (looking out), the PC monitor or the TV (looking at them).
+ * windows (looking out), the PC monitor, the TV, the coffee machine, the entrance
+ * or the middle of a room (from its lamps).
  */
 export type ShotAnchor =
-  | { kind: 'window'; room?: RoomRole; near?: 'pc' | 'tv' }
+  | { kind: 'window'; room?: RoomRole; near?: 'pc' | 'tv' | 'coffee' }
   | { kind: 'pc' }
-  | { kind: 'tv' };
+  | { kind: 'tv' }
+  | { kind: 'coffee' }
+  | { kind: 'entrance' }
+  | { kind: 'room'; room: RoomRole }
+  | { kind: 'washer' };
 
-export interface ShotSegment {
-  /** Part of the shot (0..1). Segments in other rooms are joined by a short cut. */
-  span: [number, number];
-  at: ShotAnchor;
-  /** Eye distance from the anchor in metres, at the start and end of the segment. */
-  eye: [number, number];
-  /** Optional turn within the segment towards a second anchor (from this fraction of the segment on). */
-  pan?: { to: ShotAnchor; eye: number; from: number };
+/** One moment of a shot: where the eye stands and what it looks at. Between keys the camera glides. */
+export interface ShotKey {
+  /** Position within the shot (0..1). */
+  t: number;
+  /**
+   * Eye: `metres` from the anchor into the room, at eye height. `seeing`: walk further
+   * in until that anchor is in clear view. `approach`: walk straight from the previous
+   * key's position towards the anchor and stop `metres` in front of it.
+   */
+  eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean };
+  look: ShotAnchor;
+  /** Jump here with a short dip to black instead of gliding (another room). */
+  cut?: boolean;
 }
 
 export interface Shot {
-  id: string; from: number; to: number; segments: ShotSegment[];
+  id: string; from: number; to: number; keys: ShotKey[];
   /** Raise the blind of the shot's window to this position while it runs (motion sensor at the window). */
   blind?: number;
 }
 
-const shot = (id: string, from: string, to: string, segments: ShotSegment[], blind?: number): Shot => ({ id, from: clockToVirtual(from), to: clockToVirtual(to), segments, blind });
+const shot = (id: string, from: string, to: string, keys: ShotKey[], blind?: number): Shot => ({ id, from: clockToVirtual(from), to: clockToVirtual(to), keys, blind });
+
+const LIVING_WINDOW: ShotAnchor = { kind: 'window', room: 'living' };
+const ENTRANCE: ShotAnchor = { kind: 'entrance' };
 
 export const SHOTS: Shot[] = [
-  shot('night-window', '05:32', '06:03', [
-    { span: [0, 1], at: { kind: 'window', room: 'living' }, eye: [3.2, 1.0] },
-  ], 75),
+  shot('opening', '05:30', '06:45', [
+    { t: 0, eye: { at: ENTRANCE, metres: .9, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
+    { t: .6, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
+    { t: .78, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' } },
+    { t: 1, eye: { at: { kind: 'coffee' }, metres: 1.3, approach: true }, look: { kind: 'coffee' } },
+  ], 80),
   shot('storm-bedroom', '15:04', '15:46', [
-    { span: [0, 1], at: { kind: 'window', room: 'bedroom', near: 'pc' }, eye: [2.8, 1.1] },
+    { t: 0, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 2.8 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
+    { t: 1, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 1.1 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
   ]),
   shot('cinema', '20:22', '21:02', [
-    { span: [0, 1], at: { kind: 'tv' }, eye: [4.2, 3.4], pan: { to: { kind: 'window', near: 'tv' }, eye: 1.4, from: .5 } },
+    { t: 0, eye: { at: { kind: 'tv' }, metres: 4.2 }, look: { kind: 'tv' } },
+    { t: .5, eye: { at: { kind: 'tv' }, metres: 3.4 }, look: { kind: 'tv' } },
+    { t: 1, eye: { at: { kind: 'window', near: 'tv' }, metres: 1.4 }, look: { kind: 'window', near: 'tv' } },
   ], 70),
   shot('gaming', '22:24', '22:58', [
-    { span: [0, 1], at: { kind: 'pc' }, eye: [2.2, 1.5], pan: { to: { kind: 'window', near: 'pc' }, eye: 1.3, from: .45 } },
+    { t: 0, eye: { at: { kind: 'pc' }, metres: 2.2 }, look: { kind: 'pc' } },
+    { t: .45, eye: { at: { kind: 'pc' }, metres: 1.5 }, look: { kind: 'pc' } },
+    { t: 1, eye: { at: { kind: 'window', near: 'pc' }, metres: 1.3 }, look: { kind: 'window', near: 'pc' } },
   ], 70),
 ];
 
 export function shotAt(virtual: number): Shot | undefined {
   return SHOTS.find(s => virtual >= s.from && virtual < s.to);
 }
+
+// --- Orbit framing ------------------------------------------------------------------
+
+/**
+ * Where the orbit camera looks during each chapter: the room where something
+ * happens, close up (zoom = share of the home view's distance), or the whole
+ * site for weather. Tilt lowers the camera for a view towards the horizon.
+ */
+export interface Framing { at: ShotAnchor | 'overview'; zoom: number; tilt: number }
+
+const room = (r: RoomRole, zoom = .42): Framing => ({ at: { kind: 'room', room: r }, zoom, tilt: -.05 });
+const anchor = (at: ShotAnchor, zoom = .42): Framing => ({ at, zoom, tilt: -.05 });
+const overview = (zoom: number, tilt: number): Framing => ({ at: 'overview', zoom, tilt });
+
+export const CHAPTER_FRAMING: Record<string, Framing> = {
+  night: anchor(ENTRANCE, .5), wake: room('bedroom', .4), sunrise: room('living', .55), coffee: anchor({ kind: 'coffee' }, .36),
+  bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'washer' }, .36),
+  sunny: overview(1.35, .16), shade: room('living', .6), warning: overview(1.3, .16), storm: overview(1.55, .2),
+  clearing: overview(1.3, .14), home: anchor(ENTRANCE, .42), cooking: room('kitchen', .38), sunset: room('living', .6),
+  cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
+  nightlight: room('hall', .4), snow: overview(1.55, .2), dawn: overview(1.2, .12),
+};

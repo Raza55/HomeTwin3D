@@ -41,8 +41,8 @@ function drawNews(ctx: CanvasRenderingContext2D, f: ScreenFrame): void {
   for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(0, i * 45, Math.sqrt(130 ** 2 - (i * 45) ** 2), 10, 0, 0, Math.PI * 2); ctx.stroke(); }
   ctx.restore();
   const headlines = de(f)
-    ? ['Gewitterfront erreicht am Nachmittag den Süden', 'Energie: Solarstrom deckt heute 68 % des Bedarfs', 'Verkehr: freie Fahrt auf den Hauptachsen', 'Sport: Heimsieg im Spitzenspiel', 'Kultur: Lange Nacht der Museen am Wochenende']
-    : ['Thunderstorm front reaches the south this afternoon', 'Energy: solar covers 68 % of demand today', 'Traffic: main roads clear', 'Sport: home win in the top match', 'Culture: museum night this weekend'];
+    ? ['Gewitterfront erreicht am Nachmittag den Süden', 'Wetter: Morgen wieder freundlich und mild', 'Verkehr: freie Fahrt auf den Hauptachsen', 'Sport: Heimsieg im Spitzenspiel', 'Kultur: Lange Nacht der Museen am Wochenende']
+    : ['Thunderstorm front reaches the south this afternoon', 'Weather: friendly and mild again tomorrow', 'Traffic: main roads clear', 'Sport: home win in the top match', 'Culture: museum night this weekend'];
   ctx.fillStyle = '#ffffff'; ctx.font = '800 54px system-ui'; ctx.fillText(de(f) ? 'MORGENMAGAZIN' : 'MORNING SHOW', 56, 110);
   ctx.fillStyle = '#9cc2ff'; ctx.font = '500 24px system-ui'; ctx.fillText(de(f) ? 'Live aus dem Studio' : 'Live from the studio', 58, 148);
   // Lower third.
@@ -138,7 +138,7 @@ function drawDesktop(ctx: CanvasRenderingContext2D, f: ScreenFrame): void {
   plot('#4cc9f0', i => .3 + .15 * Math.sin(i / 3 + 1) + .08 * Math.sin(i * 1.7));
   // Status card.
   win(575, 280, 355, 190, de(f) ? 'Smart Home' : 'Smart home');
-  const items = de(f) ? [['Lichter an', '3'], ['Rollos', '30 %'], ['Außen', '21 °C'], ['Solar', `${(4.2 + Math.sin(f.frame) * .3).toFixed(1)} kW`]] : [['Lights on', '3'], ['Blinds', '30 %'], ['Outside', '21 °C'], ['Solar', `${(4.2 + Math.sin(f.frame) * .3).toFixed(1)} kW`]];
+  const items = de(f) ? [['Lichter an', '3'], ['Rollos', '30 %'], ['Außen', '21 °C'], ['Strom', `${(0.42 + Math.sin(f.frame) * .05).toFixed(2)} kW`]] : [['Lights on', '3'], ['Blinds', '30 %'], ['Outside', '21 °C'], ['Power', `${(0.42 + Math.sin(f.frame) * .05).toFixed(2)} kW`]];
   items.forEach(([label, value], i) => {
     ctx.fillStyle = '#9aa7bd'; ctx.font = '500 17px system-ui'; ctx.fillText(label, 598, 342 + i * 32);
     ctx.fillStyle = '#e6edf7'; ctx.font = '700 17px system-ui'; ctx.textAlign = 'right'; ctx.fillText(value, 905, 342 + i * 32); ctx.textAlign = 'left';

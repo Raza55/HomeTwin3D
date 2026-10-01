@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.13 – Weniger Hintergrundarbeit (01.10.2026)
+
+- Tür-, Kaffee-, Lüfter-, Echo- und PC-Anzeigen reagieren gezielt auf ihre konfigurierten Entities einschließlich verschachtelter Sensoren und automatischer Kaffee-Warnsensoren. Gebündelte Zustandsereignisse bleiben vollständig erhalten.
+- Türgeometrie und Marker benötigen keine sekündliche Dauerprüfung mehr: Zustandsereignisse und ein Timer zum nächsten Kippzeitpunkt reichen. Ein geöffnetes Türpopup aktualisiert seine Dauer weiterhin jede Sekunde.
+- Die HUD-Uhr aktualisiert sich zum Minutenwechsel statt jede Sekunde. Bildqualität und Render-Einstellungen bleiben erhalten.
+
 ## 0.5.12 – Kaffeemaschine: Tropfschale, Wasser, Bohnen (01.10.2026)
 
 - Meldet die Kaffeemaschine „Tropfschale voll“, „Wassertank leer“ oder „Bohnenbehälter leer“ (Home-Connect-Sensoren), wird das Symbol im Plan orange mit Ausrufezeichen und zeigt die Meldung darunter; das Popup listet sie oben auf. Die Sensoren werden automatisch neben dem Betriebszustand gefunden, ein neuer Modellexport ist nicht nötig. Ist die Maschine offline, erscheinen keine veralteten Meldungen.

@@ -33,3 +33,15 @@ export function doorDuration(state: HAState | undefined, now = Date.now()): stri
   const hours = Math.floor(minutes / 60);
   return hours < 24 ? `${hours} h ${minutes % 60} min` : `${Math.floor(hours / 24)} Tage ${hours % 24} h`;
 }
+
+/** Next time a contact's inferred pose can change; closed/entrance doors need no timer. */
+export function nextDoorPoseDelay(doors: readonly { entityId: string; door?: { kind?: string } }[], states: Record<string, HAState>, now = Date.now()): number | null {
+  let delay = Infinity;
+  for (const door of doors) {
+    const state = states[door.entityId];
+    if (door.door?.kind === 'entrance' || !state || !['on', 'open'].includes(state.state)) continue;
+    const deadline = Date.parse(state.last_changed ?? '') + DOOR_TILT_AFTER_MS + 1;
+    if (Number.isFinite(deadline) && deadline > now) delay = Math.min(delay, deadline - now);
+  }
+  return Number.isFinite(delay) ? delay : null;
+}

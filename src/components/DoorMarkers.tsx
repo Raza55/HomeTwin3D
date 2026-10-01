@@ -5,20 +5,33 @@ import { DoorClosed, DoorOpen, Clock, Pencil, X, CircleHelp, LockKeyhole, LockKe
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { createDoorRigs, doorMarkerAnchor } from '../babylon/DoorAnimation';
-import { doorDuration, doorPose, doorStatus, lockStatus } from '../services/doorState';
+import { nextDoorPoseDelay, doorDuration, doorPose, doorStatus, lockStatus } from '../services/doorState';
 import './DoorMarkers.css';
-import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { useConfiguredEntityStates } from '../services/entityStateSignal';
 
 export default function DoorMarkers({ scene, config, states, connected, onAssign }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean; onAssign: (id: string) => void;
 }) {
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  const stateVersion = useConfiguredEntityStates(config, o => Boolean(o.door || o.doorLock));
   const buttons = useRef<Record<string, HTMLButtonElement | null>>({});
   const popup = useRef<HTMLElement>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const doors = config.model?.floorplan?.objects.filter(o => o.door) ?? [];
-  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000);return () => clearInterval(timer); }, []);
+  useEffect(() => {
+    const currentTime = Date.now();
+    if (Math.abs(currentTime - now) > 1000) setNow(currentTime);
+    // Only an open popup needs a second-by-second duration display.
+    if (open) {
+      const timer = window.setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(timer);
+    }
+    if (!connected) return;
+    const delay = nextDoorPoseDelay(doors, states);
+    if (delay === null) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.max(1, delay));
+    return () => clearTimeout(timer);
+  }, [open, connected, config, stateVersion, now]);
   useEffect(() => {
     const outside = (e: PointerEvent) => { if (!popup.current?.contains(e.target as Node) && !Object.values(buttons.current).some(b => b?.contains(e.target as Node))) setOpen(null); };
     const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(null); };

@@ -2,15 +2,15 @@ import { useEffect, useRef } from 'react';
 import { AbstractMesh, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { createDoorRigs, setDoorPose } from '../babylon/DoorAnimation';
-import { doorPose } from '../services/doorState';
+import { nextDoorPoseDelay, doorPose } from '../services/doorState';
 import { invalidateShadowsNear } from '../babylon/ShadowRange';
-import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { useConfiguredEntityStates } from '../services/entityStateSignal';
 
 /** Geometry only; status markers are rendered independently by DoorMarkers. */
 export default function DoorStatus({ scene, config, states, connected }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
 }) {
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  const stateVersion = useConfiguredEntityStates(config, o => Boolean(o.door));
   const live = useRef({ states, connected });live.current = { states, connected };
   useEffect(() => {
     const rigs = createDoorRigs(scene);
@@ -29,8 +29,14 @@ export default function DoorStatus({ scene, config, states, connected }: {
       // A leaf sweeps around its hinge: its own diagonal bounds the old position.
       invalidateShadowsNear(scene, moved, sweep);
     };
-    update();const timer = window.setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, [scene, config]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      update();
+      const delay = live.current.connected ? nextDoorPoseDelay([...doors.values()], live.current.states) : null;
+      if (delay !== null) timer = setTimeout(refresh, Math.max(1, delay));
+    };
+    refresh();
+    return () => clearTimeout(timer);
+  }, [scene, config, connected, stateVersion]);
   return null;
 }

@@ -4,13 +4,13 @@ import { PBRMaterial, StandardMaterial, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { itStatus } from '../services/itState';
 import { attachITCamera } from '../babylon/ITCameraScreen';
-import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { useConfiguredEntityStates } from '../services/entityStateSignal';
 
 const RGB_STEP_MS=750;
 
 /** Clone only dedicated screen/LED materials, preserving shared furniture. */
 export default function ITVisuals({scene,config,states,connected}: {scene:Scene;config:AppConfig;states:Record<string,HAState>;connected:boolean}) {
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  useConfiguredEntityStates(config, o => Boolean(o.it));
   const live=useRef({states,connected});live.current={states,connected};
   useEffect(()=>{
     const targets=(config.model?.floorplan?.objects??[]).flatMap(o=>(o.it?.devices??[]).flatMap(device=>scene.meshes.flatMap(mesh=>{

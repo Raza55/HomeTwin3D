@@ -153,3 +153,39 @@ test('a rejected token is not retried: HA bans the device after repeated failed 
     Object.assign(globalThis, originals);
   }
 });
+
+
+test('entity signals preserve batched dependencies and ignore unrelated updates', async () => {
+  const { configuredEntityIds, entityStatesVersion, notifyEntityStates } = await import('../src/services/entityStateSignal');
+  const ids = configuredEntityIds({ entityId: 'sensor.temperature', nested: [{ entityId: 'sensor.power' }], label: 'plain label' });
+  assert.deepEqual(ids, ['sensor.power', 'sensor.temperature']);
+  const before = entityStatesVersion(ids);
+  notifyEntityStates('media_player.living_room_tv');
+  await Promise.resolve();
+  assert.equal(entityStatesVersion(ids), before);
+  notifyEntityStates('sensor.temperature');
+  notifyEntityStates('sensor.power');
+  await Promise.resolve();
+  const changed = entityStatesVersion(ids);
+  assert.ok(changed > before);
+  assert.equal(entityStatesVersion(['sensor.power']), changed);
+  assert.equal(entityStatesVersion(['sensor.temperature']), changed);
+  notifyEntityStates();
+  await Promise.resolve();
+  assert.ok(entityStatesVersion([]) > changed);
+});
+
+
+test('door pose timer waits for the earliest transition and stops after tilt', async () => {
+  const { nextDoorPoseDelay, DOOR_TILT_AFTER_MS, doorPose } = await import('../src/services/doorState');
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  const state = { state: 'on', attributes: {}, last_changed: new Date(now).toISOString() } as import('../src/types').HAState;
+  const states = { 'sensor.temperature': state };
+  const doors = [{ entityId: 'sensor.temperature' }];
+  assert.equal(nextDoorPoseDelay(doors, states, now), DOOR_TILT_AFTER_MS + 1);
+  assert.equal(nextDoorPoseDelay(doors, states, now + DOOR_TILT_AFTER_MS), 1);
+  assert.equal(nextDoorPoseDelay(doors, states, now + DOOR_TILT_AFTER_MS + 1), null);
+  assert.equal(doorPose(state, now + DOOR_TILT_AFTER_MS + 1), 'tilted');
+  assert.equal(nextDoorPoseDelay([{ ...doors[0], door: { kind: 'entrance' } }], states, now), null);
+  assert.equal(nextDoorPoseDelay(doors, { 'sensor.temperature': { ...state, state: 'off' } }, now), null);
+});

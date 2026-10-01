@@ -108,9 +108,13 @@ export default function HUD({
       setDate(now.toLocaleDateString(language, { weekday: 'short', day: 'numeric', month: 'short' }));
       setCurrentMinutes(now.getHours() * 60 + now.getMinutes());
     }
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      tick();
+      timer = setTimeout(refresh, 60000 - Date.now() % 60000 + 20);
+    };
+    refresh();
+    return () => clearTimeout(timer);
   }, [language]);
 
   // Sun position update

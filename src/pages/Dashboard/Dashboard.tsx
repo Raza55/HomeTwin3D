@@ -1544,15 +1544,15 @@ export default function Dashboard() {
         // Plan overlays (markers, door status, IT) re-render themselves; the
         // Dashboard only re-renders where its own JSX shows the state: the
         // Hue Sync lock and an open light popup (below).
-        if (isWaterLeakEntity(entityId) || wasBattery || isBatteryState(state) || /battery|batterie/.test(entityId)) notifyEntityStates();
+        if (isWaterLeakEntity(entityId) || wasBattery || isBatteryState(state) || /battery|batterie/.test(entityId)) notifyEntityStates(entityId);
         if (isHueSyncControl(entityId)) {
           for (const id of Object.keys(meshMapRef.current)) {
             const cached = lastStatesRef.current[id];
             if (cached) applyLightState(id, cached);
           }
         }
-        if (entityId.startsWith('fan.') || floorplanMarkerEntityIds().has(entityId)) notifyEntityStates();
-        if (entityId.startsWith('light.') || ['automation.tv_dial_hdmi1','media_player.living_room_receiver','media_player.living_room_tv'].includes(entityId)) notifyEntityStates();
+        if (entityId.startsWith('fan.') || floorplanMarkerEntityIds().has(entityId)) notifyEntityStates(entityId);
+        if (entityId.startsWith('light.') || ['automation.tv_dial_hdmi1','media_player.living_room_receiver','media_player.living_room_tv'].includes(entityId)) notifyEntityStates(entityId);
         if (isHueSyncControl(entityId) || (HUE_SYNC_MEMBERS as readonly string[]).includes(entityId)) refreshQuickStates(n=>n+1);
         if (entityId.startsWith('scene.')) {
           setLightSceneOptions(buildSceneOptions(Object.values(lastStatesRef.current)));
@@ -1568,7 +1568,7 @@ export default function Dashboard() {
         if (quickRef.current && quickLightCluster(configRef.current?.lights ?? [], quickRef.current.entityId).some(l => l.entityId === entityId)) refreshQuickStates(n=>n+1);
         if (entityId === modalDoubleTapEntityIdRef.current) setModalDoubleTapState(state);
         if (entityId === remoteModalEntityIdRef.current) setRemoteModalState(state);
-        if (entityId.startsWith('cover.')) notifyEntityStates();
+        if (entityId.startsWith('cover.')) notifyEntityStates(entityId);
         if (entityId.startsWith('cover.') && blindModalEntityIdRef.current) setBlindModalState(lastStatesRef.current[blindModalEntityIdRef.current] ? { ...lastStatesRef.current[blindModalEntityIdRef.current] } : null);
 
         // Mode sensor changed → re-apply color to the associated remote light

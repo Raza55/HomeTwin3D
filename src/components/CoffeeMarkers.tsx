@@ -8,14 +8,14 @@ import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
 import { coffeeState, coffeeProgram } from '../services/coffeeState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './CoffeeMarkers.css';
-import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { useConfiguredEntityStates } from '../services/entityStateSignal';
 
 export default function CoffeeMarkers({ scene, config, states, connected, open, onOpen, onAssign, onCommand }: {
   scene: Scene; config: AppConfig; states: Record<string, HAState>; connected: boolean;
   open: string | null; onOpen: (id: string | null) => void; onAssign: (id: string) => void;
   onCommand?: (domain: string, service: string, entityId: string, data?: Record<string, unknown>) => Promise<unknown>;
 }) {
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  useConfiguredEntityStates(config, o => Boolean(o.coffee));
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const panel = useRef<HTMLElement>(null), pending = useRef(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');

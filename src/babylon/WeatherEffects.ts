@@ -17,6 +17,7 @@ import {
 import type { WeatherData } from '../services/weatherApi';
 import { isRaining, isSnowing, isThunderstorm } from '../services/weatherApi';
 import { attachWindSway, type WindState } from './WindSway';
+import { isTabletClass } from './DeviceClass';
 
 const EMIT_HEIGHT = 15; // spawn height above ground
 /** Precipitation falls in a ring around the building, densest close to it. */
@@ -369,7 +370,7 @@ export function createWeatherEffects(scene: Scene, shadowGen?: ShadowGenerator):
     }
     const h = hemi();
     if (h) { flashAdded = flash * 1.9; h.intensity += flashAdded; }
-    scene.metadata = { ...scene.metadata, weatherAnimating: wind.amplitude > .02 || thunder || flashStart >= 0 };
+    scene.metadata = { ...scene.metadata, weatherAnimating: wind.amplitude > 0 || thunder || flashStart >= 0 };
   };
   // The flash is added before each frame and removed afterwards, so the sun controller stays in charge.
   const before: Observer<Scene> = scene.onBeforeRenderObservable.add(animate);
@@ -386,7 +387,12 @@ export function createWeatherEffects(scene: Scene, shadowGen?: ShadowGenerator):
     // Meteorological direction is where the wind comes from; it blows towards the opposite side.
     const towards = ((data.wind_direction_10m ?? 250) + 180) * Math.PI / 180;
     wind.dirX = Math.sin(towards); wind.dirZ = Math.cos(towards);
-    wind.amplitude = Math.min(.55, .02 + Math.max(kmh, gusts * .7) / 60 * .35);
+    // Swaying trees keep the scene rendering at the idle frame rate instead of the
+    // static floor rate, so they only move once the wind is noticeable (Beaufort 3+,
+    // stronger on tablets). The day demo renders every frame anyway.
+    const effective = Math.max(kmh, gusts * .7);
+    const minKmh = scene.metadata?.alwaysAnimateWeather ? 0 : isTabletClass() ? 25 : 15;
+    wind.amplitude = effective > 0 && effective >= minKmh ? Math.min(.55, .02 + effective / 60 * .35) : 0;
     windVector.set(wind.dirX * windSpeed, 0, wind.dirZ * windSpeed);
     // Rain slants with the wind; snow drifts sideways.
     const slant = Math.min(.6, windSpeed / 22);

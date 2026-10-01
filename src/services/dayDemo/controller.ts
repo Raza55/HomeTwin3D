@@ -152,7 +152,7 @@ export class DayDemoController {
   private async prepare(): Promise<void> {
     const { scene, sun, hemi } = this.deps;
     // Mirror captures (0.1-0.7 s each) would follow every daylight change.
-    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true };
+    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true, alwaysAnimateWeather: true };
     this.preparing = 0;
     this.emit();
     const t0 = performance.now();
@@ -243,7 +243,7 @@ export class DayDemoController {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     // Mirrors catch up with the real daylight; lamps switch off for real again with the next HA states.
-    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false };
+    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false, alwaysAnimateWeather: false };
     // Blinds moved without refreshing lamp shadows during the demo.
     for (const light of this.deps.scene.lights) if (light !== this.deps.sun) light.getShadowGenerator()?.getShadowMap()?.resetRefreshCounter();
     this.disposeFns.forEach(fn => fn());

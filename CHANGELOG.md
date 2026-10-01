@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.17 – Wind ohne Dauer-Rendering (01.10.2026)
+
+- Baumkronen wiegen sich erst bei spürbarem Wind (ab 15 km/h, auf Tablets ab 25 km/h, Böen anteilig). Zuvor hielt schon leichter Wind das Board dauerhaft auf 30 Bildern pro Sekunde statt der Ruhe-Bildrate (~2 pro Sekunde) – mehr Akku- und Wärmelast auf dem Wand-iPad. In der Tagesdemo bewegen sich die Bäume weiterhin bei jedem Wind.
+
 ## 0.5.16 – Flüssige Tagesdemo und weniger Schattenarbeit (01.10.2026)
 
 - Tagesdemo ohne Kompilier-Ruckler: Lampen bleiben während der Demo technisch aktiv (aus = Helligkeit 0), sodass Schalten und Dimmen keine neuen Shader-Varianten mehr erzeugen. Eine einmalige Vorbereitung (~7 s, mit Fortschrittsanzeige) kompiliert Shader, rendert Lampenschatten und initialisiert die Bildschirminhalte vor dem Start.

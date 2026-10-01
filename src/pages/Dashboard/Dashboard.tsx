@@ -22,7 +22,7 @@ import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } fro
 import { useNavigate } from 'react-router-dom';
 import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, ImageOff } from 'lucide-react';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
-import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
+import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, Matrix, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
 import { findFrontFacade } from '../../babylon/SiteLayout';
 import { CAMERA_CONTROL_SENSITIVITY, createScene, createSceneAsync, prefersWebGPU, setupSunShadows, sunShadowFilteringQuality, type SceneContext } from '../../babylon/SceneManager';
@@ -1728,14 +1728,46 @@ export default function Dashboard() {
     // The demo uses the whole width; the side panel comes back as it was afterwards.
     const panelBefore = panelCollapsedRef.current;
     setPanelCollapsed(true);
-    void import('../../services/dayDemo/controller').then(({ DayDemoController }) => {
+    let touch: import('../../components/DayDemo/boardTouch').BoardTouch | null = null;
+    void Promise.all([import('../../services/dayDemo/controller'), import('../../components/DayDemo/boardTouch')]).then(([{ DayDemoController }, { BoardTouch }]) => {
       if (disposed) return;
       const cast = buildCast(config, Object.values(displayMeshMapRef.current).map(entry => entry.config));
+      // A fingertip operates the board's own popups: lamp colour and brightness, all blinds of a room.
+      const toScreen = (point: Vector3) => {
+        const camera = ctx.scene.activeCamera, canvas = ctx.engine.getRenderingCanvas();
+        if (!camera || !canvas) return null;
+        const w = ctx.engine.getRenderWidth(), h = ctx.engine.getRenderHeight();
+        const p = Vector3.Project(point, Matrix.Identity(), ctx.scene.getTransformMatrix(), camera.viewport.toGlobal(w, h));
+        const rect = canvas.getBoundingClientRect();
+        const x = rect.left + p.x * rect.width / w, y = rect.top + p.y * rect.height / h;
+        // Visible and clear of the demo panel at the bottom.
+        return p.z > 0 && p.z < 1 && x > 40 && x < innerWidth - 40 && y > 40 && y < innerHeight - 200 ? { x, y } : null;
+      };
+      touch = new BoardTouch({
+        point: control => {
+          if (control.kind === 'light') {
+            const bulb = meshMapRef.current[control.entityId]?.bulb;
+            return bulb ? toScreen(bulb.getAbsolutePosition()) : null;
+          }
+          const blind = configRef.current?.blinds?.find(b => b.entityId === control.entityId);
+          const panel = blind ? ctx.scene.getMeshByName(`blind_panel_${blind.id}`) ?? ctx.scene.getMeshByName(`blind_frame_${blind.id}`) : null;
+          return panel ? toScreen(panel.getBoundingInfo().boundingBox.centerWorld) : null;
+        },
+        open: (control, x, y) => control.kind === 'light' ? showQuick(control.entityId, x, y, true) : openBlindModal(control.entityId, x, y),
+      });
       controller = new DayDemoController(cast, {
         setState: (entityId, state, attributes) => ha.setState(entityId, state, attributes),
         getState: entityId => ha.getState(entityId),
         // The coffee machine's popup opens while it brews (and closes afterwards).
         popup: (_target, open) => setCoffeeOpen(open ? configRef.current?.model?.floorplan?.objects.find(object => object.coffee)?.id ?? null : null),
+        control: request => {
+          if (request.kind === 'blinds') { void touch?.run(request); return; }
+          // A single lamp in view (a lamp group opens another popup).
+          const lights = configRef.current?.lights ?? [];
+          const single = request.candidates.filter(id => quickLightCluster(lights, id).length <= 1);
+          const entityId = single.find(id => { const bulb = meshMapRef.current[id]?.bulb; return !!bulb && !!toScreen(bulb.getAbsolutePosition()); }) ?? single[0] ?? request.entityId;
+          void touch?.run({ kind: 'light', entityId, swatch: request.swatch, brightness: request.brightness });
+        },
       }, {
         scene: ctx.scene, engine: ctx.engine, sun: ctx.sunLight, hemi: ctx.hemiLight, requestRender: ctx.requestRender,
         location: () => ({
@@ -1759,6 +1791,7 @@ export default function Dashboard() {
           lock: on => { if (walkthroughRef.current) walkthroughRef.current.inputLocked = on; },
         },
         tvPlanes: () => Object.values(displayMeshMapRef.current).filter(entry => entry.config.kind === 'tv').map(entry => entry.plane),
+        cancelControl: () => touch?.cancel(),
         onClock: (minutes, weather) => {
           // Coarse steps keep the (large) dashboard from re-rendering every frame.
           const step = Math.floor(minutes / 5) * 5;
@@ -1769,6 +1802,17 @@ export default function Dashboard() {
           updateAutoTheme(minutes);
         },
       }, language);
+      // Commands from the popups: blinds move at motor speed, everything counts in the day's statistics.
+      const engine = controller.engine;
+      ha.serviceHook = (domain, service, entityId, data) => {
+        const before = ha.getState(entityId)?.state;
+        if (domain === 'cover' && ['open_cover', 'close_cover', 'set_cover_position'].includes(service)) {
+          const position = service === 'open_cover' ? 100 : service === 'close_cover' ? 0 : Number(data?.position ?? 0);
+          if (engine.moveBlind(entityId, position, 4, false) !== undefined) return true;
+        }
+        queueMicrotask(() => engine.noteCommand(entityId, before, ha.getState(entityId)?.state));
+        return false;
+      };
       const params = new URLSearchParams(location.search);
       const from = params.get('from');
       weatherRef.current?.setParticleScale(1.5);
@@ -1782,6 +1826,8 @@ export default function Dashboard() {
     return () => {
       disposed = true;
       controller?.dispose();
+      touch?.dispose();
+      ha.serviceHook = null;
       setDayDemoController(null);
       setCoffeeOpen(null);
       setPanelCollapsed(panelBefore);

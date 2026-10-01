@@ -51,6 +51,7 @@ function harness(cast, options = {}) {
     screen: (kind, frame) => { screens.push({ kind, frame }); return `data:image/jpeg;base64,${kind}${frame.frame}`; },
     now: () => now,
     random: () => .5,
+    control: options.control,
   };
   const engine = new DayDemoEngine(cast, hooks, options.language ?? 'de-DE');
   return { engine, states, writes, screens, tick: ms => { now += ms; engine.advance(ms); }, get now() { return now; } };
@@ -248,4 +249,27 @@ test('HS colours convert like Home Assistant', () => {
   assert.deepEqual(hsToRgb(0, 100), [255, 0, 0]);
   assert.deepEqual(hsToRgb(120, 100), [0, 255, 0]);
   assert.deepEqual(hsToRgb(240, 0), [255, 255, 255]);
+});
+
+test('at dusk the board is operated by hand: all living-room blinds, then a lamp colour', () => {
+  const cast = buildCast(config);
+  // After a jump the result is simply there.
+  const jumped = harness(cast);
+  jumped.engine.seek(at('20:05'));
+  assert.equal(jumped.states.get('cover.wohnzimmer').attributes.current_position, 0);
+  assert.ok(['light.wohnzimmer_hue_play', 'light.wohnzimmer_stehlampe'].some(id => jumped.states.get(id)?.state === 'on' && jumped.states.get(id).attributes.hs_color));
+  // Playing with the dashboard attached: the finger gets the lamp and the blind to tap, nothing is set behind its back.
+  const requests = [];
+  const live = harness(cast, { control: request => requests.push(request) });
+  live.engine.seek(at('19:40'));
+  live.engine.play();
+  while (live.engine.getSnapshot().virtual < at('20:04')) live.tick(100);
+  assert.deepEqual(requests.map(r => r.kind), ['blinds', 'light']);
+  assert.equal(requests[0].entityId, 'cover.wohnzimmer');
+  assert.equal(requests[0].position, 0);
+  assert.ok(['light.wohnzimmer_hue_play', 'light.wohnzimmer_stehlampe'].includes(requests[1].entityId));
+  assert.equal(requests[1].swatch, 'Violett');
+  assert.notEqual(live.states.get('cover.wohnzimmer').attributes.current_position, 0);
+  // The other rooms still close on their own.
+  assert.equal(live.states.get('cover.schlafzimmer').attributes.current_position, 0);
 });

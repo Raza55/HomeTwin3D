@@ -9,6 +9,11 @@ import {
   type Chapter, type DemoWeather, type LightTarget, type ScreenKind, type StoryAction, type Text, type TVMode,
 } from './story.ts';
 
+export type BoardControlRequest =
+  /** `candidates`: lamps that fit, best first (the dashboard taps the first single lamp in view). */
+  | { kind: 'light'; entityId: string; candidates: string[]; swatch: string; brightness: number }
+  | { kind: 'blinds'; entityId: string; position: number };
+
 export interface DayDemoHooks {
   setState(entityId: string, state: string, attributes?: Record<string, unknown>): void;
   getState(entityId: string): { state: string; attributes: Record<string, unknown> } | undefined;
@@ -16,6 +21,8 @@ export interface DayDemoHooks {
   screen?(kind: ScreenKind, frame: ScreenFrame): string | undefined;
   now?(): number;
   random?(): number;
+  /** Operates the board's own popups with a visible finger (dashboard UI); ignored when seeking. */
+  control?(control: BoardControlRequest): void;
   /** Opens/closes a device popup (dashboard UI); ignored when seeking. */
   popup?(target: 'coffee', open: boolean): void;
 }
@@ -306,6 +313,7 @@ export class DayDemoEngine {
           : { de: 'PC heruntergefahren', en: 'PC shut down' });
       }
       case 'coffee': return this.coffeeAction(action.phase, action.minutes ?? 4, at);
+      case 'control': return this.controlAction(action, at);
       case 'popup': {
         if (action.target === 'coffee' && !this.cast.coffee.length) return;
         if (!this.seeking) this.hooks.popup?.(action.target, action.open);
@@ -495,7 +503,8 @@ export class DayDemoEngine {
   // --- Blinds --------------------------------------------------------------------
 
   private blindAction(action: Extract<StoryAction, { type: 'blind' }>, at: number): void {
-    const blinds = action.rooms ? this.cast.blinds.filter(b => action.rooms!.includes(b.room)) : this.cast.blinds;
+    const blinds = (action.rooms ? this.cast.blinds.filter(b => action.rooms!.includes(b.room)) : this.cast.blinds)
+      .filter(b => !action.exclude?.includes(b.room));
     if (!blinds.length) return;
     let moved = 0;
     blinds.forEach((blind, i) => {
@@ -522,8 +531,43 @@ export class DayDemoEngine {
     this.addLog('blinds', rooms ? { de: `${rooms.de}: ${text.de}`, en: `${rooms.en}: ${text.en}` } : { de: `${text.de} (${moved})`, en: `${text.en} (${moved})` });
   }
 
-  /** Moves one blind (camera shots: the blind at the window the viewer steps up to). */
-  moveBlind(entityId: string, position: number, ramp = 2): number | undefined {
+  /**
+   * The board is used by hand: with the dashboard attached, a finger taps the popup
+   * (its buttons send the commands); after a jump the result is applied directly.
+   */
+  private controlAction(action: Extract<StoryAction, { type: 'control' }>, at: number): void {
+    if (action.kind === 'light') {
+      // A lamp whose colour shows: pendants and ceiling lights first, strips behind furniture last.
+      const score = (l: CastLight) => (this.hooks.getState(l.entityId)?.state === 'on' ? 0 : 4) + (/strip|leiste|band/i.test(l.label) ? 2 : 0)
+        + (/decke|ceiling|pendel|h[aä]nge/i.test(l.label) ? 0 : 1) + action.rooms.indexOf(l.room) * .5;
+      const lamps = this.cast.lights.filter(l => action.rooms.includes(l.room) && l.color).sort((a, b) => score(a) - score(b));
+      const lamp = lamps[0];
+      if (!lamp) return;
+      // A fade still running on this lamp would overwrite the hand-picked colour.
+      this.transitions.delete(`light:${lamp.entityId}`);
+      if (!this.seeking && this.hooks.control) this.hooks.control({ kind: 'light', entityId: lamp.entityId, candidates: lamps.map(l => l.entityId), swatch: action.swatch, brightness: action.brightness });
+      else this.hooks.setState(lamp.entityId, 'on', this.lightAttrs(lamp, action.brightness, undefined, action.hue, 70));
+      return this.addLog('palette', { de: `Board: Lampe → ${action.swatch}, ${action.brightness} %`, en: `Board: lamp → ${action.swatch}, ${action.brightness} %` });
+    }
+    const blinds = this.cast.blinds.filter(b => action.rooms.includes(b.room));
+    if (!blinds.length) return;
+    if (!this.seeking && this.hooks.control) this.hooks.control({ kind: 'blinds', entityId: blinds[0].entityId, position: action.position });
+    else this.blindAction({ type: 'blind', rooms: action.rooms, position: action.position, ramp: 4, stagger: .5 }, at);
+    const rooms = this.roomsText(blinds);
+    this.addLog('blinds', action.position === 0
+      ? { de: `Board: Alle Rollos im ${rooms.de} schließen`, en: `Board: close all blinds in the ${rooms.en}` }
+      : { de: `Board: Alle Rollos im ${rooms.de} öffnen`, en: `Board: open all blinds in the ${rooms.en}` });
+  }
+
+  /** A command sent from the board's popups (counts like the day's own updates). */
+  noteCommand(entityId: string, before?: string, after?: string): void {
+    if (this.seeking) return;
+    this.stats.updates++;
+    if (entityId.startsWith('light.') && (before === 'on') !== (after === 'on')) this.stats.lightSwitches++;
+  }
+
+  /** Moves one blind (camera shots: the blind at the window the viewer steps up to; board commands). */
+  moveBlind(entityId: string, position: number, ramp = 2, log = true): number | undefined {
     const blind = this.cast.blinds.find(b => b.entityId === entityId);
     if (!blind) return undefined;
     const from = Number(this.hooks.getState(entityId)?.attributes.current_position ?? 0);
@@ -533,7 +577,7 @@ export class DayDemoEngine {
       const state = !final ? (position > from ? 'opening' : 'closing') : current > 0 ? 'open' : 'closed';
       this.hooks.setState(entityId, state, { friendly_name: blind.label, current_position: current, current_cover_position: current });
     }, BLIND_INTERVAL_MS);
-    this.addLog('blinds', position > from
+    if (log) this.addLog('blinds', position > from
       ? { de: `${ROOM_NAMES[blind.room].de}: Rollo am Fenster fährt hoch (Bewegung erkannt)`, en: `${ROOM_NAMES[blind.room].en}: window blind opens (motion detected)` }
       : { de: `${ROOM_NAMES[blind.room].de}: Rollo fährt wieder herunter`, en: `${ROOM_NAMES[blind.room].en}: blind closes again` });
     return from;

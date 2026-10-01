@@ -30,6 +30,8 @@ export interface DayDemoSceneDeps {
   walk?: WalkControl;
   /** TV screen planes (for the cinema shot). */
   tvPlanes?(): AbstractMesh[];
+  /** Stops a running board interaction (finger + popup) on jumps and at the end. */
+  cancelControl?(): void;
 }
 
 export interface ChapterResult { id: string; fps: number; p95: number; cpu: number; draws: number; frames: number }
@@ -225,6 +227,7 @@ export class DayDemoController {
 
   restart(): void {
     this.shotBlind = null;
+    this.deps.cancelControl?.();
     this.endShot(false);
     this.result = undefined;
     this.engine.seek(0);
@@ -237,6 +240,7 @@ export class DayDemoController {
   seek(virtual: number): void {
     // The jump replays every state: a shot's blind must not be "restored" afterwards.
     this.shotBlind = null;
+    this.deps.cancelControl?.();
     this.endShot(false);
     this.engine.seek(virtual);
     // A jump makes the frame statistics meaningless; start a fresh measurement.
@@ -267,6 +271,7 @@ export class DayDemoController {
 
   dispose(restoreCamera = true): void {
     this.disposed = true;
+    this.deps.cancelControl?.();
     this.endShot(false);
     cancelAnimationFrame(this.frame);
     // Mirrors catch up with the real daylight; lamps switch off for real again with the next HA states.

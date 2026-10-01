@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.26 – Tagesdemo: Das Board als Fernbedienung (01.10.2026)
+
+- Neue Szene zur Dämmerung: Ein sichtbarer Finger tippt im 3D-Plan aufs Rollo, im Rollo-Popup auf „Alle Rollos im Raum schließen“ – die Rollos fahren gemeinsam herunter. Danach tippt er eine Lampe an, wählt im Licht-Popup Violett und zieht die Helligkeit auf 45 %. Alles läuft über die echten Popups und Service-Aufrufe.
+- Neues Kapitel „Das Board als Fernbedienung“ (inkl. Hinweis, dass das Board auch auf einem aktuellen iPad als Wandpanel flüssig läuft); ein Tag dauert dafür rund 2:25 Minuten.
+- Demo-Modus: Eine gewählte RGB-Farbe ersetzt das Weißlicht (wie in Home Assistant); Rollo-Befehle aus dem Popup fahren in der Tagesdemo mit Motorgeschwindigkeit.
+
 ## 0.5.25 – Tagesdemo: Esstisch, Küchenmesser und Regenblick (01.10.2026)
 
 - Frühstück: Die Kamera sitzt jetzt wirklich am Esstisch (im Modell am Tischnamen erkannt) und schaut über den Tisch zum Fernseher.

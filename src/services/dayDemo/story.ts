@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 130;
+export const DAY_REAL_SECONDS = 145;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -60,7 +60,13 @@ export type StoryAction =
     /** 0..100; low values give pastel shifts rather than vivid colours. */ saturation?: number;
     /** 0..1 slow brightness breathing (dimming) on top of the hue drift. */ breathe?: number;
   }
-  | { type: 'blind'; rooms?: RoomRole[]; position: number; ramp?: number; stagger?: number }
+  | { type: 'blind'; rooms?: RoomRole[]; exclude?: RoomRole[]; position: number; ramp?: number; stagger?: number }
+  /**
+   * Someone uses the board itself: taps a lamp (colour swatch + brightness slider in its
+   * popup) or a blind (the popup's "all blinds in the room" buttons).
+   */
+  | { type: 'control'; kind: 'light'; rooms: RoomRole[]; swatch: string; hue: number; brightness: number }
+  | { type: 'control'; kind: 'blinds'; rooms: RoomRole[]; position: number }
   | { type: 'tv'; mode: TVMode; title?: Text }
   | { type: 'pc'; on: boolean; screen?: ScreenKind }
   | { type: 'coffee'; phase: 'on' | 'brew' | 'off'; minutes?: number }
@@ -247,13 +253,22 @@ export const STORY: StoryBeat[] = [
     { type: 'door', kind: 'balcony', open: false },
   ]),
   beat('19:45', [
-    { type: 'blind', position: 0, ramp: 5, stagger: 1 },
+    // Living and dining share one room in many homes: the popup closes all of its blinds.
+    { type: 'control', kind: 'blinds', rooms: ['living', 'dining'], position: 0 },
+    { type: 'blind', exclude: ['living', 'dining'], position: 0, ramp: 5, stagger: 1 },
     { type: 'light', target: { rooms: ['outdoor'] }, on: true, brightness: 60, kelvin: WARM, ramp: 3 },
     { type: 'light', target: { rooms: ['hall'] }, on: true, brightness: 30, kelvin: WARM },
   ], {
     id: 'sunset', icon: 'sunset',
     title: { de: 'Sonnenuntergang – Rollos zu', en: 'Sunset – blinds down' },
-    text: { de: 'Mit der Dämmerung schließen die Rollos, Balkon und Flur bekommen warmes Orientierungslicht.', en: 'At dusk the blinds close, balcony and hallway get warm orientation light.' },
+    text: { de: 'Ein Tipp aufs Rollo im Board, dann „Alle schließen“: Die Wohnzimmer-Rollos fahren gemeinsam herunter, die übrigen schließen automatisch. Balkon und Flur bekommen warmes Licht.', en: 'A tap on the blind in the board, then “close all”: the living-room blinds go down together, the others close automatically. Balcony and hallway get warm light.' },
+  }),
+  beat('19:53', [
+    { type: 'control', kind: 'light', rooms: ['dining', 'living'], swatch: 'Violett', hue: 275, brightness: 45 },
+  ], {
+    id: 'board', icon: 'palette',
+    title: { de: 'Das Board als Fernbedienung', en: 'The board as a remote' },
+    text: { de: 'Lampe antippen, Farbe wählen, dimmen – direkt im 3D-Plan. Läuft auch flüssig auf einem aktuellen iPad als Wandpanel.', en: 'Tap a lamp, pick a colour, dim it – right in the 3D plan. Runs smoothly on a current iPad as a wall panel, too.' },
   }),
   beat('20:15', [
     { type: 'echo', playing: false },
@@ -397,7 +412,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '17:27', speed: 0.3 },
   { clock: '17:36', speed: 1.1 },
   { clock: '19:34', speed: 0.35 },
-  { clock: '19:52', speed: 1.1 },
+  // Board interactions run in real time: the clock nearly stands still meanwhile.
+  { clock: '19:44', speed: 0.12 },
+  { clock: '20:03', speed: 1.1 },
   { clock: '20:15', speed: 0.6 },
   { clock: '21:10', speed: 1.2 },
   { clock: '22:20', speed: 0.5 },
@@ -557,6 +574,6 @@ export const CHAPTER_FRAMING: Record<string, Framing> = {
   bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'between', a: { kind: 'washer' }, b: { kind: 'room', room: 'living' }, share: .45 }, .55),
   sunny: overview(1.35, .16), shade: room('living', .6), warning: overview(1.3, .16), storm: overview(1.55, .2),
   clearing: overview(1.3, .14), home: anchor(ENTRANCE, .42), cooking: room('kitchen', .38), sunset: room('living', .6),
-  airing: anchor(LIVING_WINDOW, .5), cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
+  airing: anchor(LIVING_WINDOW, .5), board: room('living', .5), cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
   nightlight: room('hall', .4), snow: overview(1.55, .2), dawn: overview(1.2, .12),
 };

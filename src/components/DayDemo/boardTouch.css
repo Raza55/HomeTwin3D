@@ -1,0 +1,38 @@
+/* Day demo: the fingertip that operates the board. */
+.board-finger {
+  position: fixed;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .55) 55%, rgba(255, 255, 255, .25));
+  border: 2px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 1px rgba(0, 0, 0, .15);
+}
+.board-finger.visible { opacity: .9; }
+.board-finger::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transition: transform .15s ease;
+}
+.board-finger.press { box-shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 1px rgba(0, 0, 0, .15); background: rgba(255, 255, 255, .95); }
+.board-finger::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--accent, #38bdf8);
+  opacity: 0;
+}
+.board-finger.ripple::after { animation: board-finger-ripple .55s ease-out; }
+@keyframes board-finger-ripple {
+  from { opacity: .9; transform: scale(.6); }
+  to { opacity: 0; transform: scale(2.1); }
+}
+@media (prefers-reduced-motion: reduce) { .board-finger.ripple::after { animation-duration: .01s; } }

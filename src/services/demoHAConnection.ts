@@ -269,6 +269,7 @@ export class DemoHAConnection {
     data?: Record<string, unknown>,
   ): Promise<void> {
     if (this.disposed) return;
+    if (this.serviceHook?.(domain, service, entityId, data)) return;
 
     // Script calls: simulate 1.5s delay
     if (domain === 'script') {
@@ -383,7 +384,12 @@ export class DemoHAConnection {
         attrs.rgb_color = hsToRgbTuple(h, s);
         attrs.color_mode = 'hs';
       }
-      if (data?.rgb_color !== undefined) attrs.rgb_color = data.rgb_color as [number, number, number];
+      if (data?.rgb_color !== undefined) {
+        attrs.rgb_color = data.rgb_color as [number, number, number];
+        // A picked colour replaces white light (as in HA): the lamp renders the colour.
+        attrs.color_mode = 'rgb';
+        delete attrs.hs_color; delete attrs.color_temp_kelvin; delete attrs.color_temp;
+      }
       if (data?.color_temp !== undefined) attrs.color_temp = data.color_temp as number;
       if (data?.color_temp_kelvin !== undefined) {
         attrs.color_temp_kelvin = data.color_temp_kelvin as number;
@@ -410,6 +416,12 @@ export class DemoHAConnection {
     persistStates(this.states, this.persist);
     this.callbacks.onStateChanged?.(entityId, newState);
   }
+
+  /**
+   * Day demo: sees service calls first (e.g. blinds then move at motor speed instead of
+   * jumping); returning true means it handled the call.
+   */
+  serviceHook: ((domain: string, service: string, entityId: string, data?: Record<string, unknown>) => boolean) | null = null;
 
   /** Scripted state change (day demo). Like an HA event: nothing is switched anywhere. */
   setState(entityId: string, state: string, attributes: Record<string, unknown> = {}): void {

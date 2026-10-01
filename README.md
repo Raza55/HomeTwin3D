@@ -6,7 +6,7 @@ HomeTwin3D verbindet einen eigenen 3D-Grundriss mit den Geräten und Zuständen 
 
 Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3Dash von Kdcius und seinen Mitwirkenden](https://github.com/Kdcius/3Dash_webapp). Die Apache-2.0-Lizenz und die ursprünglichen Autorenhinweise bleiben erhalten. Dieses Repository beginnt aus Datenschutzgründen mit einem bereinigten Quelltext-Snapshot ohne die frühere Git-Historie. Einzelheiten: [Herkunft und Danksagung](ORIGIN.md).
 
-> **Entwicklungsstand:** Version 0.2.1 · Stand 28.09.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben.
+> **Entwicklungsstand:** Add-on 0.5.9 · Webapp-Paket 0.2.1 · Stand 01.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
 
 ## Was HomeTwin3D kann
 
@@ -102,13 +102,14 @@ npm run test:tv-dial
 npm run test:lighting
 npm run test:performance
 npm run test:walkthrough
+npm run test:shared
 npm run build
 npm run build -- --mode addon
 ```
 
-Der aktuelle Stand besteht 114 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben.
+Der Stand 0.5.9 besteht 145 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
 
-Technik: **React 18 · TypeScript · Babylon.js 7 · Vite 6 · Home Assistant WebSocket API**.
+Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant WebSocket API**.
 
 | Verzeichnis | Inhalt |
 | --- | --- |
@@ -121,6 +122,7 @@ Technik: **React 18 · TypeScript · Babylon.js 7 · Vite 6 · Home Assistant We
 
 ## Dokumentation
 
+- [Agentenübergabe: Release 0.5.9, Änderungen, Prüfungen und Folgearbeiten](docs/AGENT_HANDOFF.md)
 - [Projektstand, wichtige Funktionen und Performance-Optimierungen](PROJECT_STATUS.md)
 - [Neue Geräte, Warnungen, TV Dial und PC-Screenshots](docs/DEVICES_AND_ALERTS.md)
 - [Optionaler Windows-/MQTT-Screenshot-Helfer](tools/pc-screen/README.md)

@@ -1,8 +1,18 @@
 # Projektstand, Funktionen und Optimierungen
 
-Stand: **28.09.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
+Stand: **01.10.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
 
-Die aktuellen Ergänzungen und Prüfergebnisse stehen direkt unten; die Validierung vom 27.09.2026 bleibt als historischer Ausgangsstand erhalten.
+## Aktueller Release 0.5.9 vom 01.10.2026
+
+- Add-on 0.5.9 ist auf `main` veröffentlicht; die Images für AMD64 und ARM64 sowie beide GitHub-Prüfabläufe sind erfolgreich. Die Paketversion der Webapp bleibt 0.2.1.
+- Übertragungen desselben Browsers laufen nacheinander; neue Änderungen während eines Uploads bleiben vorgemerkt. Empfangene Assets werden vor der Übernahme vollständig geladen und zusammen gespeichert; Speicherfehler lösen einen Rollback aus.
+- Ein Entity-Index reduziert die Gerätesuche bei HA-Updates. Unzugeordnete Geräte fordern keine zusätzliche 3D-Darstellung allein wegen ihrer Domain an.
+- Ladeanzeige und p95-CPU-Framezeit in der Diagnoseanzeige ergänzt. WebGL-/Apple-Einstellungen und das Add-on-Datenformat bleiben kompatibel.
+- 145 JS-/TS-Tests, 5 Python-Tests in CI, Typecheck, Datenschutzprüfung, öffentlicher Build und Add-on-Build erfolgreich. Zusätzlich Browserprüfung mit Simulation und echter IndexedDB.
+
+Implementierung, Release-Nachweise, Messbedingungen und verbleibende Grenzen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md). Insbesondere ist die neue Warteschlange kein serverseitiger Schutz gegen gleichzeitig schreibende unterschiedliche Geräte. Der tatsächliche Update-/GPU-Test auf der privaten Hassio-/Apple-Installation wurde hier nicht durchgeführt.
+
+Die folgenden Ergänzungen und Prüfungen vom 28. und 27.09.2026 bleiben als historischer Ausgangsstand erhalten. Neuere Funktionsänderungen vom 30.09.2026 stehen im [Änderungsverlauf](CHANGELOG.md).
 
 ## Ergänzungen vom 28.09.2026
 
@@ -16,7 +26,7 @@ Die aktuellen Ergänzungen und Prüfergebnisse stehen direkt unten; die Validier
 
 Bedienung, Zuordnungen, Installationsabhängigkeiten und Grenzen: [Geräte und Warnungen](docs/DEVICES_AND_ALERTS.md).
 
-### Aktuelle Prüfungen
+### Prüfungen vom 28.09.2026
 
 | Prüfung | Ergebnis |
 | --- | --- |
@@ -32,7 +42,7 @@ Summe: **112 JS-/TS-Tests und 5 Python-Tests**. Keine realen Gerätebefehle und 
 ## Lieferumfang und Versionsstand
 
 - Webapp: React/TypeScript mit Babylon.js, statischer Vite-Build und direkter Home-Assistant-WebSocket-Verbindung.
-- Paketversion in `package.json`: `0.2.0`; Add-on-Version in `3dash-addon/config.yaml`: `0.2.0`. Diese Nummern sind unabhängig von den Wohnungsmodell-Versionen.
+- Paketversion in `package.json`: `0.2.1`; Add-on-Version in `3dash-addon/config.yaml`: `0.5.9` (Stand 01.10.2026). Diese Nummern sind unabhängig von den Wohnungsmodell-Versionen.
 - Lokale Modellreihe bis `Wohnung_v106_3Dash_Schlafzimmer.blend` und `.glb` in `../blender/`. Das Vorhandensein der Dateien beweist nicht, welche Version ein bestimmter Browser gerade geladen hat.
 - Das Repository enthält Quellcode, Werkzeuge und Simulationsmodell. Persönliche `.blend`-/GLB-Dateien im Nachbarordner, `.qa/`, `dist/`, `node_modules/` und Browserdaten werden nicht mit Git übertragen.
 - Der Add-on-Dockerfile baut aus `Raza55/HomeTwin3D`, Branch `main`. Git-Push und Deployment bleiben getrennte Schritte; siehe README.

@@ -1,5 +1,9 @@
 # Regeln für Arbeiten an HomeTwin3D
 
+## Einstieg und Übergabe
+
+Vor Folgearbeiten [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) lesen. Dort stehen der veröffentlichte Stand 0.5.9, die Änderungen vom 01.10.2026, Prüfnachweise, Grenzen und der bestehende GitHub-/Hassio-Release-Ablauf. Die Übergabe ist ein datierter Snapshot: vor Änderungen aktuellen Branch, Arbeitsbaum, Remote und Add-on-Version prüfen. [PROJECT_STATUS.md](PROJECT_STATUS.md) und [CHANGELOG.md](CHANGELOG.md) ergänzen den Überblick.
+
 ## Vor jeder Veröffentlichung verpflichtend
 
 Dieses Repository ist öffentlich. Lies [docs/PUBLICATION_PRIVACY.md](docs/PUBLICATION_PRIVACY.md), bevor du Änderungen synchronisierst, pushst oder neue Bilder/Beispieldaten veröffentlichst.

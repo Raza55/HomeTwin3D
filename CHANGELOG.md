@@ -1,6 +1,6 @@
 # Änderungsverlauf
 
-## 0.5.19 – Schnellere Tagesdemo mit Raumfokus (01.10.2026)
+## 0.5.20 – Schnellere Tagesdemo mit Raumfokus (01.10.2026)
 
 - Ein Tag dauert jetzt rund zwei Minuten (statt fünf); die Tempo-Auswahl entfällt. Die Außenansicht fährt pro Kapitel zum Raum, in dem etwas passiert (Bad, Küche, Schlafzimmer, Kammer …), zoomt nah heran und dreht sich langsam weiter; Wetterkapitel zeigen das ganze Gelände.
 - Neuer Einstieg in Ich-Perspektive: vom Wohnungseingang durchs Wohnzimmer zu den Fenstern – die Dämmerung wird heller, Bäume und Büsche biegen sich im Morgenwind –, dann Schwenk zur Küche und zur vorheizenden Kaffeemaschine. Die Kamera plant ihren Weg mit freier Sicht und hält eine natürliche Kopfneigung.

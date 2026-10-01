@@ -151,7 +151,15 @@ export class ShotDirector {
           if (clear(p)) { eye = p; break; }
         }
       }
-    } else if (anchor) eye = this.eyeAt(anchor, key.eye.metres);
+    } else if (anchor && key.eye.away) {
+      // Beyond the anchor, on its far side from `away` (e.g. a chair at the table facing the TV).
+      const away = this.anchor(key.eye.away);
+      if (away) {
+        const direction = anchor.center.subtract(away.center); direction.y = 0;
+        const p = anchor.center.add(direction.normalize().scale(key.eye.metres * this.walk.unit()));
+        eye = new Vector3(p.x, this.walk.floorY() + 1.6 * this.walk.unit(), p.z);
+      }
+    } else if (anchor) eye = this.eyeAt(anchor, key.eye.metres, key.eye.over);
     if (eye && key.eye.height !== undefined) eye.y = this.walk.floorY() + key.eye.height * this.walk.unit();
     this.eyes.set(id, eye);
     return eye;
@@ -200,7 +208,7 @@ export class ShotDirector {
 
   /** True when every anchor the shot needs exists in this model. */
   playable(shot: Shot): boolean {
-    return shot.keys.every(k => !!this.anchor(k.eye.at) && !!this.anchor(k.look));
+    return shot.keys.every(k => !!this.anchor(k.eye.at) && !!this.anchor(k.look) && (!k.eye.away || !!this.anchor(k.eye.away)));
   }
 
   /** Ray casts against the whole model are far too slow per frame: measure each anchor once. */
@@ -220,12 +228,16 @@ export class ShotDirector {
     return anchor.spots = { reach, floor };
   }
 
-  private eyeAt(anchor: Anchor, metres: number): Vector3 {
+  private eyeAt(anchor: Anchor, metres: number, over = false): Vector3 {
     const unit = this.walk.unit();
     const height = this.walk.floorY() + 1.6 * unit;
     if (anchor.inward.lengthSquared() === 0) return new Vector3(anchor.center.x, height, anchor.center.z);
     const { reach, floor } = this.spots(anchor);
     let d = Math.min(metres, reach);
+    if (over) {
+      const p = anchor.center.add(anchor.inward.scale(d * unit));
+      return new Vector3(p.x, height, p.z);
+    }
     // Step back from furniture: the nearest spot with floor at or below the wanted distance.
     let dm = Math.round(d * 10);
     while (dm >= 5 && !floor[dm]) dm--;
@@ -293,6 +305,18 @@ export class ShotDirector {
       return meshes.length ? { center: bounds(meshes).center, inward: Vector3.Zero(), out: false, meshes } : null;
     }
     if (spec.kind === 'entrance') return this.entranceAnchor();
+    if (spec.kind === 'table') {
+      // The table top: the largest flat mesh named like a dining table.
+      const tops = this.scene.meshes.filter(m => !m.isDisposed() && m.getTotalVertices() > 0 && /esstisch|dining.?table/i.test(m.name));
+      if (!tops.length) return null;
+      const area = (m: AbstractMesh) => { const e = m.getBoundingInfo().boundingBox.extendSizeWorld; return e.x * e.z; };
+      const top = tops.reduce((best, m) => area(m) > area(best) ? m : best);
+      return { center: bounds([top]).center, inward: Vector3.Zero(), out: false, meshes: [top] };
+    }
+    if (spec.kind === 'between') {
+      const a = this.anchor(spec.a), b = this.anchor(spec.b);
+      return a && b ? { center: Vector3.Lerp(a.center, b.center, spec.share), inward: Vector3.Zero(), out: false, meshes: [] } : null;
+    }
     if (spec.kind === 'room') {
       const center = this.roomCenter(spec.room);
       if (center) return { center: new Vector3(center.x, this.walk.floorY() + 1 * this.walk.unit(), center.z), inward: Vector3.Zero(), out: false, meshes: [] };

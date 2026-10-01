@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.25 – Tagesdemo: Esstisch, Küchenmesser und Regenblick (01.10.2026)
+
+- Frühstück: Die Kamera sitzt jetzt wirklich am Esstisch (im Modell am Tischnamen erkannt) und schaut über den Tisch zum Fernseher.
+- Einstieg: Vor dem Wechsel zur Kaffeemaschine tritt die Kamera näher Richtung Esstisch und schwenkt weiter an der Küchenzeile entlang bis zu Messerleiste und Messerblock.
+- Nach der Waschmaschine fährt die Ansicht Richtung Wohnzimmer, das Symbol der Waschmaschine bleibt im Bild.
+- Gewitter: Der Blick aus dem Schlafzimmerfenster beginnt weiter hinten im Raum (Möbel begrenzen den Abstand nicht mehr, nur Wände).
+
 ## 0.5.24 – LED-Ziffern und kompaktes Demo-Panel (01.10.2026)
 
 - Info-Displays können Werte als rote Sieben-Segment-LED-Ziffern in einem dunklen Fenster zeigen (`segment: true`, z. B. für Trockner-Displays).

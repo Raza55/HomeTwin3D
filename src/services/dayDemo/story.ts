@@ -455,7 +455,11 @@ export type ShotAnchor =
   | { kind: 'washer' }
   | { kind: 'dryer' }
   /** The PC case with its RGB lighting. */
-  | { kind: 'pcCase' };
+  | { kind: 'pcCase' }
+  /** The dining table (found by its mesh name). */
+  | { kind: 'table' }
+  /** A point on the way from `a` to `b` (share 0 = a, 1 = b). */
+  | { kind: 'between'; a: ShotAnchor; b: ShotAnchor; share: number };
 
 /** One moment of a shot: where the eye stands and what it looks at. Between keys the camera glides. */
 export interface ShotKey {
@@ -466,7 +470,7 @@ export interface ShotKey {
    * in until that anchor is in clear view. `approach`: walk straight from the previous
    * key's position towards the anchor and stop `metres` in front of it.
    */
-  eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean; /** Eye height in metres (1.6 standing, ~1.2 seated). */ height?: number };
+  eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean; /** Stand `metres` beyond the anchor, on its far side from this one (a seat at the table facing the TV). */ away?: ShotAnchor; /** May stand beside low furniture (bed, desk): only walls limit the distance. */ over?: boolean; /** Eye height in metres (1.6 standing, ~1.2 seated). */ height?: number };
   look: ShotAnchor;
   /** Turn the head this many degrees to the right of the look anchor (negative: left). */
   turn?: number;
@@ -486,19 +490,22 @@ const shot = (id: string, from: string, to: string, keys: ShotKey[], blind?: num
 
 const LIVING_WINDOW: ShotAnchor = { kind: 'window', room: 'living' };
 const ENTRANCE: ShotAnchor = { kind: 'entrance' };
+const BEDROOM_WINDOW: ShotAnchor = { kind: 'window', room: 'bedroom', near: 'pc' };
+const TOWARDS_TABLE: ShotAnchor = { kind: 'between', a: ENTRANCE, b: { kind: 'room', room: 'dining' }, share: .55 };
 
 export const SHOTS: Shot[] = [
   shot('opening', '05:30', '06:45', [
     { t: 0, eye: { at: ENTRANCE, metres: .9, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
     { t: .6, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
-    { t: .72, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' } },
-    // Keep panning along the counter to the knife block and utensils on the right.
-    { t: .84, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
+    // Step towards the dining table, then pan along the counter to the knife block and utensils on the right.
+    { t: .72, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' } },
+    { t: .84, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 48 },
     { t: 1, eye: { at: { kind: 'coffee' }, metres: 1.3, approach: true }, look: { kind: 'coffee' } },
   ], 80),
   shot('breakfast-news', '07:31', '07:52', [
-    { t: 0, eye: { at: { kind: 'tv' }, metres: 5.2, height: 1.2 }, look: { kind: 'tv' } },
-    { t: 1, eye: { at: { kind: 'tv' }, metres: 4.4, height: 1.2 }, look: { kind: 'tv' } },
+    // Seated at the dining table, looking across it to the TV.
+    { t: 0, eye: { at: { kind: 'table' }, metres: .85, away: { kind: 'tv' }, height: 1.38 }, look: { kind: 'tv' }, drop: .15 },
+    { t: 1, eye: { at: { kind: 'table' }, metres: .7, away: { kind: 'tv' }, height: 1.38 }, look: { kind: 'tv' }, drop: .1 },
   ]),
   shot('laundry', '09:01', '09:18', [
     { t: 0, eye: { at: { kind: 'washer' }, metres: 1.8 }, look: { kind: 'washer' } },
@@ -510,8 +517,9 @@ export const SHOTS: Shot[] = [
     { t: 1, eye: { at: { kind: 'dryer' }, metres: 1.6 }, look: { kind: 'dryer' } },
   ]),
   shot('storm-bedroom', '15:04', '15:46', [
-    { t: 0, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 2.8 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
-    { t: 1, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 1.1 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
+    // Further back in the room: the whole window with the rain, the glowing PC at the side.
+    { t: 0, eye: { at: BEDROOM_WINDOW, metres: 3.2, over: true }, look: BEDROOM_WINDOW },
+    { t: 1, eye: { at: BEDROOM_WINDOW, metres: 2.7, over: true }, look: BEDROOM_WINDOW },
   ]),
   shot('cinema', '20:22', '21:02', [
     { t: 0, eye: { at: { kind: 'tv' }, metres: 4.2 }, look: { kind: 'tv' } },
@@ -546,7 +554,7 @@ const overview = (zoom: number, tilt: number): Framing => ({ at: 'overview', zoo
 
 export const CHAPTER_FRAMING: Record<string, Framing> = {
   night: anchor(ENTRANCE, .5), wake: room('bedroom', .4), sunrise: room('living', .55), coffee: anchor({ kind: 'coffee' }, .36),
-  bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'washer' }, .36),
+  bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'between', a: { kind: 'washer' }, b: { kind: 'room', room: 'living' }, share: .45 }, .55),
   sunny: overview(1.35, .16), shade: room('living', .6), warning: overview(1.3, .16), storm: overview(1.55, .2),
   clearing: overview(1.3, .14), home: anchor(ENTRANCE, .42), cooking: room('kitchen', .38), sunset: room('living', .6),
   airing: anchor(LIVING_WINDOW, .5), cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),

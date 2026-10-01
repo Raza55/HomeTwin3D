@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.24 – LED-Ziffern und kompaktes Demo-Panel (01.10.2026)
+
+- Info-Displays können Werte als rote Sieben-Segment-LED-Ziffern in einem dunklen Fenster zeigen (`segment: true`, z. B. für Trockner-Displays).
+- Tagesdemo: Hat ein Gerät keinen Restzeit-Sensor, zählt die Demo die Laufzeit auf seinem Panel-Display herunter.
+- Das Demo-Panel ist nur noch etwa halb so hoch: Uhrzeit, Wetter, Kapiteltitel und Bedienknöpfe in einer Zeile, darunter höchstens zwei Zeilen Text und die letzten zwei Ereignisse, schmalere Zeitleiste.
+
 ## 0.5.23 – Türen, Lüften und Gaming-Blick (01.10.2026)
 
 - Türen und Schlösser: Statusänderungen von Türkontakten und Schlössern bewegen das Türblatt und wechseln das Türsymbol jetzt sofort (vorher erst beim nächsten anderen Update).

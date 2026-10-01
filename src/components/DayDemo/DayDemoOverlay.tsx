@@ -107,6 +107,13 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
               <span>{weatherText}</span>
             </span>
           </div>
+          {!result && (
+            <div className="day-demo-chapter-head" key={chapter?.id ?? 'none'} title={t('dayDemo.chapter', { n: view.chapterIndex + 1, total: CHAPTERS.length })}>
+              <span className="day-demo-chapter-icon"><ChapterIcon size={15} strokeWidth={1.9} aria-hidden /></span>
+              <h2>{chapter ? pick(chapter.title, language) : t('dayDemo.title')}</h2>
+              <span className="day-demo-chapter-count">{view.chapterIndex + 1}/{CHAPTERS.length}</span>
+            </div>
+          )}
           <div className="day-demo-controls">
             <button type="button" className="day-demo-btn" onClick={() => controller.togglePlay()} aria-label={view.playing ? t('dayDemo.pause') : t('dayDemo.play')} title={view.playing ? t('dayDemo.pause') : t('dayDemo.play')}>
               {view.playing ? <Pause size={16} /> : <Play size={16} />}
@@ -134,16 +141,9 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
           </div>
         ) : (
         <div className="day-demo-body">
-          <div className="day-demo-chapter" key={chapter?.id ?? 'none'}>
-            <div className="day-demo-chapter-head">
-              <span className="day-demo-chapter-icon"><ChapterIcon size={18} strokeWidth={1.9} aria-hidden /></span>
-              <span className="day-demo-chapter-count">{t('dayDemo.chapter', { n: view.chapterIndex + 1, total: CHAPTERS.length })}</span>
-            </div>
-            <h2>{chapter ? pick(chapter.title, language) : t('dayDemo.title')}</h2>
-            <p>{chapter ? pick(chapter.text, language) : ''}</p>
-          </div>
+          <p className="day-demo-chapter" key={chapter?.id ?? 'none'}>{chapter ? pick(chapter.text, language) : ''}</p>
           <ol className="day-demo-feed" aria-label={t('dayDemo.feed')}>
-            {view.log.slice(0, 5).map(entry => {
+            {view.log.slice(0, 2).map(entry => {
               const EntryIcon = ICONS[entry.icon] ?? Lightbulb;
               return (
                 <li key={entry.id}>

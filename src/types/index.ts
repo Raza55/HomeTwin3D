@@ -363,6 +363,8 @@ export interface DisplayConfig {
   textAlign?: TextAlign;
   backgroundColor?: string;
   opacity?: number;
+  /** Seven-segment LED digits on a dark window (appliance panels). */
+  segment?: boolean;
   /** Mirror the texture horizontally. */
   mirrorH?: boolean;
   /** Mirror the texture vertically. */

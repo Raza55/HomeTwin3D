@@ -16,7 +16,7 @@ import {
   type Mesh,
 } from '@babylonjs/core';
 import { getLucideIconImage } from '../services/lucideIcons';
-import type { DisplayAnimation, DisplayConfig, DisplayKind, HAState } from '../types';
+import type { DisplayAnimation, DisplayConfig, DisplayKind, HAState, TextAlign } from '../types';
 import type { Observer } from '@babylonjs/core';
 
 export interface DisplayMeshEntry {
@@ -214,6 +214,64 @@ interface SourceRenderInfo {
  * Redraw display texture with current HA state values.
  * `states` is a map of entityId → HAState.
  */
+const SEGMENTS: Record<string, string> = {
+  '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc', '5': 'afgcd', '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g', '—': 'g',
+};
+
+/** Seven-segment LED text like on appliance panels: lit segments glow, unlit ones shimmer faintly. */
+function drawSegmentText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, align: TextAlign): void {
+  const w = size * .5, h = size * .9, t = size * .1, gap = size * .16, s = t * .2;
+  const cell = (c: string) => SEGMENTS[c] !== undefined ? w + gap : c === ':' || c === '.' ? size * .24 : size * .3;
+  const chars = [...text];
+  const total = chars.reduce((sum, c) => sum + cell(c), 0) - gap;
+  let ox = align === 'left' ? x : align === 'right' ? x - total : x - total / 2;
+  const top = y - h / 2, half = h / 2;
+  const bar = (sx: number, sy: number, horizontal: boolean, length: number) => {
+    ctx.beginPath();
+    if (horizontal) {
+      ctx.moveTo(sx, sy); ctx.lineTo(sx + t / 2, sy - t / 2); ctx.lineTo(sx + length - t / 2, sy - t / 2);
+      ctx.lineTo(sx + length, sy); ctx.lineTo(sx + length - t / 2, sy + t / 2); ctx.lineTo(sx + t / 2, sy + t / 2);
+    } else {
+      ctx.moveTo(sx, sy); ctx.lineTo(sx + t / 2, sy + t / 2); ctx.lineTo(sx + t / 2, sy + length - t / 2);
+      ctx.lineTo(sx, sy + length); ctx.lineTo(sx - t / 2, sy + length - t / 2); ctx.lineTo(sx - t / 2, sy + t / 2);
+    }
+    ctx.closePath(); ctx.fill();
+  };
+  const segment = (id: string, px: number) => {
+    if (id === 'a') bar(px + s, top, true, w - 2 * s);
+    else if (id === 'g') bar(px + s, top + half, true, w - 2 * s);
+    else if (id === 'd') bar(px + s, top + h, true, w - 2 * s);
+    else if (id === 'f') bar(px, top + s, false, half - 2 * s);
+    else if (id === 'b') bar(px + w, top + s, false, half - 2 * s);
+    else if (id === 'e') bar(px, top + half + s, false, half - 2 * s);
+    else bar(px + w, top + half + s, false, half - 2 * s);
+  };
+  ctx.save();
+  // A slight forward slant like real LED digits.
+  ctx.translate(0, y); ctx.transform(1, 0, -.08, 1, 0, 0); ctx.translate(0, -y);
+  ctx.fillStyle = color;
+  for (const c of chars) {
+    const lit = SEGMENTS[c];
+    if (lit !== undefined) {
+      ctx.globalAlpha = .1; ctx.shadowBlur = 0;
+      for (const id of 'abcdefg') if (!lit.includes(id)) segment(id, ox);
+      ctx.globalAlpha = 1; ctx.shadowColor = color; ctx.shadowBlur = size * .18;
+      for (const id of lit) segment(id, ox);
+    } else if (c === ':' || c === '.') {
+      ctx.globalAlpha = 1; ctx.shadowColor = color; ctx.shadowBlur = size * .18;
+      const dot = t * 1.1, mid = ox + cell(c) / 2 - dot / 2 - gap / 2;
+      if (c === ':') { ctx.fillRect(mid, top + h * .28, dot, dot); ctx.fillRect(mid, top + h * .66, dot, dot); }
+      else ctx.fillRect(mid, top + h - dot / 2, dot, dot);
+    } else if (c.trim()) {
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.textAlign = 'left';
+      ctx.font = `bold ${size}px "DM Mono", monospace`;
+      ctx.fillText(c, ox, y);
+    }
+    ox += cell(c);
+  }
+  ctx.restore();
+}
+
 export function updateDisplayTexture(
   entry: DisplayMeshEntry,
   states: Record<string, HAState>,
@@ -299,8 +357,8 @@ export function updateDisplayTexture(
   // Clear
   ctx.clearRect(0, 0, texW, texH);
 
-  // Draw background panel if configured (conditional bg overrides)
-  const bgColor = conditionalBg ?? cfg.backgroundColor;
+  // Draw background panel if configured (conditional bg overrides); LED digits sit in a dark window.
+  const bgColor = conditionalBg ?? cfg.backgroundColor ?? (cfg.segment ? '#0b0505' : undefined);
   if (bgColor && bgColor !== 'transparent') {
     const radius = Math.min(texW, texH) * 0.08; // rounded corners
     ctx.fillStyle = bgColor;
@@ -364,6 +422,8 @@ export function updateDisplayTexture(
   const drawItem = (it: SourceRenderInfo, x: number, y: number) => {
     if (it.icon) {
       drawIcon(it.icon, x, y, it.color, it.fontSize);
+    } else if (cfg.segment) {
+      drawSegmentText(ctx, it.text, x, y, it.fontSize, it.color, align);
     } else {
       ctx.font = `${it.fontWeight} ${it.fontSize}px "DM Mono", monospace`;
       drawText(it.text, x, y, it.color);

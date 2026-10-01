@@ -730,17 +730,19 @@ export class DayDemoEngine {
     if (!appliance) return;
     if (appliance.power) this.hooks.setState(entityId, running ? String(Math.round(420 + this.random() * 380)) : '0.4', { unit_of_measurement: 'W' });
     else this.hooks.setState(entityId, running ? appliance.runningState ?? 'running' : 'off', {});
-    if (appliance.remainingEntityId && !running) this.hooks.setState(appliance.remainingEntityId, '0', { unit_of_measurement: 'min' });
+    const countdown = appliance.remainingEntityId || appliance.displayEntityId;
+    if (countdown && !running) this.hooks.setState(countdown, '0', { unit_of_measurement: 'min' });
   }
 
   private applianceAction(entityId: string, running: boolean, minutes: number, at: number): void {
     this.appliance(entityId, running);
     const appliance = this.cast.appliances.find(a => a.entityId === entityId);
-    if (!appliance?.remainingEntityId) return;
+    const countdown = appliance?.remainingEntityId || appliance?.displayEntityId;
+    if (!appliance || !countdown) return;
     const key = `appliance:${entityId}`;
     if (!running) { this.transitions.delete(key); return; }
     this.schedule(key, at, at + minutes, t => {
-      this.hooks.setState(appliance.remainingEntityId!, String(Math.max(0, Math.round(minutes * (1 - t)))), { unit_of_measurement: 'min' });
+      this.hooks.setState(countdown, String(Math.max(0, Math.round(minutes * (1 - t)))), { unit_of_measurement: 'min' });
       if (appliance.power && t < 1) this.hooks.setState(entityId, String(Math.round(380 + this.random() * 420)), { unit_of_measurement: 'W' });
     });
   }

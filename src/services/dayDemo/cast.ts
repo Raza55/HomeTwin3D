@@ -32,7 +32,11 @@ export interface CastLight {
 export interface CastCoffee { entityId: string; ids: NonNullable<FloorplanObject['coffee']>; objectId?: string }
 export interface CastPC { device: ITDevice; room: RoomRole }
 export interface CastDoor { entityId: string; kind: 'entrance' | 'balcony' | 'window' | 'other'; label: string; objectId?: string }
-export interface CastAppliance { entityId: string; kind: 'washer' | 'dryer'; runningState?: string; power: boolean; remainingEntityId?: string; objectId?: string }
+export interface CastAppliance {
+  entityId: string; kind: 'washer' | 'dryer'; runningState?: string; power: boolean; remainingEntityId?: string; objectId?: string;
+  /** Sensor on the appliance's panel display (when it has no remaining-time sensor): the demo counts down there. */
+  displayEntityId?: string;
+}
 export interface CastEntity { entityId: string; label: string; room: RoomRole; /** Blind config id (its meshes are named after it). */ id?: string }
 
 export interface DayDemoCast {
@@ -167,6 +171,13 @@ export function buildCast(config: AppConfig, extraDisplays: DisplayConfig[] = []
       entityId: device.entityId, kind: device.appliance.kind, runningState: device.appliance.runningStates?.[0],
       power: domainOf(device.entityId) === 'sensor' && device.appliance.powerThreshold !== undefined, remainingEntityId: device.appliance.remainingEntityId,
     });
+  }
+  // Panel displays named after the appliance ("… Trockner Display").
+  for (const appliance of appliances.values()) {
+    if (appliance.remainingEntityId) continue;
+    const name = appliance.kind === 'washer' ? /wasch|washer/i : /trock|dryer/i;
+    const display = (config.displays ?? []).find(d => !d.kind && name.test(d.label) && d.sources?.[0]?.entityId);
+    if (display) appliance.displayEntityId = display.sources[0].entityId;
   }
   for (const light of config.lights ?? []) {
     if (light.doubleTapEntityId?.startsWith('fan.') && !fans.has(light.doubleTapEntityId)) {

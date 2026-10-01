@@ -19,7 +19,7 @@ Windows 10/11, Python 3.10+ (Befehl `python`). Auf **DesktopMain im angemeldeten
 
    `powershell -NoProfile -ExecutionPolicy Bypass -File .\Autostart.ps1`
 
-   Den Ordner danach nicht verschieben. Es wird nur eine Verknuepfung im Benutzer-Autostart erstellt. Zum Entfernen denselben Befehl mit `-Remove` ausfuehren.
+   Den Ordner danach nicht verschieben. Es werden eine Verknuepfung im Benutzer-Autostart und eine geplante Aufgabe im eigenen Benutzerkonto erstellt (ohne Adminrechte). Die Aufgabe startet alle 5 Minuten unsichtbar `Watchdog.ps1` und startet den Helfer neu, falls er von aussen beendet wurde, z. B. durch ein Python-Update. Nach `Stop.ps1` bleibt er aus, bis `Start.ps1` wieder ausgefuehrt wird. Zum Entfernen denselben Befehl mit `-Remove` ausfuehren.
 
 ## Betrieb
 

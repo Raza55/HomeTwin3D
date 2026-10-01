@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.14 – Weniger identische Render- und Popup-Updates (01.10.2026)
+
+- Marker übertragen ihre Positions-, UV- und Farbpuffer nur bei geänderten Daten zur GPU. Projektion, Verdeckung und Klickprüfung laufen weiterhin pro Frame; Darstellung und Kamerabewegung bleiben erhalten.
+- Geöffnete Display- und Rohr-Popups übernehmen gezielt ihre benötigten HA-Entities. Nachträglich eintreffende Sensoren und Anfangszustände nach einer Wiederverbindung werden weiterhin angezeigt.
+- PC-RGB-Materialien überspringen identische Animationsschritte. Farben, Ablauf und Reaktionen auf Ein-/Ausschalten bleiben erhalten.
+
 ## 0.5.13 – Weniger Hintergrundarbeit (01.10.2026)
 
 - Tür-, Kaffee-, Lüfter-, Echo- und PC-Anzeigen reagieren gezielt auf ihre konfigurierten Entities einschließlich verschachtelter Sensoren und automatischer Kaffee-Warnsensoren. Gebündelte Zustandsereignisse bleiben vollständig erhalten.

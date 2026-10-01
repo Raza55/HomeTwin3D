@@ -10,7 +10,7 @@ import { setActiveHAConnection, type HALike } from '../src/services/haWebSocket'
 import { computeGraphGeometry } from '../src/utils/graphGeometry';
 import { iconLoaders } from '../src/services/iconLoaders.generated';
 import { loadLucideIcon } from '../src/services/lucideIcons';
-import { indexByEntity } from '../src/utils/entityIndex';
+import { indexByEntity, selectEntityStates } from '../src/utils/entityIndex';
 
 test('entity index preserves shared targets and excludes unrelated HA states', () => {
   const a = { id: 'a', entity: 'sensor.temperature' }, b = { id: 'b', entity: 'sensor.temperature' };
@@ -25,6 +25,24 @@ test('entity index preserves shared targets and excludes unrelated HA states', (
 });
 
 const connection = (request: HALike['request']): HALike => ({ request, isConnected: true, callService: async () => {}, forceReconnect() {}, dispose() {} });
+
+test('popup selection preserves full dependency states, refreshes initial states and isolates other sources', async () => {
+  const { displayStateDependencies } = await import('../src/services/tvMedia');
+  const display = { sources: [{ entityId: 'sensor.temperature' }, { entityId: 'sensor.power' }] } as import('../src/types').DisplayConfig;
+  const ids = new Set(displayStateDependencies(display));
+  const temperature = { entity_id: 'sensor.temperature', state: '21', attributes: { unit_of_measurement: '°C' } };
+  const power = { entity_id: 'sensor.power', state: '42', attributes: { unit_of_measurement: 'W' } };
+  const seed = { [temperature.entity_id]: temperature, 'sensor.indoor_humidity': power };
+  const selected = selectEntityStates(seed, ids);
+  assert.deepEqual(Object.keys(selected), ['sensor.temperature']);
+  assert.equal(selected[temperature.entity_id], temperature, 'attributes and state identity are preserved');
+  assert.equal(seed['sensor.indoor_humidity'], power, 'the full HA state cache is unchanged');
+  const refreshed = selectEntityStates({ ...seed, [power.entity_id]: power }, ids);
+  assert.equal(refreshed[power.entity_id], power, 'a dependency absent at opening can appear on reconnect');
+  const nextPopup = selectEntityStates(seed, new Set(['sensor.indoor_humidity']));
+  assert.deepEqual(Object.keys(nextPopup), ['sensor.indoor_humidity'], 'switching popups leaves no old dependencies');
+  assert.deepEqual(selectEntityStates(seed, []), {});
+});
 
 test('concurrent identical histories share one request and preserve the cache TTL', async () => {
   let calls = 0, resolve!: (value: unknown) => void;

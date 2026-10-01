@@ -11,5 +11,7 @@ await build({ entryPoints: [fileURLToPath(new URL('./marker-occlusion.test.ts', 
 await import('../.qa/marker-occlusion.test.mjs');
 await build({ entryPoints: [fileURLToPath(new URL('./it-render-performance.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/it-render-performance.test.mjs', import.meta.url)) });
 await import('../.qa/it-render-performance.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./marker-buffer.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/marker-buffer.test.mjs', import.meta.url)) });
+await import('../.qa/marker-buffer.test.mjs');
 await build({ entryPoints: [fileURLToPath(new URL('./render-batch.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', define: { 'import.meta.env.DEV': 'false' }, outfile: fileURLToPath(new URL('../.qa/render-batch.test.mjs', import.meta.url)) });
 await import('../.qa/render-batch.test.mjs');

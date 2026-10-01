@@ -22,9 +22,18 @@ test('static IT screens and powered-off RGB avoid repeated material writes; anim
         const expected = Color3.FromHSV((275 + time / 220 + 40) % 360, .9, .85);
         assert.ok(diffuse.equals(expected)); assert.ok(material.emissiveColor.equals(expected));
       }
+      const rgbCopies = copies;
+      for (let i = 0; i < 60; i++) update(true, 9800);
+      assert.equal(copies, rgbCopies, 'one RGB step must not rewrite the same color at the render rate');
       update(true, 10000, false); assert.ok(diffuse.equals(Color3.Black()));
       update(true, 10001, true); assert.ok(diffuse.equals(Color3.White()));
       update(false, 10002, true); assert.ok(diffuse.equals(Color3.Black()));
+      // Same timestamp still refreshes on power and screen-mode transitions.
+      update(true, 10002);
+      assert.ok(diffuse.equals(Color3.FromHSV((275 + 10002 / 220 + 40) % 360, .9, .85)));
+      update(false, 10002); assert.ok(diffuse.equals(Color3.Black()));
+      update(true, 10002);
+      assert.ok(diffuse.equals(Color3.FromHSV((275 + 10002 / 220 + 40) % 360, .9, .85)));
       const screen = createITMaterialUpdater(material, false, base, 0);
       screen(true, 0); const written = copies;
       for (let i = 0; i < 120; i++) screen(true, i * 16);

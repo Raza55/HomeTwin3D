@@ -1,13 +1,15 @@
 import { Color3, PBRMaterial, StandardMaterial } from '@babylonjs/core';
 
-/** Dedicated IT materials: only active RGB needs per-frame color changes. */
+/** Dedicated IT materials: active RGB only needs a write when its animation step changes. */
 export function createITMaterialUpdater(material: PBRMaterial | StandardMaterial, rgb: boolean, color: Color3, zone: number) {
   const hue = new Color3(), black = Color3.Black();
   const diffuse = material instanceof PBRMaterial ? material.albedoColor : material.diffuseColor;
   let previousOn: boolean | undefined, previousScreen: boolean | undefined;
+  let previousElapsed: number | undefined;
   return (on: boolean, elapsed: number, screen?: boolean): void => {
-    if (on === previousOn && screen === previousScreen && !(on && rgb && screen === undefined)) return;
+    if (on === previousOn && screen === previousScreen && (!(on && rgb && screen === undefined) || elapsed === previousElapsed)) return;
     previousOn = on; previousScreen = screen;
+    previousElapsed = elapsed;
     if (screen !== undefined) {
       const visible = on && screen;
       diffuse.set(visible ? 1 : 0, visible ? 1 : 0, visible ? 1 : 0);

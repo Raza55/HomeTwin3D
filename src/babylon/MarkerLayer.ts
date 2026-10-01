@@ -5,6 +5,7 @@ import {
 import { getMarkerProjection, setMarkerStyle } from './MarkerProjection';
 import { rasterizeMarker, type MarkerRaster } from './MarkerRaster';
 import { markerSizeScale } from './DeviceClass';
+import { MarkerVertexBuffers } from './MarkerVertexBuffers';
 
 /**
  * Map markers (lights, doors, blinds, devices, warnings) drawn by WebGL in the
@@ -300,6 +301,7 @@ class MarkerOverlay {
   private positions = new Float32Array(0);
   private uvs = new Float32Array(0);
   private colors = new Float32Array(0);
+  private buffers = new MarkerVertexBuffers();
   private scratch = document.createElement('canvas');
   private beforeRender: Observer<Scene>;
   private input: MarkerInput;
@@ -335,6 +337,7 @@ class MarkerOverlay {
   }
 
   private grow(capacity: number): void {
+    this.buffers.reset();
     this.capacity = capacity;
     this.positions = new Float32Array(capacity * 12);
     this.uvs = new Float32Array(capacity * 8);
@@ -381,9 +384,9 @@ class MarkerOverlay {
         this.colors.fill(1, i * 16, i * 16 + 16);
       });
     }
-    this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions);
-    this.mesh.updateVerticesData(VertexBuffer.UVKind, this.uvs);
-    this.mesh.updateVerticesData(VertexBuffer.ColorKind, this.colors);
+    this.buffers.upload(this.mesh, VertexBuffer.PositionKind, this.positions);
+    this.buffers.upload(this.mesh, VertexBuffer.UVKind, this.uvs);
+    this.buffers.upload(this.mesh, VertexBuffer.ColorKind, this.colors);
   }
 
   private rasterize(marker: Marker, pixelRatio: number, all: Marker[]): void {

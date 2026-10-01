@@ -9,3 +9,12 @@ export function indexByEntity<T>(entries: Iterable<T>, entityId: (entry: T) => s
   }
   return index;
 }
+
+/** A popup only needs its configured dependencies; keep the complete HA states themselves intact. */
+export function selectEntityStates<T>(states: Record<string, T>, entityIds: Iterable<string>): Record<string, T> {
+  const selected: Record<string, T> = {};
+  for (const id of entityIds) {
+    if (states[id] !== undefined) selected[id] = states[id];
+  }
+  return selected;
+}

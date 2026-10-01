@@ -96,7 +96,7 @@ import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, Ligh
 import './Dashboard.css';
 import { markStartup } from '../../babylon/StartupTiming';
 import { enableTouchZoneBatching } from '../../babylon/TouchZoneBatch';
-import { indexByEntity } from '../../utils/entityIndex';
+import { indexByEntity, selectEntityStates } from '../../utils/entityIndex';
 
 // Rarely used dialogs load on demand to keep the dashboard chunk small.
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
@@ -268,6 +268,7 @@ export default function Dashboard() {
   const [displayModalVisible, setDisplayModalVisible] = useState(false);
   const [displayModalConfig, setDisplayModalConfig] = useState<DisplayConfig | null>(null);
   const [displayModalStates, setDisplayModalStates] = useState<Record<string, HAState>>({});
+  const displayModalEntityIdsRef = useRef<Set<string>>(new Set());
 
   const [defaultTarget, setDefaultTarget] = useState<{ x: number; y: number; z: number } | null>(null);
   const modelSizeRef = useRef<{ x: number; z: number } | null>(null);
@@ -1594,11 +1595,10 @@ export default function Dashboard() {
             setDisplayAnimation(entry, resolveDisplayAnimation(entry.config, lastStatesRef.current));
           }
         }
-        // Keep display modal states in sync
-        setDisplayModalStates(prev => {
-          if (!prev[entityId] && !Object.keys(prev).length) return prev;
-          return { ...prev, [entityId]: state };
-        });
+        // Only the open popup's dependencies need a React update, including initially missing entities.
+        if (displayModalEntityIdsRef.current.has(entityId)) {
+          setDisplayModalStates(prev => prev[entityId] === state ? prev : { ...prev, [entityId]: state });
+        }
       },
       onInitialStates: (states: HAState[]) => {
         sceneCtxRef.current?.requestRender();
@@ -1609,6 +1609,9 @@ export default function Dashboard() {
         );
         setLightSceneOptions(buildSceneOptions(states));
         lastStatesRef.current = Object.fromEntries(states.map(state => [state.entity_id, state]));
+        if (displayModalEntityIdsRef.current.size) {
+          setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));
+        }
         refreshQuickStates(n=>n+1);
         const newCardStates: Record<string, HAState> = {};
         states.forEach((state) => {
@@ -1744,7 +1747,8 @@ export default function Dashboard() {
     const dc = config.displays?.find((d) => d.id === displayId);
     if (!dc) return;
     setDisplayModalConfig(dc);
-    setDisplayModalStates({ ...lastStatesRef.current });
+    displayModalEntityIdsRef.current = new Set(displayStateDependencies(dc));
+    setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));
     setDisplayModalVisible(true);
   }, []);
 
@@ -1767,14 +1771,15 @@ export default function Dashboard() {
       height: 1,
     };
     setDisplayModalConfig(syntheticDisplay);
-    setDisplayModalStates({ ...lastStatesRef.current });
+    displayModalEntityIdsRef.current = new Set(displayStateDependencies(syntheticDisplay));
+    setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));
     setDisplayModalVisible(true);
   }, []);
 
   const handleDisplayModalClose = useCallback(() => {
     setDisplayModalVisible(false);
     setDisplayModalConfig(null);
-    // An empty map lets onStateChanged skip the per-event copy while the modal is closed.
+    displayModalEntityIdsRef.current.clear();
     setDisplayModalStates({});
   }, []);
 

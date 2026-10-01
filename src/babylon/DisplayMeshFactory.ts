@@ -488,7 +488,7 @@ function updateRoutedTV(entry: DisplayMeshEntry, states: Record<string, HAState>
   const key = JSON.stringify({ ...content, position: content.position===undefined ? undefined : Math.floor(content.position), loaded: !!runtime.loaded });
   if (key === entry.lastText) return;
   entry.lastText = key;
-  drawTVMediaScreen(entry.texture.getContext() as unknown as CanvasRenderingContext2D, content, runtime.loaded);
+  drawTVMediaScreen(entry.texture.getContext() as unknown as CanvasRenderingContext2D, content, runtime.loaded, !!local);
   entry.material.disableLighting = true;
   // StandardMaterial adds emissiveColor to the texture; white would wash it out.
   entry.material.emissiveColor.set(0,0,0);

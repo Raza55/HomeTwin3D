@@ -27,35 +27,66 @@ function seeded(seed: number): () => number {
 const de = (frame: ScreenFrame) => frame.language.startsWith('de');
 
 function drawNews(ctx: CanvasRenderingContext2D, f: ScreenFrame): void {
-  const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#0a1f4d'); g.addColorStop(1, '#173d85');
+  // Studio: deep blue with soft light from above.
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#0b2a63'); g.addColorStop(.65, '#0a1f4f'); g.addColorStop(1, '#06132f');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Studio light beams and a globe made of meridians.
-  ctx.save(); ctx.globalAlpha = .12; ctx.fillStyle = '#9fc3ff';
-  for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(120 + i * 180, 0); ctx.lineTo(60 + i * 190, H); ctx.lineTo(140 + i * 190, H); ctx.closePath(); ctx.fill(); }
+  const glow = ctx.createRadialGradient(W * .32, H * .2, 20, W * .32, H * .2, W * .6);
+  glow.addColorStop(0, 'rgba(120,170,255,.28)'); glow.addColorStop(1, 'rgba(120,170,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  // Background wall: a world map of dots behind the presenter.
+  ctx.save();
+  const rnd = seeded(23);
+  ctx.fillStyle = 'rgba(160,200,255,.22)';
+  for (let y = 40; y < 330; y += 13) for (let x = 20; x < W - 20; x += 13) {
+    const lat = (y - 185) / 145, lon = (x - W / 2) / (W / 2);
+    const land = Math.sin(lon * 5.2 + 1.3) * Math.cos(lat * 3.1) + Math.sin(lon * 11 - lat * 4) * .35 + (rnd() - .5) * .25;
+    if (land > .35) { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); }
+  }
   ctx.restore();
-  ctx.save(); ctx.translate(700, 215); ctx.strokeStyle = '#6fa8ff88'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, 130, 0, Math.PI * 2); ctx.stroke();
-  const turn = f.frame * .18;
-  for (let i = 0; i < 6; i++) { const rx = Math.abs(Math.cos(turn + i * Math.PI / 6)) * 130; ctx.beginPath(); ctx.ellipse(0, 0, rx, 130, 0, 0, Math.PI * 2); ctx.stroke(); }
-  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(0, i * 45, Math.sqrt(130 ** 2 - (i * 45) ** 2), 10, 0, 0, Math.PI * 2); ctx.stroke(); }
+  // Picture-in-picture: weather card of the day.
+  ctx.save();
+  ctx.translate(640, 80);
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(0, 0, 250, 150);
+  const sky = ctx.createLinearGradient(0, 4, 0, 146); sky.addColorStop(0, '#3a76c9'); sky.addColorStop(1, '#9cc4f2');
+  ctx.fillStyle = sky; ctx.fillRect(4, 4, 242, 142);
+  ctx.fillStyle = '#ffd35a'; ctx.beginPath(); ctx.arc(80, 70, 30, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  for (const [x, y, r] of [[130, 82, 26], [160, 70, 32], [192, 84, 24], [150, 92, 22]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = '#0b2a63'; ctx.font = '800 26px system-ui'; ctx.fillText('22°', 26, 132);
   ctx.restore();
+  // Presenter at the desk (simple shapes).
+  ctx.save();
+  ctx.translate(300, 0);
+  ctx.fillStyle = '#1b2433';
+  ctx.beginPath(); ctx.moveTo(-120, 470); ctx.quadraticCurveTo(-110, 300, 0, 290); ctx.quadraticCurveTo(110, 300, 120, 470); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#f2f4f8'; ctx.beginPath(); ctx.moveTo(-26, 292); ctx.lineTo(0, 360); ctx.lineTo(26, 292); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#8b1e2e'; ctx.beginPath(); ctx.moveTo(-7, 300); ctx.lineTo(0, 352); ctx.lineTo(7, 300); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e8c3a8'; ctx.fillRect(-16, 250, 32, 44);
+  ctx.beginPath(); ctx.ellipse(0, 220, 46, 56, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4a3326'; ctx.beginPath(); ctx.ellipse(0, 186, 50, 30, 0, Math.PI, 0); ctx.fill();
+  ctx.fillRect(-50, 182, 12, 34); ctx.fillRect(38, 182, 12, 34);
+  // Talking: the mouth opens and closes from frame to frame.
+  ctx.fillStyle = '#7a3a33'; ctx.beginPath(); ctx.ellipse(0, 248, 12, f.frame % 2 ? 6 : 2.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.arc(-17, 215, 4.5, 0, Math.PI * 2); ctx.arc(17, 215, 4.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // Desk.
+  const desk = ctx.createLinearGradient(0, 400, 0, 470);
+  desk.addColorStop(0, '#e9f0fb'); desk.addColorStop(1, '#a9bedd');
+  ctx.fillStyle = desk; ctx.beginPath(); ctx.moveTo(60, 470); ctx.quadraticCurveTo(300, 390, 540, 470); ctx.lineTo(540, 480); ctx.lineTo(60, 480); ctx.closePath(); ctx.fill();
+  // Clock top left.
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(36, 30, 96, 40);
+  ctx.fillStyle = '#0b2a63'; ctx.font = '800 26px system-ui'; ctx.fillText(clockLabel(f.clock), 46, 60);
+  // Lower third with the current headline.
   const headlines = de(f)
-    ? ['Gewitterfront erreicht am Nachmittag den Süden', 'Wetter: Morgen wieder freundlich und mild', 'Verkehr: freie Fahrt auf den Hauptachsen', 'Sport: Heimsieg im Spitzenspiel', 'Kultur: Lange Nacht der Museen am Wochenende']
-    : ['Thunderstorm front reaches the south this afternoon', 'Weather: friendly and mild again tomorrow', 'Traffic: main roads clear', 'Sport: home win in the top match', 'Culture: museum night this weekend'];
-  ctx.fillStyle = '#ffffff'; ctx.font = '800 54px system-ui'; ctx.fillText(de(f) ? 'MORGENMAGAZIN' : 'MORNING SHOW', 56, 110);
-  ctx.fillStyle = '#9cc2ff'; ctx.font = '500 24px system-ui'; ctx.fillText(de(f) ? 'Live aus dem Studio' : 'Live from the studio', 58, 148);
-  // Lower third.
-  ctx.fillStyle = '#d6202b'; ctx.fillRect(0, 360, 200, 64);
-  ctx.fillStyle = '#ffffff'; ctx.font = '800 30px system-ui'; ctx.fillText(de(f) ? 'AKTUELL' : 'LATEST', 26, 403);
-  ctx.fillStyle = '#ffffffee'; ctx.fillRect(200, 360, W - 200, 64);
-  ctx.fillStyle = '#0b1f45'; ctx.font = '700 28px system-ui'; ctx.fillText(headlines[Math.floor(f.frame / 3) % headlines.length], 222, 403);
-  ctx.fillStyle = '#071331'; ctx.fillRect(0, 470, W, 70);
-  ctx.fillStyle = '#ffd35a'; ctx.font = '700 24px system-ui'; ctx.fillText(clockLabel(f.clock), 28, 514);
-  ctx.fillStyle = '#c8d8ff'; ctx.font = '500 22px system-ui';
-  const ticker = headlines.join('   +++   ');
-  ctx.save(); ctx.beginPath(); ctx.rect(120, 470, W - 120, 70); ctx.clip();
-  ctx.fillText(ticker, 140 - (f.frame * 60) % 1400, 514); ctx.restore();
+    ? ['Gewitterfront erreicht am Nachmittag den Süden', 'Pendler: freie Fahrt auf den Hauptachsen', 'Herbstferien beginnen in mehreren Ländern', 'Heimsieg im Spitzenspiel am Abend', 'Lange Nacht der Museen am Wochenende']
+    : ['Thunderstorm front reaches the south this afternoon', 'Commuters: main roads clear', 'Autumn holidays begin in several regions', 'Home win in the evening top match', 'Museum night this weekend'];
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 430, W, 62);
+  ctx.fillStyle = '#0b2a63'; ctx.fillRect(0, 430, 18, 62);
+  ctx.font = '700 28px system-ui'; ctx.fillText(headlines[Math.floor(f.frame / 3) % headlines.length], 40, 472);
+  ctx.fillStyle = '#0b2a63'; ctx.fillRect(0, 492, W, 48);
+  ctx.fillStyle = '#ffffff'; ctx.font = '600 20px system-ui';
+  ctx.fillText(de(f) ? 'NACHRICHTEN' : 'NEWS', 40, 523);
 }
 
 function drawMovie(ctx: CanvasRenderingContext2D, f: ScreenFrame): void {

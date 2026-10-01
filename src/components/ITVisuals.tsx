@@ -44,7 +44,9 @@ export default function ITVisuals({scene,config,states,connected}: {scene:Scene;
       }
       // The RGB cycle is slow (80 s per turn). Advancing it in 3.4° steps instead of every
       // frame leaves identical frames in between, so the idle dashboard can skip them.
-      const elapsed=Math.floor((performance.now()-start)/RGB_STEP_MS)*RGB_STEP_MS;
+      // The day demo speeds the cycle up (scene.metadata.itRgbSpeed) into a visible rainbow.
+      const speed=Number(scene.metadata?.itRgbSpeed??1)||1;
+      const elapsed=Math.floor((performance.now()-start)*speed/RGB_STEP_MS)*RGB_STEP_MS;
       for(const t of targets){
         if(t.mesh.isDisposed())continue;
         const on=status.get(t.device)?.on??false;

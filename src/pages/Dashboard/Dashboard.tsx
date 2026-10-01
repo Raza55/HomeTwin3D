@@ -1744,7 +1744,7 @@ export default function Dashboard() {
           return ccf;
         },
         walk: {
-          enter: () => changeNavigationMode('walk'),
+          enter: () => { if (walkthroughRef.current) walkthroughRef.current.scriptedEntry = true; changeNavigationMode('walk'); },
           exit: () => changeNavigationMode('normal'),
           active: () => walkthroughRef.current?.mode === 'walk',
           pose: (eye, look) => walkthroughRef.current?.setPose(eye, look),

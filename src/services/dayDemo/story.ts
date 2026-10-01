@@ -148,7 +148,7 @@ export const STORY: StoryBeat[] = [
   ], {
     id: 'breakfast', icon: 'tv',
     title: { de: 'Frühstück mit Nachrichten', en: 'Breakfast with the news' },
-    text: { de: 'Der Fernseher startet das Morgenmagazin. Die Kaffeemaschine meldet: fertig.', en: 'The TV starts the morning show. The coffee machine reports: done.' },
+    text: { de: 'Vom Esstisch der Blick zum Fernseher: Die Nachrichten laufen, das Licht über dem Tisch ist gedimmt.', en: 'From the dining table the view goes to the TV: the news is on, the light above the table is dimmed.' },
   }),
   beat('07:40', [{ type: 'fan', on: false }]),
   beat('08:12', [{ type: 'door', kind: 'entrance', open: true }]),
@@ -167,7 +167,7 @@ export const STORY: StoryBeat[] = [
   beat('09:00', [{ type: 'appliance', kind: 'washer', running: true }], {
     id: 'chores', icon: 'washer',
     title: { de: 'Waschtag', en: 'Laundry day' },
-    text: { de: 'Niemand zu Hause: Die Waschmaschine startet nach Zeitplan, danach übernimmt der Trockner.', en: 'Nobody home: the washer starts on schedule, the dryer takes over afterwards.' },
+    text: { de: 'Niemand zu Hause: Die Waschmaschine startet nach Zeitplan und zeigt die Restzeit, danach übernimmt der Trockner darüber.', en: 'Nobody home: the washer starts on schedule and shows its remaining time, then the dryer above takes over.' },
   }),
   beat('10:30', [], {
     id: 'sunny', icon: 'sun',
@@ -259,7 +259,7 @@ export const STORY: StoryBeat[] = [
   ], {
     id: 'gaming', icon: 'gamepad',
     title: { de: 'Gaming-Session', en: 'Gaming session' },
-    text: { de: 'Der Film ist aus, im Schlafzimmer startet der PC ein Spiel. RGB-Lüfter und Bildschirm leuchten, die Lampen atmen langsam in kühlem Blau – ein Blick hinaus in die Nacht.', en: 'The movie ends, the PC in the bedroom launches a game. RGB fans and screen glow, the lamps breathe slowly in cool blue – a look out into the night.' },
+    text: { de: 'Der Film ist aus, im Schlafzimmer startet der PC ein Spiel. Gehäuse und Lüfter leuchten im Regenbogen, die Lampen atmen langsam in kühlem Blau.', en: 'The movie ends, the PC in the bedroom launches a game. Case and fans glow in rainbow colours, the lamps breathe slowly in cool blue.' },
   }),
   beat('23:15', [
     { type: 'pc', on: false },
@@ -366,7 +366,13 @@ const PACE: { clock: string; speed: number }[] = [
   // Let the coffee machine's popup show its progress.
   { clock: '06:45', speed: 0.2 },
   { clock: '06:54', speed: 0.9 },
+  { clock: '07:30', speed: 0.35 },
+  { clock: '07:53', speed: 0.9 },
   { clock: '08:35', speed: 2 },
+  { clock: '09:00', speed: 0.27 },
+  { clock: '09:19', speed: 2 },
+  { clock: '11:07', speed: 0.27 },
+  { clock: '11:25', speed: 2 },
   { clock: '13:25', speed: 1.2 },
   { clock: '15:00', speed: .55 },
   { clock: '16:05', speed: 1.1 },
@@ -425,7 +431,10 @@ export type ShotAnchor =
   | { kind: 'coffee' }
   | { kind: 'entrance' }
   | { kind: 'room'; room: RoomRole }
-  | { kind: 'washer' };
+  | { kind: 'washer' }
+  | { kind: 'dryer' }
+  /** The PC case with its RGB lighting. */
+  | { kind: 'pcCase' };
 
 /** One moment of a shot: where the eye stands and what it looks at. Between keys the camera glides. */
 export interface ShotKey {
@@ -436,7 +445,7 @@ export interface ShotKey {
    * in until that anchor is in clear view. `approach`: walk straight from the previous
    * key's position towards the anchor and stop `metres` in front of it.
    */
-  eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean };
+  eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean; /** Eye height in metres (1.6 standing, ~1.2 seated). */ height?: number };
   look: ShotAnchor;
   /** Jump here with a short dip to black instead of gliding (another room). */
   cut?: boolean;
@@ -460,6 +469,19 @@ export const SHOTS: Shot[] = [
     { t: .78, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' } },
     { t: 1, eye: { at: { kind: 'coffee' }, metres: 1.3, approach: true }, look: { kind: 'coffee' } },
   ], 80),
+  shot('breakfast-news', '07:31', '07:52', [
+    { t: 0, eye: { at: { kind: 'tv' }, metres: 5.2, height: 1.2 }, look: { kind: 'tv' } },
+    { t: 1, eye: { at: { kind: 'tv' }, metres: 4.4, height: 1.2 }, look: { kind: 'tv' } },
+  ]),
+  shot('laundry', '09:01', '09:18', [
+    { t: 0, eye: { at: { kind: 'washer' }, metres: 1.8 }, look: { kind: 'washer' } },
+    { t: 1, eye: { at: { kind: 'washer' }, metres: 1.3 }, look: { kind: 'washer' } },
+  ]),
+  shot('dryer', '11:08', '11:24', [
+    { t: 0, eye: { at: { kind: 'washer' }, metres: 1.4 }, look: { kind: 'washer' } },
+    { t: .4, eye: { at: { kind: 'washer' }, metres: 1.4 }, look: { kind: 'washer' } },
+    { t: 1, eye: { at: { kind: 'dryer' }, metres: 1.6 }, look: { kind: 'dryer' } },
+  ]),
   shot('storm-bedroom', '15:04', '15:46', [
     { t: 0, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 2.8 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
     { t: 1, eye: { at: { kind: 'window', room: 'bedroom', near: 'pc' }, metres: 1.1 }, look: { kind: 'window', room: 'bedroom', near: 'pc' } },
@@ -470,10 +492,11 @@ export const SHOTS: Shot[] = [
     { t: 1, eye: { at: { kind: 'window', near: 'tv' }, metres: 1.4 }, look: { kind: 'window', near: 'tv' } },
   ], 70),
   shot('gaming', '22:24', '22:58', [
-    { t: 0, eye: { at: { kind: 'pc' }, metres: 2.2 }, look: { kind: 'pc' } },
-    { t: .45, eye: { at: { kind: 'pc' }, metres: 1.5 }, look: { kind: 'pc' } },
-    { t: 1, eye: { at: { kind: 'window', near: 'pc' }, metres: 1.3 }, look: { kind: 'window', near: 'pc' } },
-  ], 70),
+    { t: 0, eye: { at: { kind: 'pc' }, metres: 1.6 }, look: { kind: 'pc' } },
+    { t: .4, eye: { at: { kind: 'pc' }, metres: 1.4 }, look: { kind: 'pc' } },
+    // Step back and look down at the desk: the PC case glows in rainbow colours.
+    { t: 1, eye: { at: { kind: 'pc' }, metres: 1.8, height: 2.2 }, look: { kind: 'pcCase' } },
+  ]),
 ];
 
 export function shotAt(virtual: number): Shot | undefined {

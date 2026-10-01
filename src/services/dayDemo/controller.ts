@@ -165,7 +165,7 @@ export class DayDemoController {
     // Mirror captures (0.1-0.7 s each) would follow every daylight change.
     // Moonlight: at night the park stays visible through the windows (at least the user's own minimum).
     this.parkFloor = Number(scene.metadata?.parkMinBrightness ?? 0);
-    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true, alwaysAnimateWeather: true, parkMinBrightness: Math.max(this.parkFloor, .4) };
+    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true, alwaysAnimateWeather: true, parkMinBrightness: Math.max(this.parkFloor, .4), itRgbSpeed: 10 };
     this.preparing = 0;
     this.emit();
     const t0 = performance.now();
@@ -265,7 +265,7 @@ export class DayDemoController {
     this.endShot(false);
     cancelAnimationFrame(this.frame);
     // Mirrors catch up with the real daylight; lamps switch off for real again with the next HA states.
-    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false, alwaysAnimateWeather: false,
+    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false, alwaysAnimateWeather: false, itRgbSpeed: 1,
       ...(this.parkFloor !== undefined ? { parkMinBrightness: this.parkFloor } : {}) };
     // Blinds moved without refreshing lamp shadows during the demo.
     for (const light of this.deps.scene.lights) if (light !== this.deps.sun) light.getShadowGenerator()?.getShadowMap()?.resetRefreshCounter();

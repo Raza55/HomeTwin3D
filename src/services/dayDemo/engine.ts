@@ -292,7 +292,7 @@ export class DayDemoEngine {
         if (!this.cast.tvRoutes.length && !this.cast.tvPlayers.length) return;
         this.tv(action.mode, action.title, at);
         const titles: Record<TVMode, Text> = {
-          off: { de: 'Fernseher aus', en: 'TV off' }, news: { de: 'Fernseher: Morgenmagazin', en: 'TV: morning show' },
+          off: { de: 'Fernseher aus', en: 'TV off' }, news: { de: 'Fernseher: Nachrichten', en: 'TV: the news' },
           movie: { de: `Fernseher: ${action.title?.de ?? 'Film'}`, en: `TV: ${action.title?.en ?? 'movie'}` },
           pc: { de: 'Fernseher: PC-Eingang', en: 'TV: PC input' }, game: { de: 'Fernseher: Konsole', en: 'TV: console' },
         };
@@ -581,7 +581,7 @@ export class DayDemoEngine {
       }
       if (mode === 'news' || mode === 'movie') {
         const media = mode === 'news'
-          ? { app_name: 'Mediathek', media_title: pick({ de: 'Morgenmagazin', en: 'Morning Show' }, this.language), media_series_title: pick({ de: 'Nachrichten', en: 'News' }, this.language), media_duration: 2700 }
+          ? { app_name: 'Mediathek', media_title: pick({ de: 'Nachrichten', en: 'The News' }, this.language), media_series_title: pick({ de: 'Nachrichten', en: 'News' }, this.language), media_duration: 2700 }
           : { app_name: 'Heimkino', media_title: movieTitle || 'Nordlicht', media_series_title: pick({ de: 'Spielfilm', en: 'Feature film' }, this.language), media_duration: 7260 };
         set(route.shield, 'playing', { ...media, media_position: 0 });
         if (route.screenshot) this.addScreen({ entityId: route.screenshot, kind: mode, state: 'on', attributes: {}, title: media.media_title, startV: at, tv: { shield: route.shield, duration: media.media_duration } });
@@ -593,7 +593,7 @@ export class DayDemoEngine {
       if (!on) { set(player, 'off', {}); continue; }
       set(player, 'playing', {
         app_name: mode === 'news' ? 'Mediathek' : 'Heimkino', source: mode === 'news' ? 'Mediathek' : 'Heimkino',
-        media_title: mode === 'news' ? pick({ de: 'Morgenmagazin', en: 'Morning Show' }, this.language) : movieTitle || 'Nordlicht',
+        media_title: mode === 'news' ? pick({ de: 'Nachrichten', en: 'The News' }, this.language) : movieTitle || 'Nordlicht',
         volume_level: 0.3,
       });
     }

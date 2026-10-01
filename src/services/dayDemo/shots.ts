@@ -89,11 +89,11 @@ export class ShotDirector {
       const from = lookA.subtract(eyeA).normalize(), to = lookB.subtract(eyeB).normalize();
       look = eye.add(Vector3.Lerp(from, to, u).normalize().scale(4 * this.walk.unit()));
     }
-    // A natural head angle: never more than ~25° down (or 20° up) while turning.
+    // A natural head angle: at most ~50° down (looking at a desk) or 20° up.
     const unit = this.walk.unit(), time = performance.now() / 1000;
     eye = eye.clone(); look = look.clone();
     const view = look.subtract(eye), flat = Math.hypot(view.x, view.z);
-    if (flat > 1e-6) look.y = eye.y + Math.max(-.47 * flat, Math.min(.36 * flat, view.y));
+    if (flat > 1e-6) look.y = eye.y + Math.max(-1.25 * flat, Math.min(.36 * flat, view.y));
     // A slight breathing sway keeps the hand-held feel.
     eye.y += Math.sin(time * 1.3) * .012 * unit;
     look.x += Math.sin(time * .7) * .03 * unit;
@@ -146,6 +146,7 @@ export class ShotDirector {
         }
       }
     } else if (anchor) eye = this.eyeAt(anchor, key.eye.metres);
+    if (eye && key.eye.height !== undefined) eye.y = this.walk.floorY() + key.eye.height * this.walk.unit();
     this.eyes.set(id, eye);
     return eye;
   }
@@ -271,7 +272,13 @@ export class ShotDirector {
     if (spec.kind === 'pc') return this.screenAnchor(this.pcScreens());
     if (spec.kind === 'tv') return this.screenAnchor(this.tvPlanes().filter(m => !m.isDisposed()));
     if (spec.kind === 'coffee') return this.objectAnchor(this.cast.coffee.map(c => c.objectId));
-    if (spec.kind === 'washer') return this.objectAnchor(this.cast.appliances.map(a => a.objectId));
+    if (spec.kind === 'washer' || spec.kind === 'dryer') return this.objectAnchor(this.cast.appliances.filter(a => a.kind === spec.kind).map(a => a.objectId));
+    if (spec.kind === 'pcCase') {
+      const names = this.cast.pcs.flatMap(pc => pc.device.rgbMaterials ?? []);
+      const matches = (name = '') => names.some(n => name === n || name.startsWith(n + '.') || name.startsWith(n + ':'));
+      const meshes = this.scene.meshes.filter(m => !m.isDisposed() && m.getTotalVertices() > 0 && matches((m.metadata?.originalMaterial ?? m.material)?.name));
+      return meshes.length ? { center: bounds(meshes).center, inward: Vector3.Zero(), out: false, meshes } : null;
+    }
     if (spec.kind === 'entrance') return this.entranceAnchor();
     if (spec.kind === 'room') {
       const center = this.roomCenter(spec.room);

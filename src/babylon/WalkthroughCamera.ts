@@ -7,6 +7,8 @@ export const nextNavigationMode = (mode: NavigationMode): NavigationMode => mode
 /** Reuses the scene camera so outlines, markers and lighting keep the same camera. */
 export class WalkthroughCamera {
   mode: NavigationMode = 'normal';
+  /** Next entry is scripted (day demo): skip the spawn and view search, the script sets the pose. */
+  scriptedEntry = false;
   readonly keys = new Set<string>();
   private eye = Vector3.Zero();
   private saved?: { target: Vector3; alpha: number; beta: number; radius: number; mode: number; minZ: number; layerMask: number; lower: number | null; upper: number | null; lowerBeta: number | null; upperBeta: number | null };
@@ -97,10 +99,14 @@ export class WalkthroughCamera {
       // Reveal actual ceilings only. The same hidden layer also contains opaque
       // shadow-only walls across windows, which must never become camera-visible.
       for (const mesh of this.ceilingMasks.keys()) if (!mesh.isDisposed()) mesh.layerMask = c.layerMask;
-      this.eye.copyFrom(this.spawn()); c.beta = Math.PI / 2;
+      const scripted = this.scriptedEntry;
+      this.scriptedEntry = false;
+      if (scripted) this.scriptedUntil = performance.now() + 100;
+      if (scripted) { this.eye.copyFrom(c.position); c.beta = Math.PI / 2; }
+      else this.eye.copyFrom(this.spawn()); c.beta = Math.PI / 2;
       // Look into the longest unobstructed direction from the starting point.
       let best = -1;
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < (scripted ? 0 : 8); i++) {
         const angle = i * Math.PI / 4, direction = new Vector3(-Math.cos(angle), 0, -Math.sin(angle));
         const hit = this.pick(this.eye, direction, 6 * this.scale);
         let distance = hit?.hit ? hit.distance : 6 * this.scale;
@@ -119,10 +125,13 @@ export class WalkthroughCamera {
       c.attachControl(this.canvas, true); this.saved = undefined;
       for (const [mesh, mask] of this.ceilingMasks) if (!mesh.isDisposed()) mesh.layerMask = mask;
     } else {
-      if (mode === 'walk') { const y = this.ground(this.eye.x, this.eye.z); if (y === undefined) this.eye.copyFrom(this.spawn()); else this.eye.y = y + 1.65 * this.scale; }
+      if (mode === 'walk' && !this.scriptedPose()) { const y = this.ground(this.eye.x, this.eye.z); if (y === undefined) this.eye.copyFrom(this.spawn()); else this.eye.y = y + 1.65 * this.scale; }
       this.syncCamera(); this.canvas.focus({ preventScroll: true });
     }
   }
+  private scriptedUntil = 0;
+  private scriptedPose(): boolean { return performance.now() < this.scriptedUntil; }
+
   /** Floor height and model scale (metres → scene units) for scripted shots. */
   get floorY(): number { return this.floor; }
   get unit(): number { return this.scale; }

@@ -228,7 +228,7 @@ test('camera shots stay inside the day and their chapters', () => {
     assert.ok(realSecondsUntil(s.to) - realSecondsUntil(s.from) >= 5, s.id);
   }
   assert.equal(shotAt(at('12:00')), undefined);
-  assert.deepEqual(SHOTS.map(s => s.id), ['opening', 'storm-bedroom', 'cinema', 'gaming']);
+  assert.deepEqual(SHOTS.map(s => s.id), ['opening', 'breakfast-news', 'laundry', 'dryer', 'storm-bedroom', 'cinema', 'gaming']);
   // The opening ends on the coffee machine just before it starts brewing.
   const opening = SHOTS[0];
   assert.equal(opening.keys.at(-1).look.kind, 'coffee');

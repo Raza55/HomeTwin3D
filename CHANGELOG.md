@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.21 – Tagesdemo: Nachrichten, Waschtag und Gaming-Blick (01.10.2026)
+
+- Frühstück: Blick vom Esstisch zum Fernseher; die Nachrichten erscheinen als eigenes Bild im Abendnachrichten-Stil (Studio, Sprecher, Wetterkarte, Bauchbinde) und – wie alle Demo-Bildschirminhalte – vollflächig ohne Player-Einblendung.
+- Waschtag: kurze Einstellungen in der Kammer – die laufende Waschmaschine mit Restzeit, später der Schwenk hoch zum Trockner.
+- Gaming: vom Monitor zurück und von oben auf den Schreibtisch; die RGB-Beleuchtung des PCs läuft während der Demo als schneller Regenbogen.
+- Weniger Ruckler: Der Einstieg in die Ich-Perspektive überspringt bei Kameraeinstellungen die Suche nach einem Startpunkt (vorher 150–350 ms).
+
 ## 0.5.20 – Schnellere Tagesdemo mit Raumfokus (01.10.2026)
 
 - Ein Tag dauert jetzt rund zwei Minuten (statt fünf); die Tempo-Auswahl entfällt. Die Außenansicht fährt pro Kapitel zum Raum, in dem etwas passiert (Bad, Küche, Schlafzimmer, Kammer …), zoomt nah heran und dreht sich langsam weiter; Wetterkapitel zeigen das ganze Gelände.

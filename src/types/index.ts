@@ -167,7 +167,8 @@ export interface FloorplanObject {
   /** Read-only marker, visible only for explicitly listed active states. */
   statusIndicator?: { kind: 'smoke'; activeStates: string[] };
   /** One contact per opening; a double door animates its right leaf only. */
-  door?: { kind: 'double' | 'single' | 'entrance' };
+  /** `tiltOnly`: the sash can only be tilted (furniture in front), so an open contact means tilted. */
+  door?: { kind: 'double' | 'single' | 'entrance'; tiltOnly?: boolean };
   doorLock?: { doorId: string };
   appliance?: ApplianceConfig;
   id: string;

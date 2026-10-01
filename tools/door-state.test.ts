@@ -19,6 +19,11 @@ test('door uses continuous HA open duration, including the precise 15-minute bou
   assert.equal(doorPose({ ...state, state: 'off' }, opened + 20 * 60000), 'closed');
   assert.equal(doorPose({ ...state, last_changed: new Date(opened + 21 * 60000).toISOString() }, opened + 22 * 60000), 'open');
 });
+test('a tilt-only sash is tilted as soon as its contact opens', () => {
+  assert.equal(doorPose(state, opened, 'double', true), 'tilted');
+  assert.equal(doorPose({ ...state, state: 'off' }, opened, 'double', true), 'closed');
+  assert.equal(doorPose({ ...state, state: 'unavailable' }, opened, 'double', true), null);
+});
 test('missing or invalid HA timestamps never invent a tilt; unknown contacts keep their pose', () => {
   for (const last_changed of [undefined, 'invalid', new Date(opened + 9999999).toISOString()]) assert.equal(doorPose({ ...state, last_changed }, opened), 'open');
   for (const status of ['unknown', 'unavailable', 'garbage']) assert.equal(doorPose({ ...state, state: status }), null);

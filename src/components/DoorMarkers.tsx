@@ -54,7 +54,7 @@ export default function DoorMarkers({ scene, config, states, connected, onAssign
     setMarkerStyle(panel, 'top', `${Math.max(8, Math.min(window.innerHeight - panel.offsetHeight - 8, y + 22))}px`);
   });
   return <>{doors.map(o => {
-    const state = states[o.entityId], pose = connected ? doorPose(state, now, o.door?.kind) : null;
+    const state = states[o.entityId], pose = connected ? doorPose(state, now, o.door?.kind, o.door?.tiltOnly) : null;
     const lock = config.model?.floorplan?.objects.find(l => l.doorLock?.doorId === o.id);
     const lockState = connected && lock?.entityId ? states[lock.entityId] : undefined;
     const lockLabel = !lock?.entityId ? 'Schloss nicht zugeordnet' : !connected ? 'Schloss nicht verbunden' : lockStatus(lockState);
@@ -63,7 +63,7 @@ export default function DoorMarkers({ scene, config, states, connected, onAssign
     // An open contact takes precedence over the lock; unknown contacts stay unknown.
     const locked = entrance && pose === 'closed' && lockState?.state === 'locked';
     const status = !o.entityId ? 'Nicht zugeordnet' : !connected ? 'Nicht verbunden'
-      : locked ? 'Abgeschlossen' : entrance && pose === 'open' ? 'Offen' : doorStatus(pose);
+      : locked ? 'Abgeschlossen' : entrance && pose === 'open' ? 'Offen' : doorStatus(pose, o.door?.tiltOnly);
     const duration = connected && o.entityId && pose ? doorDuration(state, now) : 'Dauer unbekannt';
     const Icon = locked ? LockKeyhole : pose === 'closed' ? DoorClosed : pose ? DoorOpen : CircleHelp;
     return <div key={o.id}>

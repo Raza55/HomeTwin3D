@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.28 – Fenster, die nur gekippt werden können (02.10.2026)
+
+- Türen und Fenster können als „nur kippbar“ markiert werden (`door.tiltOnly`, z. B. wenn Möbel davor stehen): Ein offener Kontakt zeigt sie sofort gekippt, der Status lautet „Gekippt“, ein Klick kippt statt zu öffnen.
+- Tagesdemo: Beim Lüften kippt ein solches Fenster nur, die übrigen Fenstertüren öffnen weiter ganz.
+
 ## 0.5.27 – Türen per Klick öffnen, Flurschrank an der Haustür (02.10.2026)
 
 - Türen mit Türkontakt (Haustür, Balkon- und Fenstertüren) lassen sich per Klick auf das Türblatt öffnen und wieder schließen, in der normalen Ansicht und im Laufmodus. Das ist nur Darstellung: Es wird nichts geschaltet, und sobald der Türkontakt in Home Assistant seinen Zustand ändert, gilt wieder der echte Zustand.

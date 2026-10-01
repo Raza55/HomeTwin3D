@@ -25,7 +25,7 @@ export default function DoorStatus({ scene, config, states, connected }: {
     const doors = new Map(config.model?.floorplan?.objects.filter(o => o.door).map(o => [o.id, o]));
     const haPose = (id: string): DoorPose | null => {
       const door = doors.get(id);
-      return !door?.entityId ? 'closed' : live.current.connected ? doorPose(live.current.states[door.entityId], Date.now(), door.door?.kind) : null;
+      return !door?.entityId ? 'closed' : live.current.connected ? doorPose(live.current.states[door.entityId], Date.now(), door.door?.kind, door.door?.tiltOnly) : null;
     };
     const parts = (rig: typeof rigs[number]) => [...(rig.node instanceof AbstractMesh ? [rig.node] : []), ...rig.node.getChildMeshes(false)];
     const reachOf = (meshes: AbstractMesh[]) => Math.max(0, ...meshes.map(mesh => mesh.getBoundingInfo().boundingBox.extendSizeWorld.length() * 2));
@@ -35,7 +35,7 @@ export default function DoorStatus({ scene, config, states, connected }: {
       has: mesh => !!rigOf(mesh),
       toggle: mesh => {
         const rig = rigOf(mesh);if (!rig) return false;
-        const pose: DoorPose = rig.pose === 'closed' ? 'open' : 'closed', meshes = parts(rig);
+        const pose: DoorPose = rig.pose === 'closed' ? doors.get(rig.id)?.door?.tiltOnly ? 'tilted' : 'open' : 'closed', meshes = parts(rig);
         overrides.current.set(rig.id, { pose, base: haPose(rig.id) });
         swingDoor(scene, rig, pose, 900, () => invalidateShadowsNear(scene, meshes, reachOf(meshes)));
         return true;

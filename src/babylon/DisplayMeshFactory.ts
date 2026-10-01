@@ -4,6 +4,7 @@ import { itCameraUrl } from '../services/itCamera';
 import { getSetting } from '../services/settingsStore';
 import { buildWsUrl } from '../services/haWebSocket';
 import { drawTVMediaScreen } from './TVMediaScreen';
+import { VisibleScreenUpdates } from './VisibleScreenUpdates';
 import {
   Scene,
   MeshBuilder,
@@ -397,13 +398,19 @@ export function updateDisplayTexture(
   entry.texture.update();
 }
 
+/** Images rendered in this browser (day demo screens): no request leaves the page. */
+export function isLocalScreenImage(value: unknown): value is string {
+  return typeof value === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(value);
+}
+
 interface TVRuntime {
   states: Record<string, HAState>;
   artworkUrl?: string;
   artworkSource?: string;
+  /** Only the pending download; a completed image lives in loaded. */
   image?: HTMLImageElement;
   loaded?: HTMLImageElement;
-  timer?: ReturnType<typeof setInterval>;
+  updates?: VisibleScreenUpdates;
 }
 const tvRuntimes = new WeakMap<DisplayMeshEntry, TVRuntime>();
 
@@ -414,27 +421,39 @@ function updateRoutedTV(entry: DisplayMeshEntry, states: Record<string, HAState>
     runtime = { states };
     tvRuntimes.set(entry, runtime);
     const owned = runtime;
+    owned.updates = new VisibleScreenUpdates(() => {
+      if (!entry.plane.isDisposed()) updateRoutedTV(entry, owned.states);
+    }, () => {
+      // Abort pending downloads, retaining a completed snapshot until the next one arrives.
+      if (owned.image && owned.image !== owned.loaded) {
+        owned.image.onload = null; owned.image.onerror = null; owned.image.src = '';
+        owned.image = undefined; owned.artworkUrl = undefined;
+      }
+    });
     entry.plane.onDisposeObservable.addOnce(() => {
-      clearInterval(owned.timer);
+      owned.updates?.dispose();
       if (owned.image) { owned.image.onload = null; owned.image.onerror = null; owned.image.src = ''; }
       tvRuntimes.delete(entry);
     });
   }
   runtime.states = states;
+  if (!runtime.updates!.visible) return;
   const content = resolveTVScreen(states, route);
   const settings = getSetting('connection').haSettings;
   const base = settings.url ? buildWsUrl(settings.url, settings.port).replace(/^ws/, 'http') : '';
+  // Locally generated frames (day demo) need neither a proxy nor a network request.
+  const local = isLocalScreenImage(content.artwork) ? content.artwork : undefined;
   // PC desktop stills come from the HA camera proxy; everything else from the media proxy.
-  let url = content.camera ? itCameraUrl(content.artwork, content.camera, base) : mediaArtworkUrl(content.artwork, base);
+  let url = local ?? (content.camera ? itCameraUrl(content.artwork, content.camera, base) : mediaArtworkUrl(content.artwork, base));
   // The HA add-on serves media from its own origin so WebGL can use the image.
-  if (url && (import.meta.env.MODE === 'addon' || import.meta.env.DEV)) {
+  if (url && !local && (import.meta.env.MODE === 'addon' || import.meta.env.DEV)) {
     const mediaUrl = new URL(url);
     const route = content.camera ? 'ha-camera/' : 'ha-media/', upstream = content.camera ? '/api/camera_proxy/' : '/api/media_player_proxy/';
     const prefix = import.meta.env.DEV ? `${import.meta.env.BASE_URL}${route}` : `/${route}`;
     url = `${location.origin}${prefix}${mediaUrl.pathname.slice(upstream.length)}${mediaUrl.search}`;
   }
   // ADB snapshots and PC helper stills change without a state change or new image URL (both ~10 s).
-  if (url && content.artworkKind === 'screenshot') {
+  if (url && !local && content.artworkKind === 'screenshot') {
     const refreshUrl = new URL(url);
     refreshUrl.searchParams.set('_preview', String(Math.floor(Date.now() / 10000)));
     url = refreshUrl.href;
@@ -453,26 +472,19 @@ function updateRoutedTV(entry: DisplayMeshEntry, states: Record<string, HAState>
       owned.image = image;
       image.onload = () => {
         if (entry.plane.isDisposed() || owned.image !== image) return;
-        owned.loaded = image; entry.lastText = '';
+        owned.loaded = image; owned.image = undefined; entry.lastText = '';
         updateRoutedTV(entry, owned.states);
       };
       image.onerror = () => {
         if (entry.plane.isDisposed() || owned.image !== image) return;
-        owned.loaded = undefined; entry.lastText = '';
+        owned.loaded = undefined; owned.image = undefined; entry.lastText = '';
         updateRoutedTV(entry, owned.states);
       };
       image.src = url;
     }
   }
-  const needsTimer = content.ticking || (content.artworkKind === 'screenshot' && !!url);
-  if (needsTimer && !runtime.timer) {
-    const owned = runtime;
-    runtime.timer = setInterval(() => {
-      if (!entry.plane.isDisposed()) updateRoutedTV(entry, owned.states);
-    }, 1000);
-  } else if (!needsTimer && runtime.timer) {
-    clearInterval(runtime.timer); runtime.timer = undefined;
-  }
+  const needsTimer = content.ticking || (content.artworkKind === 'screenshot' && !!url && !local);
+  runtime.updates!.setTicking(needsTimer);
   const key = JSON.stringify({ ...content, position: content.position===undefined ? undefined : Math.floor(content.position), loaded: !!runtime.loaded });
   if (key === entry.lastText) return;
   entry.lastText = key;

@@ -67,10 +67,13 @@ import { getSetting, updateSettings, DEFAULT_CAMERA_SENSITIVITY, type CameraSens
 import { HAConnection, type HAConnectionStatus, type HALike, setActiveHAConnection } from '../../services/haWebSocket';
 import { DemoHAConnection } from '../../services/demoHAConnection';
 import { useDemoMode } from '../../contexts/DemoModeContext';
+import DayDemoOverlay from '../../components/DayDemo/DayDemoOverlay';
 import { useSimulationMode } from '../../contexts/SimulationModeContext';
 import { useCameraControls } from '../../contexts/CameraControlsContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useTranslation } from '../../contexts/LanguageContext';
+import { useLanguage, useTranslation } from '../../contexts/LanguageContext';
+import { buildCast } from '../../services/dayDemo/cast';
+import type { DayDemoController } from '../../services/dayDemo/controller';
 import { miredToKelvin, kelvinToRGB } from '../../utils/color';
 import { updateSunPosition, minutesToLabel } from '../../babylon/SunController';
 import { createWeatherEffects, type WeatherEffectsContext } from '../../babylon/WeatherEffects';
@@ -159,6 +162,12 @@ function collectEntityIds(config: AppConfig | null): Set<string> {
 export default function Dashboard() {
   const { demoMode } = useDemoMode();
   const { simulationMode, setSimulationMode } = useSimulationMode();
+  // Day demo (`?daydemo` or settings): a scripted day on the demo adapter, never on real HA.
+  const [dayDemo, setDayDemo] = useState(() => new URLSearchParams(location.search).has('daydemo'));
+  const dayDemoRef = useRef(dayDemo);
+  dayDemoRef.current = dayDemo;
+  const [dayDemoController, setDayDemoController] = useState<DayDemoController | null>(null);
+  const { language } = useLanguage();
   const camControls = useCameraControls();
   const [cameraSensitivity, setCameraSensitivity] = useState<CameraSensitivity>(() => ({ ...DEFAULT_CAMERA_SENSITIVITY, ...getSetting('controls').sensitivity }));
   const handleCameraSensitivityChange = useCallback((patch: Partial<CameraSensitivity>) => {
@@ -1196,7 +1205,7 @@ export default function Dashboard() {
         // Weather effects (rain/snow particles + cloud cover)
         weatherRef.current = createWeatherEffects(ctx.scene, sunShadowGen ?? undefined);
         const pollWeather = async () => {
-          if (!weatherEnabledRef.current) return;
+          if (!weatherEnabledRef.current || dayDemoRef.current) return;
           try {
             const data = await fetchWeather((configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude), (configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude));
             if (disposed || !weatherRef.current) return;
@@ -1509,7 +1518,7 @@ export default function Dashboard() {
     const callbacks = {
       onStatusChanged: (status: HAConnectionStatus) => {
         setHaStatus(status);
-        if(status==='connected' && !demoMode && !simulationMode) {
+        if(status==='connected' && !demoMode && !simulationMode && !dayDemo) {
           const connection=haRef.current;
           void connection?.request({type:'get_config'}).then(raw=>{
             if(haRef.current!==connection)return;
@@ -1650,8 +1659,8 @@ export default function Dashboard() {
       },
     };
 
-    if (demoMode || simulationMode) {
-      const demo = new DemoHAConnection(callbacks);
+    if (demoMode || simulationMode || dayDemo) {
+      const demo = new DemoHAConnection(callbacks, { persist: !dayDemo });
       haRef.current = demo;
       setActiveHAConnection(demo);
       const sensorIds: string[] = [];
@@ -1698,7 +1707,84 @@ export default function Dashboard() {
       haRef.current = null;
       setActiveHAConnection(null);
     };
-  }, [demoMode, simulationMode, sceneReady, applyLightState, applyRemoteMode, haSettingsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [demoMode, simulationMode, dayDemo, sceneReady, applyLightState, applyRemoteMode, haSettingsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Day demo: runs after the effect above has swapped in the demo adapter.
+  useEffect(() => {
+    if (!dayDemo || !sceneReady) return;
+    const ctx = sceneCtxRef.current, config = configRef.current, ha = haRef.current;
+    if (!ctx || !config || !(ha instanceof DemoHAConnection)) return;
+    let disposed = false;
+    let controller: DayDemoController | null = null;
+    setSunLiveMode(false);
+    let lastWeatherKey = '';
+    void import('../../services/dayDemo/controller').then(({ DayDemoController }) => {
+      if (disposed) return;
+      const cast = buildCast(config, Object.values(displayMeshMapRef.current).map(entry => entry.config));
+      controller = new DayDemoController(cast, {
+        setState: (entityId, state, attributes) => ha.setState(entityId, state, attributes),
+        getState: entityId => ha.getState(entityId),
+      }, {
+        scene: ctx.scene, engine: ctx.engine, sun: ctx.sunLight, hemi: ctx.hemiLight, requestRender: ctx.requestRender,
+        location: () => ({
+          latitude: configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude,
+          longitude: configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude,
+          northOffset: northOffsetRef.current,
+        }),
+        applyWeather: weather => {
+          const ccf = weatherRef.current?.updateWeather(weather) ?? 1;
+          cloudCoverFactorRef.current = ccf;
+          return ccf;
+        },
+        onClock: (minutes, weather) => {
+          // Coarse steps keep the (large) dashboard from re-rendering every frame.
+          const step = Math.floor(minutes / 5) * 5;
+          setSliderValue(step);
+          setScrubberTime(minutesToLabel(step));
+          const key = `${weather.weather_code}:${Math.round(weather.cloud_cover / 5)}:${weather.rain.toFixed(1)}:${weather.snowfall.toFixed(1)}:${Math.round(weather.temperature_2m ?? 0)}`;
+          if (key !== lastWeatherKey) { lastWeatherKey = key; setCurrentWeather({ ...weather }); }
+          updateAutoTheme(minutes);
+        },
+      }, language);
+      const params = new URLSearchParams(location.search);
+      const from = params.get('from');
+      weatherRef.current?.setParticleScale(1.5);
+      controller.start(Number(params.get('speed')) || 1, from && /^\d{2}:\d{2}$/.test(from) ? from : undefined);
+      (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo = controller;
+      setDayDemoController(controller);
+    }).catch(error => {
+      console.error('[DayDemo] Failed to start:', error);
+      setDayDemo(false);
+    });
+    return () => {
+      disposed = true;
+      controller?.dispose();
+      setDayDemoController(null);
+      delete (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo;
+      // Back to the real day: live sun, real (or no) weather, live theme.
+      setSunLiveMode(true);
+      const now = new Date(), liveMin = now.getHours() * 60 + now.getMinutes();
+      setSliderValue(liveMin);
+      setScrubberTime(minutesToLabel(liveMin));
+      cloudCoverFactorRef.current = 1;
+      weatherRef.current?.setParticleScale(1);
+      weatherRef.current?.updateWeather({ weather_code: 0, cloud_cover: 0, rain: 0, snowfall: 0 });
+      setCurrentWeather(null);
+      const scene = sceneCtxRef.current;
+      if (scene) updateSunPosition(scene.sunLight, scene.hemiLight, configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude, configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude, undefined, northOffsetRef.current, 1);
+      updateAutoTheme();
+      pollWeatherRef.current();
+    };
+  }, [dayDemo, sceneReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { dayDemoController?.setLanguage(language); }, [dayDemoController, language]);
+
+  const exitDayDemo = useCallback(() => {
+    setDayDemo(false);
+    const url = new URL(location.href);
+    ['daydemo', 'speed', 'from'].forEach(key => url.searchParams.delete(key));
+    history.replaceState(history.state, '', url);
+  }, []);
 
   // Keep refs to modal entity IDs for use in callbacks
   const modalEntityIdRef = useRef<string | null>(null);
@@ -2278,6 +2364,15 @@ export default function Dashboard() {
           currentWeather={currentWeather}
         />
 
+        {dayDemoController && (
+          <DayDemoOverlay
+            controller={dayDemoController}
+            latitude={configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude}
+            longitude={configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude}
+            onExit={exitDayDemo}
+          />
+        )}
+
         <div className="dashboard-render-toggle">
           <button
             className={`dashboard-icon-btn dashboard-texture-btn${showTextures ? ' active' : ''}`}
@@ -2484,6 +2579,7 @@ export default function Dashboard() {
               onStartVisualMatching={(category='light') => { closeQuick(); setSettingsOpen(false); setMatchingCategory(category); setMatchingObjectId(undefined); setMatchingOpen(true); }}
               onReloadModel={handleReloadModel}
               onStartTour={() => { setSettingsOpen(false); setShowTour(true); }}
+              onStartDayDemo={() => { setSettingsOpen(false); closeQuick(); setDayDemo(true); }}
             />
           </Suspense>
         )}

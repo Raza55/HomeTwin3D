@@ -5,10 +5,15 @@ export interface WeatherData {
   rain: number;
   snowfall: number;
   is_day?: number;
+  /** km/h at 10 m; drives tree sway, slanted rain and drifting clouds. */
+  wind_speed_10m?: number;
+  wind_gusts_10m?: number;
+  /** Degrees the wind comes from (meteorological). */
+  wind_direction_10m?: number;
 }
 
-// WMO weather codes for precipitation types
-const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]);
+// WMO weather codes for precipitation types (thunderstorms 95–99 come with rain)
+const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]);
 const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
 
 export function isRaining(code: number): boolean {
@@ -17,6 +22,10 @@ export function isRaining(code: number): boolean {
 
 export function isSnowing(code: number): boolean {
   return SNOW_CODES.has(code);
+}
+
+export function isThunderstorm(code: number): boolean {
+  return code >= 95 && code <= 99;
 }
 
 // Client-side cache (10 min TTL, same as old server cache)
@@ -34,7 +43,7 @@ export async function fetchWeather(latitude: number, longitude: number): Promise
     return cache.data;
   }
 
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,cloud_cover,rain,snowfall,is_day&timezone=Europe%2FBerlin`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,cloud_cover,rain,snowfall,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m&timezone=Europe%2FBerlin`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
   const json = await res.json();

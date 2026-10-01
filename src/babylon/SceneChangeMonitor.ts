@@ -107,6 +107,8 @@ export class SceneChangeMonitor {
 
     // Running particle systems (rain, snow) and skeletal/morph animations change every frame.
     if (scene.particleSystems.some(system => system.isStarted() && system.getActiveCount() > 0)) note('particles');
+    // Wind-swayed trees and lightning animate in shaders and light intensity only.
+    if (scene.metadata?.weatherAnimating) note('weather');
     const animating = scene.animationGroups.some(group => group.isPlaying) || scene.animatables.length > 0;
     if (animating) note('animation');
 

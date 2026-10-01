@@ -103,6 +103,7 @@ export class MarkerLayer {
   /** Drawn marker size relative to CSS (tablets: larger, see markerSizeScale). */
   sizeScale = 1;
   private groups = new Set<Marker[]>();
+  private markerList: Marker[] | null = null;
   private point = Vector3.Zero();
   private overlay: MarkerOverlay | null = null;
   private layoutObserver: Observer<Scene> | null = null;
@@ -126,11 +127,13 @@ export class MarkerLayer {
       return marker;
     });
     this.groups.add(markers);
+    this.markerList = null;
     this.requestRender();
     return {
       placement: id => markers.find(m => m.spec.id === id)?.placement,
       dispose: () => {
         this.groups.delete(markers);
+        this.markerList = null;
         for (const marker of markers) {
           marker.mutations.disconnect();
           this.overlay?.release(marker);
@@ -143,10 +146,11 @@ export class MarkerLayer {
 
   requestRender(): void { renderRequests.get(this.scene)?.(); }
 
-  markers(): Iterable<Marker> {
+  markers(): readonly Marker[] {
+    if (this.markerList) return this.markerList;
     const all: Marker[] = [];
     for (const group of this.groups) all.push(...group);
-    return all;
+    return this.markerList = all;
   }
 
   /** Projects, occludes and stacks every marker for the current frame. */
@@ -224,6 +228,7 @@ export class MarkerLayer {
   dispose(): void {
     for (const group of [...this.groups]) for (const marker of group) marker.mutations.disconnect();
     this.groups.clear();
+    this.markerList = null;
     this.overlay?.dispose();
     if (this.layoutObserver) this.scene.onAfterRenderObservable.remove(this.layoutObserver);
     this.onLayoutObservable.clear();
@@ -301,6 +306,7 @@ class MarkerOverlay {
   private positions = new Float32Array(0);
   private uvs = new Float32Array(0);
   private colors = new Float32Array(0);
+  private visible: Marker[] = [];
   private buffers = new MarkerVertexBuffers();
   private scratch = document.createElement('canvas');
   private beforeRender: Observer<Scene>;
@@ -356,15 +362,17 @@ class MarkerOverlay {
     this.layer.layout();
     this.input.follow();
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
-    const markers = [...this.layer.markers()];
+    const markers = this.layer.markers();
     for (const marker of markers) {
       if (!marker.element || (!marker.dirty && marker.pixelRatio === pixelRatio)) continue;
       marker.dirty = false;
       marker.pixelRatio = pixelRatio;
       this.rasterize(marker, pixelRatio, markers);
     }
-    const visible = markers.filter(m => m.placement.visible && m.raster && m.slot)
-      .sort((a, b) => a.raster!.zIndex - b.raster!.zIndex);
+    const visible = this.visible;
+    visible.length = 0;
+    for (const marker of markers) if (marker.placement.visible && marker.raster && marker.slot) visible.push(marker);
+    visible.sort((a, b) => a.raster!.zIndex - b.raster!.zIndex);
     this.input.setOrder(visible);
     if (visible.length > this.capacity) this.grow(Math.max(visible.length, this.capacity * 2));
     this.positions.fill(0);
@@ -373,23 +381,32 @@ class MarkerOverlay {
     if (rect && rect.width && rect.height) {
       const size = this.atlas.size;
       const snap = (value: number) => Math.round(value * pixelRatio) / pixelRatio;
-      visible.forEach((marker, i) => {
+      for (let i = 0; i < visible.length; i++) {
+        const marker = visible[i];
         const raster = marker.raster!, slot = marker.slot!, scale = raster.scale * this.layer.sizeScale;
         const left = snap(marker.placement.x - raster.centerX * scale), top = snap(marker.placement.y - raster.centerY * scale);
         const right = left + raster.width * scale, bottom = top + raster.height * scale;
-        const nx = (x: number) => (x - rect.left) / rect.width * 2 - 1, ny = (y: number) => 1 - (y - rect.top) / rect.height * 2;
-        this.positions.set([nx(left), ny(top), 0, nx(right), ny(top), 0, nx(right), ny(bottom), 0, nx(left), ny(bottom), 0], i * 12);
+        const x0 = (left - rect.left) / rect.width * 2 - 1, x1 = (right - rect.left) / rect.width * 2 - 1;
+        const y0 = 1 - (top - rect.top) / rect.height * 2, y1 = 1 - (bottom - rect.top) / rect.height * 2;
+        // The z values are already zeroed above; write directly into the reusable arrays.
+        const p = i * 12;
+        this.positions[p] = x0; this.positions[p + 1] = y0;
+        this.positions[p + 3] = x1; this.positions[p + 4] = y0;
+        this.positions[p + 6] = x1; this.positions[p + 7] = y1;
+        this.positions[p + 9] = x0; this.positions[p + 10] = y1;
         const u0 = slot.x / size, v0 = slot.y / size, u1 = (slot.x + marker.used.width) / size, v1 = (slot.y + marker.used.height) / size;
-        this.uvs.set([u0, v0, u1, v0, u1, v1, u0, v1], i * 8);
+        const u = i * 8;
+        this.uvs[u] = u0; this.uvs[u + 1] = v0; this.uvs[u + 2] = u1; this.uvs[u + 3] = v0;
+        this.uvs[u + 4] = u1; this.uvs[u + 5] = v1; this.uvs[u + 6] = u0; this.uvs[u + 7] = v1;
         this.colors.fill(1, i * 16, i * 16 + 16);
-      });
+      }
     }
     this.buffers.upload(this.mesh, VertexBuffer.PositionKind, this.positions);
     this.buffers.upload(this.mesh, VertexBuffer.UVKind, this.uvs);
     this.buffers.upload(this.mesh, VertexBuffer.ColorKind, this.colors);
   }
 
-  private rasterize(marker: Marker, pixelRatio: number, all: Marker[]): void {
+  private rasterize(marker: Marker, pixelRatio: number, all: readonly Marker[]): void {
     const raster = rasterizeMarker(marker.element!);
     marker.raster = raster;
     if (!raster) { marker.slot = null; return; }
@@ -421,7 +438,7 @@ class MarkerOverlay {
     marker.used = { width, height };
   }
 
-  private allocate(width: number, height: number, all: Marker[], requester: Marker): Marker['slot'] {
+  private allocate(width: number, height: number, all: readonly Marker[], requester: Marker): Marker['slot'] {
     const slot = this.atlas.allocate(width, height);
     if (slot) return { ...slot, width, height };
     // Atlas full: start over (and grow when needed); every marker is rasterized again.
@@ -442,7 +459,7 @@ class MarkerOverlay {
     return fresh ? { ...fresh, width, height } : null;
   }
 
-  private usedArea(all: Marker[]): number {
+  private usedArea(all: readonly Marker[]): number {
     return all.reduce((sum, m) => sum + (m.slot ? m.slot.width * m.slot.height : 0), 0);
   }
 

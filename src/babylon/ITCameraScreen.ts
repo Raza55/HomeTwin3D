@@ -4,6 +4,7 @@ import {itStatus,knownITState} from '../services/itState';
 import {itCameraUrl} from '../services/itCamera';
 import {getSetting} from '../services/settingsStore';
 import {buildWsUrl} from '../services/haWebSocket';
+import {isLocalScreenImage} from './DisplayMeshFactory';
 
 /** One reusable GPU texture per screen; no render-frame network requests. */
 export function attachITCamera(scene:Scene,mesh:AbstractMesh,material:PBRMaterial|StandardMaterial,device:ITDevice,
@@ -29,16 +30,18 @@ export function attachITCamera(scene:Scene,mesh:AbstractMesh,material:PBRMateria
     const camera=live().states[device.screenshotEntityId!];
     const settings=getSetting('connection').haSettings;
     const base=settings.url?buildWsUrl(settings.url,settings.port).replace(/^ws/,'http'):'';
-    let url=itCameraUrl(camera?.attributes.entity_picture,device.screenshotEntityId!,base);
+    // Day demo frames are generated in the page; they replace each other without a black flash.
+    const local=isLocalScreenImage(camera?.attributes.entity_picture)?camera!.attributes.entity_picture as string:undefined;
+    let url=local??itCameraUrl(camera?.attributes.entity_picture,device.screenshotEntityId!,base);
     if(!url){cancel();if(loaded)clear();return;}
-    if(source!==url){cancel();clear();source=url;next=0;}
+    if(source!==url){cancel();if(!local)clear();source=url;next=0;}
     if(request||Date.now()<next)return;
     next=Date.now()+10000;  // matches the PC helper cadence (10 s)
-    if(import.meta.env.DEV||import.meta.env.MODE==='addon'){
+    if(!local&&(import.meta.env.DEV||import.meta.env.MODE==='addon')){
       const upstream=new URL(url),prefix=import.meta.env.DEV?`${import.meta.env.BASE_URL}ha-camera/`:'/ha-camera/';
       url=new URL(`${prefix}${device.screenshotEntityId}${upstream.search}`,location.origin).href;
     }
-    const refresh=new URL(url);refresh.searchParams.set('_preview',String(Date.now()));
+    const refresh=new URL(url);if(!local)refresh.searchParams.set('_preview',String(Date.now()));
     const image=new Image();request=image;image.crossOrigin='anonymous';image.referrerPolicy='no-referrer';
     image.onload=()=>{
       if(disposed||request!==image)return;

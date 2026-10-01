@@ -13,5 +13,7 @@ await build({ entryPoints: [fileURLToPath(new URL('./it-render-performance.test.
 await import('../.qa/it-render-performance.test.mjs');
 await build({ entryPoints: [fileURLToPath(new URL('./marker-buffer.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/marker-buffer.test.mjs', import.meta.url)) });
 await import('../.qa/marker-buffer.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./screen-visibility.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', define: { 'import.meta.env.DEV': 'false', 'import.meta.env.MODE': '"qa"', 'import.meta.env.BASE_URL': '"./"' }, outfile: fileURLToPath(new URL('../.qa/screen-visibility.test.mjs', import.meta.url)) });
+await import('../.qa/screen-visibility.test.mjs');
 await build({ entryPoints: [fileURLToPath(new URL('./render-batch.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', define: { 'import.meta.env.DEV': 'false' }, outfile: fileURLToPath(new URL('../.qa/render-batch.test.mjs', import.meta.url)) });
 await import('../.qa/render-batch.test.mjs');

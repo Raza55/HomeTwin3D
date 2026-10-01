@@ -32,13 +32,19 @@ export interface SunPosition {
   isDay: boolean;
 }
 
+/** Calendar day for sun calculations; the day demo pins one so its story fits the daylight. */
+let dateOverride: Date | null = null;
+export function setSunDateOverride(date: Date | null): void {
+  dateOverride = date;
+}
+
 export function getSunPosition(
   latitude: number,
   longitude: number,
   minutes?: number,
   northOffset?: number,
 ): SunPosition {
-  const now = new Date();
+  const now = dateOverride ?? new Date();
   const clockMins = minutes !== undefined
     ? minutes
     : now.getHours() * 60 + now.getMinutes();

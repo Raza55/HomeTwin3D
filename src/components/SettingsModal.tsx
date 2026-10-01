@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useNavigate } from 'react-router-dom';
 import {
   Server, Palette, Box, Wrench, ChevronLeft, ChevronRight, X,
-  LayoutTemplate, Compass, Github, Upload, RefreshCw, AlertTriangle,
+  LayoutTemplate, Compass, Github, Upload, RefreshCw, AlertTriangle, Clapperboard,
 } from 'lucide-react';
 import { haSocketUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
@@ -77,6 +77,8 @@ interface Props {
   onEditGrid: () => void;
   onChangeHomeView: () => void;
   onStartTour: () => void;
+  /** Plays the simulated day (story, weather, devices) with a benchmark at the end. */
+  onStartDayDemo: () => void;
 
   haSettings: HASettings;
   onHASettingsSave: (settings: HASettings) => void;
@@ -185,7 +187,7 @@ export default function SettingsModal({
   parkMinBrightness, onParkMinBrightnessChange, cameraSensitivity, onCameraSensitivityChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
-  onEditGrid, onChangeHomeView, onStartTour,
+  onEditGrid, onChangeHomeView, onStartTour, onStartDayDemo,
   haSettings, onHASettingsSave, haStatus,
   modelStatus, modelStatusColor, onReloadModel, onStartVisualMatching,
 }: Props) {
@@ -492,6 +494,10 @@ export default function SettingsModal({
                   <Compass size={16} strokeWidth={1.6} />
                   {t('settings.startTour')}
                 </button>
+                <button type="button" className="settings-btn" onClick={onStartDayDemo} title={t('settings.dayDemoHint')}>
+                  <Clapperboard size={16} strokeWidth={1.6} />
+                  {t('settings.dayDemo')}
+                </button>
               </div>
 
               <footer className="settings-about">
@@ -517,6 +523,12 @@ export default function SettingsModal({
                     options={[{ value: 'live', label: t('settings.live') }, { value: 'demo', label: t('settings.demo') }]}
                     tone={v => v === 'demo' ? 'warn' : 'ok'}
                     onChange={v => setDemoMode(v === 'demo')} />
+                </Row>
+                <Row label={t('settings.dayDemo')} hint={t('settings.dayDemoHint')}>
+                  <button type="button" className="settings-btn" onClick={onStartDayDemo}>
+                    <Clapperboard size={16} strokeWidth={1.6} />
+                    {t('settings.dayDemoStart')}
+                  </button>
                 </Row>
               </Group>
 

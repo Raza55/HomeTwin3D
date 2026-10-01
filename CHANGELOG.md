@@ -1,5 +1,15 @@
 # Änderungsverlauf
 
+## 0.5.15 – Tagesdemo, sichtbares Wetter und weniger Hintergrundarbeit (01.10.2026)
+
+- **Tagesdemo & Benchmark** (Einstellungen → „Tagesdemo & Benchmark“ oder `?daydemo`): ein Spätsommertag von 05:30 bis 05:30 in rund fünf Minuten. 23 Kapitel mit Lichtwecker, Kaffeemaschine, Nachrichten im TV, Abwesenheitsmodus mit Saugroboter und Solar-Waschgang, Hitzeschutz, Homeoffice-PC, Unwetterwarnung, Gewitter mit Lichtautomatik, Kochen, Kinoabend mit Ambilight, Gaming mit RGB, Gute-Nacht-Routine, Nachtlicht und Schneeschauer. Die Rollen werden automatisch den vorhandenen Geräten zugeordnet (Raumnamen, Labels, Raumzonen); fehlende Geräte werden übersprungen.
+- Die Demo läuft vollständig über den Demo-Adapter: Es wird kein Home-Assistant-Gerät geschaltet, gespeicherte Demo-Zustände bleiben unverändert. TV und PC-Monitor zeigen im Browser gezeichnete Bildinhalte (keine externen Bilder).
+- Overlay mit Uhr, Wetter, Kapiteltext, Automations-Protokoll, Zeitleiste zum Springen, Tempo ½×–4× und optionaler Kamerafahrt. Am Ende eine Benchmark-Auswertung (Ø FPS, 1 % Low, p95, CPU, Draw Calls, je Kapitel). URL-Parameter: `speed`, `from=HH:MM`.
+- **Wetter auch im Normalbetrieb deutlich sichtbar:** dichterer, heller Schrägregen um das Gebäude mit Aufprall-Ringen am Boden, größere Schneeflocken, ziehende Wolkenschatten im Park, Wolken am Horizont, Sonnenscheibe, Blitze mit Blitzstrahl und Aufhellung bei Gewitter, Gewitter und Starkregen dunkeln die Szene stärker ab.
+- **Wind:** Open-Meteo liefert jetzt auch Windgeschwindigkeit, Böen und Richtung. Baumkronen im Park wiegen sich (Shader, WebGL), Regen und Schnee wehen mit. Bei Wind rendert die Szene mit der Leerlauf-Bildrate statt der Ruhe-Bildrate.
+- TV- und PC-Bildschirme pausieren ihre sekündlichen Aktualisierungen in ausgeblendeten Tabs und zeigen beim Zurückkehren sofort den aktuellen Stand.
+- Die Markerliste wird nur bei Änderungen neu aufgebaut; pro Frame entstehen keine neuen Arrays mehr für sichtbare Marker.
+
 ## 0.5.14 – Weniger identische Render- und Popup-Updates (01.10.2026)
 
 - Marker übertragen ihre Positions-, UV- und Farbpuffer nur bei geänderten Daten zur GPU. Projektion, Verdeckung und Klickprüfung laufen weiterhin pro Frame; Darstellung und Kamerabewegung bleiben erhalten.

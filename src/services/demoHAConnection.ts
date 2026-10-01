@@ -13,7 +13,8 @@ function loadPersistedStates(): Record<string, HAState> {
   }
 }
 
-function persistStates(states: Map<string, HAState>): void {
+function persistStates(states: Map<string, HAState>, persist = true): void {
+  if (!persist) return;
   const obj: Record<string, HAState> = {};
   for (const [id, s] of states) {
     // Only persist light/switch entities, not sensors
@@ -148,9 +149,12 @@ export class DemoHAConnection {
   private lightTypes = new Map<string, LightType>();
   private disposed = false;
   private sensorInterval: number | null = null;
+  /** The day demo replays a scripted day; it must not overwrite the saved demo states. */
+  private readonly persist: boolean;
 
-  constructor(callbacks: HACallbacks) {
+  constructor(callbacks: HACallbacks, options: { persist?: boolean } = {}) {
     this.callbacks = callbacks;
+    this.persist = options.persist ?? true;
   }
 
   /** Bootstrap demo states from the loaded config entity IDs. */
@@ -398,10 +402,23 @@ export class DemoHAConnection {
   }
 
   private updateState(entityId: string, state: string, attributes: Record<string, unknown>): void {
-    const newState: HAState = { entity_id: entityId, state, attributes };
+    const previous = this.states.get(entityId);
+    // Door poses, coffee timers and durations read last_changed like with a real HA.
+    const last_changed = previous && previous.state === state && previous.last_changed ? previous.last_changed : new Date().toISOString();
+    const newState: HAState = { entity_id: entityId, state, attributes, last_changed };
     this.states.set(entityId, newState);
-    persistStates(this.states);
+    persistStates(this.states, this.persist);
     this.callbacks.onStateChanged?.(entityId, newState);
+  }
+
+  /** Scripted state change (day demo). Like an HA event: nothing is switched anywhere. */
+  setState(entityId: string, state: string, attributes: Record<string, unknown> = {}): void {
+    if (this.disposed) return;
+    this.updateState(entityId, state, attributes);
+  }
+
+  getState(entityId: string): HAState | undefined {
+    return this.states.get(entityId);
   }
 
   async request(_msg: Record<string, unknown>): Promise<unknown> {

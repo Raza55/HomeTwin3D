@@ -2,6 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Mesh, NullEngine, Scene, VertexBuffer } from '@babylonjs/core';
 import { MarkerVertexBuffers } from '../src/babylon/MarkerVertexBuffers';
+import { MarkerLayer } from '../src/babylon/MarkerLayer';
+
+test('marker lists are reused until groups change and retain registration order after removal', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'MutationObserver');
+  Object.defineProperty(globalThis, 'MutationObserver', { configurable: true, value: class { disconnect() {} } });
+  const engine = new NullEngine(), scene = new Scene(engine), layer = new MarkerLayer(scene, 'dom');
+  try {
+    const spec = (id: string) => ({ id, element: () => null, anchor: () => null, display: 'block' });
+    const first = layer.add([spec('one'), spec('two')]);
+    const original = layer.markers();
+    for (let i = 0; i < 120; i++) assert.equal(layer.markers(), original);
+    const second = layer.add([spec('three')]);
+    assert.deepEqual(layer.markers().map(m => m.spec.id), ['one', 'two', 'three']);
+    assert.notEqual(layer.markers(), original);
+    first.dispose();
+    assert.deepEqual(layer.markers().map(m => m.spec.id), ['three']);
+    const remaining = layer.markers();
+    assert.equal(layer.markers(), remaining);
+    second.dispose();
+    assert.deepEqual(layer.markers(), []);
+    layer.dispose();
+    assert.deepEqual(layer.markers(), []);
+  } finally {
+    layer.dispose(); scene.dispose(); engine.dispose();
+    if (descriptor) Object.defineProperty(globalThis, 'MutationObserver', descriptor);
+    else Reflect.deleteProperty(globalThis, 'MutationObserver');
+  }
+});
 
 test('marker GPU data follows movement, atlas changes and hiding while identical frames skip uploads', () => {
   const engine = new NullEngine(), scene = new Scene(engine), mesh = new Mesh('markers', scene);

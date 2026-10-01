@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.12 – Kaffeemaschine: Tropfschale, Wasser, Bohnen (01.10.2026)
+
+- Meldet die Kaffeemaschine „Tropfschale voll“, „Wassertank leer“ oder „Bohnenbehälter leer“ (Home-Connect-Sensoren), wird das Symbol im Plan orange mit Ausrufezeichen und zeigt die Meldung darunter; das Popup listet sie oben auf. Die Sensoren werden automatisch neben dem Betriebszustand gefunden, ein neuer Modellexport ist nicht nötig. Ist die Maschine offline, erscheinen keine veralteten Meldungen.
+
 ## 0.5.11 – Kiosk-Abstand (01.10.2026)
 
 - Im Kiosk-Modus sitzen Logo, Wetter, Werkzeugleiste und Seitenpanel etwas tiefer, damit die Unschärfe der iPad-Statusleiste nicht mehr über die Bedienelemente reicht.

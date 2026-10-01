@@ -55,3 +55,16 @@ test('coffee companion entities survive binding backup and model reimport', () =
   const bad = structuredClone(manifest); bad.objects[0].coffee.stopEntityId = 'switch.wrong';
   assert.throws(() => validateManifest(bad));
 });
+
+test('drip tray, water tank and bean alerts come from Home Connect event sensors next to the operation state', () => {
+  const machine = { ...object, coffee: { ...c, statusEntityId: 'sensor.coffee_maker_operation_state' } };
+  const data = { ...states(), 'sensor.coffee_maker_operation_state': s('inactive'), 'sensor.coffee_maker_drip_tray_full': s('off'), 'sensor.coffee_maker_water_tank_empty': s('off') };
+  assert.deepEqual(coffeeState(machine, data, true, now).alerts, []);
+  data['sensor.coffee_maker_drip_tray_full'] = s('present');
+  assert.deepEqual(coffeeState(machine, data, true, now).alerts, ['Tropfschale voll']);
+  data['sensor.coffee_maker_drip_tray_full'] = s('confirmed'); data['sensor.coffee_maker_water_tank_empty'] = s('present');
+  assert.deepEqual(coffeeState(machine, data, true, now).alerts, ['Tropfschale voll', 'Wassertank leer']);
+  // Offline machines show no stale alerts; unknown naming schemes show none.
+  assert.deepEqual(coffeeState(machine, data, false, now).alerts, []);
+  assert.deepEqual(coffeeState(object, { ...data, ...states() }, true, now).alerts, []);
+});

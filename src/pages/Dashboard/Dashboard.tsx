@@ -13,6 +13,7 @@ import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
 import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
+import { coffeeAlertEntityIds } from '../../services/coffeeState';
 import { notifyEntityStates } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus from '../../components/DoorStatus';
@@ -335,6 +336,7 @@ export default function Dashboard() {
       if (o.coffee) {
         if (o.entityId) ids.add(o.entityId);
         Object.values(o.coffee).forEach(id => { if (typeof id === 'string') ids.add(id); });
+        coffeeAlertEntityIds(o.coffee.statusEntityId).forEach(alert => ids.add(alert.entityId));
       }
     }
     floorplanMarkerIdsRef.current = { objects, ids };

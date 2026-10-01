@@ -40,6 +40,7 @@ function QA() {
     <strong>Kaffeemaschine · Prüfung</strong><p>{note}</p>
     <button onClick={()=>setConnected(v=>!v)}>Verbindung wechseln</button>
     <button onClick={()=>setStates(s=>({...s,[c.remoteStartEntityId]:state(c.remoteStartEntityId,s[c.remoteStartEntityId].state==='on'?'off':'on')}))}>Fernstart wechseln</button>
+    <button onClick={()=>setStates(s=>{const id=c.statusEntityId.replace(/_operation_state$/,'_drip_tray_full');return {...s,[id]:state(id,s[id]?.state==='present'?'off':'present')};})}>Tropfschale voll wechseln</button>
     <button onClick={()=>setMatching(machine.id)}>Kaffee-Wizard</button>
   </nav>
   {!matching && <CoffeeMarkers scene={scene} config={config} states={states} connected={connected} open={open} onOpen={setOpen} onAssign={setMatching} onCommand={async(domain,service,entityId,data)=>{

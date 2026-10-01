@@ -11,6 +11,22 @@ export function coffeeDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
+/**
+ * Home Connect reports "act at the machine" events as sensors next to the
+ * operation state (`sensor.<device>_operation_state` → `sensor.<device>_drip_tray_full`).
+ * `present` = event active, `confirmed` = acknowledged in the app but not fixed yet.
+ */
+const COFFEE_ALERTS = [
+  { key: 'dripTray', suffix: 'drip_tray_full', label: 'Tropfschale voll' },
+  { key: 'waterTank', suffix: 'water_tank_empty', label: 'Wassertank leer' },
+  { key: 'beans', suffix: 'bean_container_empty', label: 'Bohnenbehälter leer' },
+] as const;
+
+export function coffeeAlertEntityIds(statusEntityId: string): { key: string; entityId: string; label: string }[] {
+  const base = /^sensor\.(.+)_operation_state$/.exec(statusEntityId)?.[1];
+  return base ? COFFEE_ALERTS.map(alert => ({ key: alert.key, entityId: `sensor.${base}_${alert.suffix}`, label: alert.label })) : [];
+}
+
 export function coffeeState(object: FloorplanObject, states: Record<string, HAState>, connected: boolean, now = Date.now()) {
   const c = object.coffee!;
   const power = states[object.entityId], operation = states[c.statusEntityId], active = states[c.activeProgramEntityId];
@@ -32,7 +48,10 @@ export function coffeeState(object: FloorplanObject, states: Record<string, HASt
   const local = states[c.localControlEntityId]?.state !== 'off';
   const remote = states[c.remoteStartEntityId]?.state === 'on';
   const labels: Record<string, string> = { inactive: on ? 'Bereit' : 'Aus', ready: 'Bereit', run: 'Läuft', pause: 'Pausiert', actionrequired: 'Aktion am Gerät nötig', finished: 'Fertig', error: 'Fehler am Gerät', aborting: 'Wird gestoppt', delayedstart: 'Start geplant' };
-  return { available, on, running, inProgress, options, program, remaining, elapsed, progress,
+  const alerts = available ? coffeeAlertEntityIds(c.statusEntityId)
+    .filter(alert => ['present', 'confirmed'].includes(states[alert.entityId]?.state ?? ''))
+    .map(alert => alert.label) : [];
+  return { available, on, running, inProgress, options, program, remaining, elapsed, progress, alerts,
     label: !object.entityId ? 'Noch nicht zugeordnet' : !available ? 'Nicht verbunden' : labels[status] ?? 'Status nicht verfügbar',
     canPower: available && valid(power) && !local,
     canStart: available && on && remote && !local && ['ready', 'inactive', 'finished'].includes(status) && options.length > 0,

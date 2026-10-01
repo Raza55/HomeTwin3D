@@ -7,3 +7,10 @@
 .coffee-popup header{display:flex;align-items:center;gap:8px;margin-bottom:6px}.coffee-popup header strong{flex:1}.coffee-popup header button{border:0;padding:4px;display:flex;background:transparent}
 .coffee-popup small,.coffee-hint{color:#a5b9c6;font-size:12px}.coffee-popup button,.coffee-popup select{font:inherit;border:1px solid #426172;border-radius:7px;background:#1b3444;color:#e3eff5;padding:8px;cursor:pointer}.coffee-popup button:disabled,.coffee-popup select:disabled{opacity:.4;cursor:default}
 .coffee-actions{display:flex;gap:8px}.coffee-actions button{flex:1}.coffee-program{display:grid;gap:5px;margin:14px 0 8px}.coffee-program select{width:100%;min-width:0}.coffee-popup .coffee-start{width:100%;background:#1b563d;border-color:#54b482}.coffee-stop{width:100%;margin-top:8px}.coffee-popup dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px}.coffee-popup dd{margin:0;text-align:right}.coffee-running{color:#83e9ac}.coffee-progress{display:grid;gap:5px;margin:10px 0}.coffee-progress progress{width:100%;accent-color:#61d891}.coffee-popup [role=alert]{color:#ffb0aa}
+
+/* Home Connect "act at the machine" events (drip tray full, water tank or beans empty). */
+.coffee-marker.needs-service{color:#ffd28a;border-color:#e0a03c;box-shadow:0 0 12px #e0a03c55}
+.coffee-alert-badge{position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#e0a03c;color:#1a1204;font:700 12px/1 system-ui}
+.coffee-caption.coffee-caption-alert{background:#3a2a0eed;border-color:#e0a03c90;color:#ffd28a}
+.coffee-alerts{list-style:none;margin:6px 0 10px;padding:8px 10px;border-radius:9px;background:#3a2a0e;border:1px solid #e0a03c80;color:#ffd28a;display:grid;gap:4px}
+.coffee-alerts li{display:flex;align-items:center;gap:7px}

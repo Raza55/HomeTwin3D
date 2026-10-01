@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Coffee, Pencil, X } from 'lucide-react';
+import { AlertTriangle, Coffee, Pencil, X } from 'lucide-react';
 import { Vector3, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
@@ -84,16 +84,19 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     const state = coffeeState(o, states, connected, now);
     const time = state.remaining ? `Noch ${state.remaining}` : state.elapsed ? `Seit ${state.elapsed}` : '';
     return <button key={o.id} ref={el => { refs.current[o.id] = el; }}
-      className={`coffee-marker ${state.running ? 'is-running' : ''} ${state.inProgress && !state.running ? 'needs-attention' : ''}`}
-      title={`${o.label} · ${state.label}`} aria-label={`${o.label} steuern`} aria-expanded={open === o.id} aria-haspopup="dialog"
+      className={`coffee-marker ${state.running ? 'is-running' : ''} ${state.inProgress && !state.running ? 'needs-attention' : ''} ${state.alerts.length ? 'needs-service' : ''}`}
+      title={[o.label, state.label, ...state.alerts].join(' · ')} aria-label={`${o.label} steuern${state.alerts.length ? ` · ${state.alerts.join(', ')}` : ''}`} aria-expanded={open === o.id} aria-haspopup="dialog"
       onClick={() => o.entityId ? onOpen(open === o.id ? null : o.id) : onAssign(o.id)}>
       <Coffee size={20}/>{!o.entityId && <span>+</span>}
-      {state.inProgress && <span className="coffee-caption">{state.program || state.label}{time && <small>{time}</small>}</span>}
+      {state.alerts.length > 0 && <span className="coffee-alert-badge" aria-hidden="true">!</span>}
+      {state.inProgress ? <span className="coffee-caption">{state.program || state.label}{time && <small>{time}</small>}</span>
+        : state.alerts.length > 0 && <span className="coffee-caption coffee-caption-alert">{state.alerts.join(' · ')}</span>}
     </button>;
   })}{current && value && <section ref={panel} className="coffee-popup" role="dialog" aria-label={`${current.label} steuern`}>
     <header><Coffee size={20}/><strong>{current.label}</strong><button aria-label="Kaffeemaschine zuordnen" onClick={() => { onOpen(null); onAssign(current.id); }}><Pencil size={16}/></button><button aria-label="Kaffeesteuerung schließen" onClick={() => onOpen(null)}><X size={18}/></button></header>
     <small>Siemens TI9558X1DE · {current.room}</small>
     <p className={value.running ? 'coffee-running' : ''} role="status">{value.label}</p>
+    {value.alerts.length > 0 && <ul className="coffee-alerts" role="alert">{value.alerts.map(alert => <li key={alert}><AlertTriangle size={15}/>{alert}</li>)}</ul>}
     {value.inProgress && <dl><dt>Programm</dt><dd>{value.program || 'Nicht gemeldet'}</dd>
       <dt>Restzeit</dt><dd>{value.remaining || 'Nicht gemeldet'}</dd>
       {value.elapsed && <><dt>Läuft seit</dt><dd>{value.elapsed}</dd></>}

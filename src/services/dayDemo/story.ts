@@ -65,7 +65,8 @@ export type StoryAction =
   | { type: 'pc'; on: boolean; screen?: ScreenKind }
   | { type: 'coffee'; phase: 'on' | 'brew' | 'off'; minutes?: number }
   | { type: 'echo'; rooms?: RoomRole[]; playing: boolean; title?: Text }
-  | { type: 'door'; kind: 'entrance' | 'balcony'; open: boolean }
+  /** `window`: the French windows (airing, only while their blinds are up). */
+  | { type: 'door'; kind: 'entrance' | 'balcony' | 'window'; open: boolean }
   | { type: 'lock'; locked: boolean }
   | { type: 'fan'; rooms?: RoomRole[]; on: boolean; percentage?: number }
   | { type: 'vacuum'; phase: 'cleaning' | 'returning' | 'docked' }
@@ -140,6 +141,8 @@ export const STORY: StoryBeat[] = [
     title: { de: 'Bad & Lüftung', en: 'Bathroom & ventilation' },
     text: { de: 'Tageslichtweiß im Bad, der Lüfter läuft an. Das Schlafzimmer schaltet sich selbst aus.', en: 'Daylight white in the bathroom, the fan starts. The bedroom switches itself off.' },
   }),
+  beat('07:04', [{ type: 'door', kind: 'window', open: true }]),
+  beat('07:24', [{ type: 'door', kind: 'window', open: false }]),
   beat('07:25', [{ type: 'light', target: { rooms: ['bath'] }, on: false }]),
   beat('07:30', [
     { type: 'tv', mode: 'news' },
@@ -151,19 +154,20 @@ export const STORY: StoryBeat[] = [
     text: { de: 'Vom Esstisch der Blick zum Fernseher: Die Nachrichten laufen, das Licht über dem Tisch ist gedimmt.', en: 'From the dining table the view goes to the TV: the news is on, the light above the table is dimmed.' },
   }),
   beat('07:40', [{ type: 'fan', on: false }]),
-  beat('08:12', [{ type: 'door', kind: 'entrance', open: true }]),
-  beat('08:14', [
+  beat('08:08', [{ type: 'lock', locked: false }]),
+  beat('08:10', [{ type: 'door', kind: 'entrance', open: true }], {
+    id: 'away', icon: 'door',
+    title: { de: 'Alle aus dem Haus', en: 'Everyone has left' },
+    text: { de: 'Haustür auf, Haustür zu, Schloss verriegelt: Abwesenheitsmodus. Alle Lichter, der Fernseher und die Kaffeemaschine gehen aus.', en: 'Front door open, front door shut, lock bolted: away mode. All lights, the TV and the coffee machine switch off.' },
+  }),
+  beat('08:15', [
     { type: 'door', kind: 'entrance', open: false },
     { type: 'light', target: { all: true }, on: false, stagger: 0.4 },
     { type: 'tv', mode: 'off' },
     { type: 'coffee', phase: 'off' },
     { type: 'echo', playing: false },
-  ], {
-    id: 'away', icon: 'door',
-    title: { de: 'Alle aus dem Haus', en: 'Everyone has left' },
-    text: { de: 'Die Haustür fällt ins Schloss: Abwesenheitsmodus. Alle Lichter, der Fernseher und die Kaffeemaschine gehen aus.', en: 'The front door shuts: away mode. All lights, the TV and the coffee machine switch off.' },
-  }),
-  beat('08:16', [{ type: 'lock', locked: true }]),
+  ]),
+  beat('08:19', [{ type: 'lock', locked: true }]),
   beat('09:00', [{ type: 'appliance', kind: 'washer', running: true }], {
     id: 'chores', icon: 'washer',
     title: { de: 'Waschtag', en: 'Laundry day' },
@@ -219,7 +223,7 @@ export const STORY: StoryBeat[] = [
     title: { de: 'Feierabend', en: 'Home time' },
     text: { de: 'Die Haustür öffnet sich: Begrüßung, Musik und warmes Licht im Wohnbereich.', en: 'The front door opens: a greeting, music and warm light in the living area.' },
   }),
-  beat('17:31', [{ type: 'door', kind: 'entrance', open: false }]),
+  beat('17:33', [{ type: 'door', kind: 'entrance', open: false }]),
   beat('18:45', [
     { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 100, kelvin: 4000 },
     { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 70, kelvin: 2700, ramp: 2 },
@@ -230,6 +234,18 @@ export const STORY: StoryBeat[] = [
     text: { de: 'Arbeitslicht in der Küche, gedimmtes Licht am Esstisch, die Lüftung läuft mit.', en: 'Task lighting in the kitchen, dimmed light at the dining table, ventilation on.' },
   }),
   beat('19:35', [{ type: 'fan', on: false }, { type: 'light', target: { rooms: ['kitchen'] }, on: true, brightness: 30, kelvin: WARM, ramp: 2 }]),
+  beat('19:36', [
+    { type: 'door', kind: 'window', open: true },
+    { type: 'door', kind: 'balcony', open: true },
+  ], {
+    id: 'airing', icon: 'wind',
+    title: { de: 'Lüften nach dem Kochen', en: 'Airing after cooking' },
+    text: { de: 'Die Rollos sind noch oben: Fenstertüren und Balkontür öffnen zum Querlüften. Vor dem Sonnenuntergang ist alles wieder zu.', en: 'The blinds are still up: French windows and the balcony door open for a cross draught. Everything is closed again before sunset.' },
+  }),
+  beat('19:43', [
+    { type: 'door', kind: 'window', open: false },
+    { type: 'door', kind: 'balcony', open: false },
+  ]),
   beat('19:45', [
     { type: 'blind', position: 0, ramp: 5, stagger: 1 },
     { type: 'light', target: { rooms: ['outdoor'] }, on: true, brightness: 60, kelvin: WARM, ramp: 3 },
@@ -368,7 +384,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '06:54', speed: 0.9 },
   { clock: '07:30', speed: 0.35 },
   { clock: '07:53', speed: 0.9 },
-  { clock: '08:35', speed: 2 },
+  // Leaving: lock, door and lock again, slow enough to watch.
+  { clock: '08:06', speed: 0.22 },
+  { clock: '08:22', speed: 2 },
   { clock: '09:00', speed: 0.27 },
   { clock: '09:19', speed: 2 },
   { clock: '11:07', speed: 0.27 },
@@ -376,7 +394,10 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '13:25', speed: 1.2 },
   { clock: '15:00', speed: .55 },
   { clock: '16:05', speed: 1.1 },
-  { clock: '17:40', speed: 1.1 },
+  { clock: '17:27', speed: 0.3 },
+  { clock: '17:36', speed: 1.1 },
+  { clock: '19:34', speed: 0.35 },
+  { clock: '19:52', speed: 1.1 },
   { clock: '20:15', speed: 0.6 },
   { clock: '21:10', speed: 1.2 },
   { clock: '22:20', speed: 0.5 },
@@ -447,6 +468,10 @@ export interface ShotKey {
    */
   eye: { at: ShotAnchor; metres: number; seeing?: ShotAnchor; approach?: boolean; /** Eye height in metres (1.6 standing, ~1.2 seated). */ height?: number };
   look: ShotAnchor;
+  /** Turn the head this many degrees to the right of the look anchor (negative: left). */
+  turn?: number;
+  /** Aim this many metres below the look anchor (it then sits higher in the picture, above the overlay). */
+  drop?: number;
   /** Jump here with a short dip to black instead of gliding (another room). */
   cut?: boolean;
 }
@@ -466,7 +491,9 @@ export const SHOTS: Shot[] = [
   shot('opening', '05:30', '06:45', [
     { t: 0, eye: { at: ENTRANCE, metres: .9, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
     { t: .6, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: LIVING_WINDOW },
-    { t: .78, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' } },
+    { t: .72, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' } },
+    // Keep panning along the counter to the knife block and utensils on the right.
+    { t: .84, eye: { at: ENTRANCE, metres: 3, seeing: LIVING_WINDOW }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
     { t: 1, eye: { at: { kind: 'coffee' }, metres: 1.3, approach: true }, look: { kind: 'coffee' } },
   ], 80),
   shot('breakfast-news', '07:31', '07:52', [
@@ -494,8 +521,9 @@ export const SHOTS: Shot[] = [
   shot('gaming', '22:24', '22:58', [
     { t: 0, eye: { at: { kind: 'pc' }, metres: 1.6 }, look: { kind: 'pc' } },
     { t: .4, eye: { at: { kind: 'pc' }, metres: 1.4 }, look: { kind: 'pc' } },
-    // Step back and look down at the desk: the PC case glows in rainbow colours.
-    { t: 1, eye: { at: { kind: 'pc' }, metres: 1.8, height: 2.2 }, look: { kind: 'pcCase' } },
+    // Step back and look down at the desk: the PC case glows in rainbow colours. Hold there.
+    { t: .72, eye: { at: { kind: 'pc' }, metres: 1.5, height: 2.1 }, look: { kind: 'pcCase' }, drop: .55 },
+    { t: 1, eye: { at: { kind: 'pc' }, metres: 1.5, height: 2.1 }, look: { kind: 'pcCase' }, drop: .55 },
   ]),
 ];
 
@@ -521,6 +549,6 @@ export const CHAPTER_FRAMING: Record<string, Framing> = {
   bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'washer' }, .36),
   sunny: overview(1.35, .16), shade: room('living', .6), warning: overview(1.3, .16), storm: overview(1.55, .2),
   clearing: overview(1.3, .14), home: anchor(ENTRANCE, .42), cooking: room('kitchen', .38), sunset: room('living', .6),
-  cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
+  airing: anchor(LIVING_WINDOW, .5), cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
   nightlight: room('hall', .4), snow: overview(1.55, .2), dawn: overview(1.2, .12),
 };

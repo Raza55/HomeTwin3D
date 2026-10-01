@@ -79,23 +79,27 @@ export class ShotDirector {
     while (i < keys.length - 1 && keys[i + 1].t <= f) i++;
     const a = keys[i], b = keys[Math.min(i + 1, keys.length - 1)];
     const cuts = keys.slice(1, i + 1).filter(k => k.cut).length;
-    const eyeA = this.eyeOf(shot, i), lookA = this.lookOf(a);
+    const eyeA = this.eyeOf(shot, i), lookA = eyeA && this.lookOf(a, eyeA);
     if (!eyeA || !lookA) return null;
     let eye = eyeA, look = lookA;
     if (b !== a && !b.cut) {
-      const eyeB = this.eyeOf(shot, i + 1), lookB = this.lookOf(b);
+      const eyeB = this.eyeOf(shot, i + 1), lookB = eyeB && this.lookOf(b, eyeB);
       if (!eyeB || !lookB) return null;
       const u = ease(Math.max(0, Math.min(1, (f - a.t) / Math.max(1e-6, b.t - a.t))));
       eye = Vector3.Lerp(eyeA, eyeB, u);
-      // Turn the view direction rather than sliding the look-at point.
-      const from = lookA.subtract(eyeA).normalize(), to = lookB.subtract(eyeB).normalize();
-      look = eye.add(Vector3.Lerp(from, to, u).normalize().scale(4 * this.walk.unit()));
+      // Turn the head (shortest way round, then up/down) rather than sliding the look-at point:
+      // a blend of two near-opposite directions would dip towards the floor.
+      const from = lookA.subtract(eyeA), to = lookB.subtract(eyeB);
+      const yawA = Math.atan2(from.x, from.z), yawB = Math.atan2(to.x, to.z);
+      const pitchA = Math.atan2(from.y, Math.hypot(from.x, from.z)), pitchB = Math.atan2(to.y, Math.hypot(to.x, to.z));
+      const yaw = yawA + Math.atan2(Math.sin(yawB - yawA), Math.cos(yawB - yawA)) * u, pitch = pitchA + (pitchB - pitchA) * u;
+      look = eye.add(new Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).scale(4 * this.walk.unit()));
     }
-    // A natural head angle: at most ~50° down (looking at a desk) or 20° up.
+    // A natural head angle: at most ~60° down (looking at a desk) or 20° up.
     const unit = this.walk.unit(), time = performance.now() / 1000;
     eye = eye.clone(); look = look.clone();
     const view = look.subtract(eye), flat = Math.hypot(view.x, view.z);
-    if (flat > 1e-6) look.y = eye.y + Math.max(-1.25 * flat, Math.min(.36 * flat, view.y));
+    if (flat > 1e-6) look.y = eye.y + Math.max(-1.7 * flat, Math.min(.36 * flat, view.y));
     // A slight breathing sway keeps the hand-held feel.
     eye.y += Math.sin(time * 1.3) * .012 * unit;
     look.x += Math.sin(time * .7) * .03 * unit;
@@ -153,9 +157,16 @@ export class ShotDirector {
     return eye;
   }
 
-  private lookOf(key: { look: ShotAnchor }): Vector3 | null {
+  private lookOf(key: { look: ShotAnchor; turn?: number; drop?: number }, eye?: Vector3): Vector3 | null {
     const anchor = this.anchor(key.look);
-    return anchor ? this.lookAt(anchor) : null;
+    if (!anchor) return null;
+    const look = this.lookAt(anchor);
+    if (key.drop) look.y -= key.drop * this.walk.unit();
+    if (!key.turn || !eye) return look;
+    // Turn the head around the vertical axis (positive: to the right).
+    const view = look.subtract(eye), angle = key.turn * Math.PI / 180;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    return new Vector3(eye.x + view.x * cos + view.z * sin, look.y, eye.z - view.x * sin + view.z * cos);
   }
 
   /** Point the orbit camera centres on for a chapter (null: the whole site). */

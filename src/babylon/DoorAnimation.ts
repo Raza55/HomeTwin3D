@@ -46,21 +46,56 @@ export function createDoorRigs(scene: Scene): DoorRig[] {
   });
 }
 
-export function setDoorPose(rig: DoorRig, pose: DoorPose | null): boolean {
-  if (!pose || rig.node.isDisposed()) return false; // Keep the last known geometry on lost contact.
-  const changed = pose !== rig.pose;
-  const { geometry: g, node } = rig;
-  const rotation = pose === 'closed' ? Quaternion.Identity() : Quaternion.RotationAxis(
+function poseRotation(g: DoorGeometry, pose: DoorPose): Quaternion {
+  return pose === 'closed' ? Quaternion.Identity() : Quaternion.RotationAxis(
     Vector3.FromArray(pose === 'open' ? g.swingAxis : g.tiltAxis).normalize(),
     (pose === 'open' ? g.swingDegrees : g.tiltDegrees) * Math.PI / 180,
   );
-  const hinge = Vector3.FromArray(g.hinge);
+}
+
+/** Places the leaf turned by `rotation` around its hinge. */
+function applyTurn(rig: DoorRig, rotation: Quaternion): void {
+  const hinge = Vector3.FromArray(rig.geometry.hinge);
   const offset = rig.position.subtract(hinge);
   const moved = Vector3.Zero(); offset.rotateByQuaternionToRef(rotation, moved);
-  node.position.copyFrom(hinge.add(moved));
-  node.rotationQuaternion = rotation.multiply(rig.rotation);
-  node.computeWorldMatrix(true);
-  for (const mesh of node.getChildMeshes()) mesh.computeWorldMatrix(true);
+  rig.node.position.copyFrom(hinge.add(moved));
+  rig.node.rotationQuaternion = rotation.multiply(rig.rotation);
+  rig.node.computeWorldMatrix(true);
+  for (const mesh of rig.node.getChildMeshes()) mesh.computeWorldMatrix(true);
+}
+
+const swings = new WeakMap<TransformNode, { pose: DoorPose; stop: () => void }>();
+
+export function setDoorPose(rig: DoorRig, pose: DoorPose | null): boolean {
+  if (!pose || rig.node.isDisposed()) return false; // Keep the last known geometry on lost contact.
+  const changed = pose !== rig.pose;
+  swings.get(rig.node)?.stop();
+  applyTurn(rig, poseRotation(rig.geometry, pose));
   rig.pose = pose;
   return changed;
+}
+
+/**
+ * Swings the leaf from where it is now to `pose` over `ms` (day demo). Returns
+ * false when it already is there or on its way; `done` runs once it arrives.
+ */
+export function swingDoor(scene: Scene, rig: DoorRig, pose: DoorPose | null, ms: number, done: () => void): boolean {
+  if (!pose || rig.node.isDisposed()) return false;
+  const running = swings.get(rig.node);
+  if (running?.pose === pose) { rig.pose = pose; return false; }
+  running?.stop();
+  const from = (rig.node.rotationQuaternion ?? Quaternion.Identity()).multiply(Quaternion.Inverse(rig.rotation));
+  const to = poseRotation(rig.geometry, pose);
+  rig.pose = pose;
+  if (Math.abs(Quaternion.Dot(from, to)) > .99999) return false;
+  const start = performance.now();
+  const observer = scene.onBeforeRenderObservable.add(() => {
+    const t = Math.min(1, (performance.now() - start) / ms), u = t * t * (3 - 2 * t);
+    if (rig.node.isDisposed()) { stop(); return; }
+    applyTurn(rig, Quaternion.Slerp(from, to, u));
+    if (t >= 1) { stop(); done(); }
+  });
+  const stop = () => { scene.onBeforeRenderObservable.remove(observer); if (swings.get(rig.node)?.stop === stop) swings.delete(rig.node); };
+  swings.set(rig.node, { pose, stop });
+  return true;
 }

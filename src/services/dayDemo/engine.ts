@@ -316,6 +316,11 @@ export class DayDemoEngine {
         const doors = this.cast.doors.filter(d => d.kind === action.kind);
         for (const door of doors) this.hooks.setState(door.entityId, action.open ? 'on' : 'off', { friendly_name: door.label });
         if (!doors.length) return;
+        if (action.kind === 'window') {
+          return this.addLog('door', action.open
+            ? { de: 'Fenstertüren geöffnet: Lüften', en: 'French windows open: airing' }
+            : { de: 'Fenstertüren geschlossen', en: 'French windows closed' });
+        }
         const name = action.kind === 'entrance' ? { de: 'Haustür', en: 'Front door' } : { de: 'Balkontür', en: 'Balcony door' };
         return this.addLog('door', { de: `${name.de} ${action.open ? 'geöffnet' : 'geschlossen'}`, en: `${name.en} ${action.open ? 'opened' : 'closed'}` });
       }

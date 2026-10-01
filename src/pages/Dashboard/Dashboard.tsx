@@ -342,7 +342,8 @@ export default function Dashboard() {
     if (cache.objects === objects) return cache.ids;
     const ids = new Set<string>();
     for (const o of objects ?? []) {
-      if ((o.statusIndicator || o.echo) && o.entityId) ids.add(o.entityId);
+      // Door contacts and locks move the leaf and switch the door marker icon.
+      if ((o.statusIndicator || o.echo || o.door || o.doorLock) && o.entityId) ids.add(o.entityId);
       if (o.it) itEntityIds(o.it).forEach(id => ids.add(id));
       if (o.coffee) {
         if (o.entityId) ids.add(o.entityId);

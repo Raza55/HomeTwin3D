@@ -31,7 +31,7 @@ export interface CastLight {
 }
 export interface CastCoffee { entityId: string; ids: NonNullable<FloorplanObject['coffee']>; objectId?: string }
 export interface CastPC { device: ITDevice; room: RoomRole }
-export interface CastDoor { entityId: string; kind: 'entrance' | 'balcony' | 'other'; label: string; objectId?: string }
+export interface CastDoor { entityId: string; kind: 'entrance' | 'balcony' | 'window' | 'other'; label: string; objectId?: string }
 export interface CastAppliance { entityId: string; kind: 'washer' | 'dryer'; runningState?: string; power: boolean; remainingEntityId?: string; objectId?: string }
 export interface CastEntity { entityId: string; label: string; room: RoomRole; /** Blind config id (its meshes are named after it). */ id?: string }
 
@@ -138,7 +138,8 @@ export function buildCast(config: AppConfig, extraDisplays: DisplayConfig[] = []
     if (o.echo && o.entityId) echos.push({ entityId: o.entityId, label: o.label, room: objectRoom(o) });
     if (o.door && o.entityId) {
       const text = `${o.label} ${o.room ?? ''} ${o.entityId}`.toLowerCase();
-      const kind = o.door.kind === 'entrance' ? 'entrance' : /balkon|balcon|terrass|patio|garten/.test(text) || objectRoom(o) === 'outdoor' ? 'balcony' : 'other';
+      const kind = o.door.kind === 'entrance' ? 'entrance' : /balkon|balcon|terrass|patio|garten/.test(text) || objectRoom(o) === 'outdoor' ? 'balcony'
+        : /fenster|window/.test(text) ? 'window' : 'other';
       doors.push({ entityId: o.entityId, kind, label: o.label, objectId: o.id });
     }
     if (o.doorLock && o.entityId) locks.add(o.entityId);

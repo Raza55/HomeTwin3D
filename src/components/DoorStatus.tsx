@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AbstractMesh, type Scene } from '@babylonjs/core';
 import type { AppConfig, HAState } from '../types';
-import { createDoorRigs, setDoorPose } from '../babylon/DoorAnimation';
+import { createDoorRigs, setDoorPose, swingDoor } from '../babylon/DoorAnimation';
 import { nextDoorPoseDelay, doorPose } from '../services/doorState';
 import { invalidateShadowsNear } from '../babylon/ShadowRange';
 import { useConfiguredEntityStates } from '../services/entityStateSignal';
@@ -21,9 +21,15 @@ export default function DoorStatus({ scene, config, states, connected }: {
       for (const rig of rigs) {
         const door = doors.get(rig.id);if (!door) continue;
         const pose = !door.entityId ? 'closed' : live.current.connected ? doorPose(live.current.states[door.entityId], Date.now(), door.door?.kind) : null;
-        if (!setDoorPose(rig, pose)) continue;
         const meshes = [...(rig.node instanceof AbstractMesh ? [rig.node] : []), ...rig.node.getChildMeshes(false)];
-        for (const mesh of meshes) sweep = Math.max(sweep, mesh.getBoundingInfo().boundingBox.extendSizeWorld.length() * 2);
+        const reach = Math.max(0, ...meshes.map(mesh => mesh.getBoundingInfo().boundingBox.extendSizeWorld.length() * 2));
+        // The day demo swings doors visibly; shadows follow once the leaf has arrived.
+        if (scene.metadata?.animateDoors) {
+          swingDoor(scene, rig, pose, 1100, () => invalidateShadowsNear(scene, meshes, reach));
+          continue;
+        }
+        if (!setDoorPose(rig, pose)) continue;
+        sweep = Math.max(sweep, reach);
         moved.push(...meshes);
       }
       // A leaf sweeps around its hinge: its own diagonal bounds the old position.

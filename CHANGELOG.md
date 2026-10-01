@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.23 – Türen, Lüften und Gaming-Blick (01.10.2026)
+
+- Türen und Schlösser: Statusänderungen von Türkontakten und Schlössern bewegen das Türblatt und wechseln das Türsymbol jetzt sofort (vorher erst beim nächsten anderen Update).
+- Tagesdemo: Beim Verlassen wird die Haustür entriegelt, öffnet und schließt sichtbar (das Türblatt schwenkt weich) und wird wieder verriegelt – das Symbol wechselt mit. Auch beim Heimkommen bleibt die Tür kurz offen.
+- Lüften: morgens und nach dem Kochen öffnen die Fenstertüren (abends auch die Balkontür), solange die Rollos oben sind; neues Kapitel „Lüften nach dem Kochen“.
+- Einstieg: Der Blick schwenkt weiter an der Küchenzeile entlang, bevor er zur Kaffeemaschine wechselt; Kopfdrehungen laufen jetzt über den kürzesten Winkel ohne Kippen zum Boden.
+- Gaming: tiefer und steiler Blick auf den PC unter dem Schreibtisch, die Einstellung hält kurz an; die RGB-Beleuchtung wechselt schneller die Farben.
+
 ## 0.5.22 – Tagesdemo: feste Kamera und eigenes Nachrichtenbild (01.10.2026)
 
 - Während der Tagesdemo gehört die Kamera dem Drehbuch: Drehen, Zoomen und Verschieben (auch Mausblick und Tasten in der Ich-Perspektive) sind gesperrt; Startansicht und Navigationsmodus-Knopf reagieren erst nach der Demo wieder.

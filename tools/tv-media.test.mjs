@@ -109,3 +109,21 @@ test('PC input shows the desktop camera still as background, gated by input and 
   const saved={receiver:route.receiver,shield:route.shield,television:route.television};
   assert.ok(displayStateDependencies({kind:'tv',tvMedia:saved,sources:[]}).includes(route.pcScreenshot));
 });
+test('apps without metadata or image (Netflix) surface the app as title and brand backdrop key',async()=>{
+  const {appBrand}=await import('../src/services/tvMedia.ts');
+  const states=fixture();
+  states[route.shield]=state(route.shield,'playing',{app_name:'Netflix',media_position_updated_at:'2026-09-27T19:00:00Z'});
+  states[route.remote]=state(route.remote,'on',{app_id:'com.netflix.ninja'});
+  const playing=resolveTVScreen(states,route,now);
+  assert.equal(playing.title,'Netflix');assert.equal(playing.subtitle,'SHIELD');assert.equal(playing.app,'Netflix');
+  assert.equal(playing.artwork,undefined);assert.equal(playing.status,'Wiedergabe');
+  assert.equal(appBrand(playing.app).label,'NETFLIX');
+  states[route.shield].attributes.media_title='Some film';
+  const titled=resolveTVScreen(states,route,now);
+  assert.equal(titled.title,'Some film');assert.equal(titled.subtitle,'Netflix');assert.equal(titled.app,'Netflix');
+  states[route.shield].state='idle';
+  assert.equal(resolveTVScreen(states,route,now).app,'Netflix');
+  delete states[route.remote];delete states[route.shield];
+  assert.equal(resolveTVScreen(states,route,now).app,undefined);
+  assert.equal(appBrand('Some Unknown App'),undefined);assert.equal(appBrand(undefined),undefined);
+});

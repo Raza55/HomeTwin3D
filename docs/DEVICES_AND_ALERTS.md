@@ -44,6 +44,10 @@ Der separate [Windows-/MQTT-Helfer](../tools/pc-screen/README.md) veröffentlich
 
 Steht der Receiver auf dem Eingang `PC`, nutzt `resolveTVScreen` die Kamera `pcScreenshot` der TV-Route (Beispiel `camera.desktop_main_bildschirm`, dieselbe Kamera wie auf dem Modellmonitor) als Hintergrund des Fernsehermodells; Beschriftung und HDMI-Badge bleiben darüber. Das Bild wird nur bei verfügbarer Kamera geladen (nicht bei `off`, `standby`, `unknown`, `unavailable`) und läuft wie das Monitorbild über `/api/camera_proxy/…` bzw. die `ha-camera`-Route; die Aktualisierung folgt dem 10-Sekunden-Takt des Helfers. Gespeicherte Wohnzimmer-Routen erben die Kamera automatisch.
 
+### App-Hintergrund ohne Bild
+
+Liefert die SHIELD weder Screenshot noch Cover (etwa bei geschützter Netflix-Wiedergabe), zeichnet `TVMediaScreen` für bekannte Apps (Netflix, YouTube, Plex, Prime Video, Disney+, Spotify) einen Hintergrund mit App-Schriftzug in Markenfarbe. Ohne Medientitel wird der App-Name zum Titel; vorhandene Titel, Serien-/Interpretenangaben und Fortschritt erscheinen wie gewohnt darüber. Unbekannte Apps behalten die neutrale Grafik.
+
 ## TV Dial
 
 Das TV-Popup fordert SHIELD, PC, PlayStation, RetroPie oder Aus an. `tvDial.ts` sendet dazu das authentifizierte HA-WebSocket-Event `hometwin_tv_dial` mit `event_data.source` gleich `shield`, `pc`, `playstation`, `retropie` oder `aus`.

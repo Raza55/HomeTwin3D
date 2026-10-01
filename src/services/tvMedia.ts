@@ -20,6 +20,8 @@ export interface TVScreenContent {
   artworkKind?: 'cover' | 'screenshot';
   /** Set when `artwork` is a camera still (`/api/camera_proxy/…`) rather than a media proxy image. */
   camera?: string;
+  /** Foreground app on the SHIELD (e.g. Netflix); drives the branded backdrop when no image is available. */
+  app?: string;
   position?: number;
   duration?: number;
   ticking?: boolean;
@@ -32,6 +34,14 @@ const appName = (state?: HAState) => {
   const name = text(state?.attributes.app_name) || text(state?.attributes.app_id);
   return ({'com.plexapp.android':'Plex','com.netflix.ninja':'Netflix','com.google.android.youtube.tv':'YouTube','com.amazon.amazonvideo.livingroom':'Prime Video','com.disney.disneyplus':'Disney+','com.google.android.tvlauncher':'Startbildschirm'} as Record<string,string>)[name] || name;
 };
+
+/** Known streaming apps: wordmark and colour for the backdrop shown when neither screenshot nor cover exists. */
+const APP_BRANDS: Record<string, { label: string; color: string }> = {
+  netflix: { label: 'NETFLIX', color: '#e50914' }, youtube: { label: 'YouTube', color: '#ff0033' },
+  plex: { label: 'plex', color: '#e5a00d' }, 'prime video': { label: 'prime video', color: '#1a98ff' },
+  'disney+': { label: 'Disney+', color: '#2a6cf0' }, spotify: { label: 'Spotify', color: '#1db954' },
+};
+export const appBrand = (app?: string) => app ? APP_BRANDS[app.trim().toLowerCase()] : undefined;
 
 export function tvMediaRoute(config: DisplayConfig): TVMediaRoute | undefined {
   if (config.kind !== 'tv') return undefined;
@@ -65,8 +75,10 @@ export function resolveTVScreen(states: Record<string, HAState>, route: TVMediaR
   const remote = route.remote ? states[route.remote] : undefined;
   const screenshot = route.screenshot ? states[route.screenshot] : undefined;
   const screenArt = !offline(screenshot) && !['off','standby'].includes(screenshot!.state) ? picture(screenshot) : undefined;
+  // The remote integration reports package ids; the cast/ADB players report display names.
+  const app = (!offline(remote) ? appName(remote) : '') || (!offline(player) ? text(player?.attributes.app_name) : '') || undefined;
   const fallback: TVScreenContent = {
-    kind:'shield',title:'SHIELD',subtitle:!offline(remote) ? appName(remote) || 'Bereit zur Wiedergabe' : 'Medieninfos nicht verfügbar',
+    kind:'shield',app,title:'SHIELD',subtitle:!offline(remote) ? appName(remote) || 'Bereit zur Wiedergabe' : 'Medieninfos nicht verfügbar',
     status:screenArt ? 'Bildschirmvorschau' : !offline(remote) ? 'Bereit' : 'Offline',
     artwork:screenArt,artworkKind:screenArt ? 'screenshot' : undefined,
   };
@@ -77,9 +89,11 @@ export function resolveTVScreen(states: Record<string, HAState>, route: TVMediaR
   const updated = Date.parse(text(a.media_position_updated_at));
   const elapsed = player.state==='playing' && Number.isFinite(updated) ? Math.max(0,(now-updated)/1000) : 0;
   const position = base===undefined ? undefined : Math.min(duration && duration>0 ? duration : Infinity,Math.max(0,base+elapsed));
+  // Apps such as Netflix expose no title: the app name then becomes the title instead of a bare "SHIELD".
+  const mediaTitle = text(a.media_title) || text(a.media_series_title);
   return {
-    kind:'shield',title:text(a.media_title) || text(a.media_series_title) || 'SHIELD',
-    subtitle:[text(a.app_name),text(a.media_series_title) || text(a.media_artist)].filter(Boolean).join(' · ') || 'SHIELD',
+    kind:'shield',app,title:mediaTitle || app || 'SHIELD',
+    subtitle:[mediaTitle ? text(a.app_name) || app : '',text(a.media_series_title) || text(a.media_artist)].filter(Boolean).join(' · ') || 'SHIELD',
     status:player.state==='playing'?'Wiedergabe':player.state==='paused'?'Pausiert':'Lädt …',
     artwork:screenArt || picture(player),
     artworkKind:screenArt ? 'screenshot' : picture(player) ? 'cover' : undefined,

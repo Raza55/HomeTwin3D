@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.19 – App-Hintergrund auf dem Wohnzimmer-TV (01.10.2026)
+
+- Gibt die SHIELD kein Vorschaubild und kein Cover her (z. B. Netflix-Wiedergabe), zeigt das Fernsehermodell einen Hintergrund mit dem Schriftzug der laufenden App (Netflix, YouTube, Plex, Prime Video, Disney+, Spotify) statt der neutralen Grafik.
+- Ohne Medientitel steht der App-Name als Titel; Titel, Serie/Interpret und Fortschritt werden angezeigt, sobald Home Assistant sie liefert.
+
 ## 0.5.18 – Tagesdemo mit Kameramomenten (01.10.2026)
 
 - Ich-Perspektive in der Tagesdemo (bei aktiver Kamerafahrt): nachts ans Wohnzimmerfenster mit Blick in den nebligen Park, im Gewitter vom Schlafzimmer in den Starkregen, beim Kinoabend vom Sofa auf den Fernseher und danach hinaus, beim Gaming der leuchtende PC und der Blick aus dem Fenster. Fenster, PC und TV werden im Modell erkannt; Wände, Möbel und Vorhänge werden berücksichtigt. Das Rollo am jeweiligen Fenster fährt hoch, solange man davorsteht. Kurze Abblende bei Schnitten, Plan-Marker sind währenddessen ausgeblendet; Maus oder Tastatur übernehmen die Kamera.

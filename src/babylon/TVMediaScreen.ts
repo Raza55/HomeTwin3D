@@ -1,5 +1,5 @@
 import type { TVScreenContent } from '../services/tvMedia';
-import { mediaTime } from '../services/tvMedia';
+import { mediaTime, appBrand } from '../services/tvMedia';
 
 function rounded(ctx: CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number) {
   ctx.beginPath();ctx.roundRect(x,y,w,h,r);
@@ -50,6 +50,23 @@ function drawInputArt(ctx:CanvasRenderingContext2D,kind:TVScreenContent['kind'],
   ctx.restore();
 }
 
+/** Branded backdrop for a known app when the device yields no screenshot or cover (e.g. protected playback). */
+function drawAppBackdrop(ctx:CanvasRenderingContext2D,brand:{label:string;color:string}) {
+  const w=1024,h=576;
+  ctx.save();ctx.fillStyle='#050608';ctx.fillRect(0,0,w,h);
+  const glow=ctx.createRadialGradient(730,270,20,730,270,540);
+  glow.addColorStop(0,brand.color+'70');glow.addColorStop(.55,brand.color+'22');glow.addColorStop(1,brand.color+'00');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=brand.color;
+  let size=124;ctx.font=`900 ${size}px system-ui`;
+  while(size>48 && ctx.measureText(brand.label).width>430){size-=6;ctx.font=`900 ${size}px system-ui`;}
+  ctx.shadowColor=brand.color;ctx.shadowBlur=40;ctx.fillText(brand.label,745,270);
+  ctx.shadowBlur=0;
+  const shade=ctx.createLinearGradient(0,0,620,0);shade.addColorStop(0,'#050608e6');shade.addColorStop(1,'#05060800');
+  ctx.fillStyle=shade;ctx.fillRect(0,0,620,h);
+  ctx.restore();
+}
+
 export function drawTVMediaScreen(ctx:CanvasRenderingContext2D,content:TVScreenContent,artwork?:HTMLImageElement):void {
   const w=1024,h=576;
   ctx.save();ctx.clearRect(0,0,w,h);ctx.fillStyle='#030508';ctx.fillRect(0,0,w,h);
@@ -72,7 +89,8 @@ export function drawTVMediaScreen(ctx:CanvasRenderingContext2D,content:TVScreenC
     ctx.drawImage(artwork,804-artwork.naturalWidth*scale/2,288-artwork.naturalHeight*scale/2,artwork.naturalWidth*scale,artwork.naturalHeight*scale);
     ctx.restore();
     const shade=ctx.createLinearGradient(500,0,w,0);shade.addColorStop(0,'#0b111b');shade.addColorStop(.4,'#0b111b88');shade.addColorStop(1,'#0b111b22');ctx.fillStyle=shade;ctx.fillRect(500,0,524,576);
-  } else if(content.kind!=='unavailable') drawInputArt(ctx,content.kind,accent);
+  } else if(content.kind==='shield' && appBrand(content.app)) drawAppBackdrop(ctx,appBrand(content.app)!);
+  else if(content.kind!=='unavailable') drawInputArt(ctx,content.kind,accent);
   ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillStyle=accent;ctx.font='600 18px system-ui';
   ctx.fillText(fitText(ctx,content.kind==='shield'?(content.position!==undefined?'SHIELD  /  NOW PLAYING':'SHIELD'):content.kind==='unavailable'?'WOHNZIMMER':'HDMI  /  '+content.title.toUpperCase(),500),52,50);
   ctx.fillStyle='#f5f7fc';ctx.font='650 48px system-ui';

@@ -5,14 +5,15 @@
 html.kiosk {
   --kiosk-top: env(safe-area-inset-top, 0px);
   --kiosk-bottom: env(safe-area-inset-bottom, 0px);
-  --kiosk-row: calc(var(--kiosk-top) + 10px);
+  /* Clear of the status bar's blur, which reaches a little below the inset. */
+  --kiosk-row: calc(var(--kiosk-top) + 18px);
   /* Toolbar: 3 × 40px buttons + gaps + padding + border. */
   --kiosk-toolbar-width: 138px;
 }
 
 /* Top row: logo left, sun/weather and toolbar right, all below the status bar. */
 html.kiosk .title-bar { top: var(--kiosk-row); }
-html.kiosk .corner.tl, html.kiosk .corner.tr { top: calc(var(--kiosk-top) + 6px); }
+html.kiosk .corner.tl, html.kiosk .corner.tr { top: calc(var(--kiosk-top) + 12px); }
 html.kiosk .corner.bl, html.kiosk .corner.br { bottom: calc(var(--kiosk-bottom) + 6px); }
 
 html.kiosk .hud-clock { display: none; }
@@ -28,12 +29,12 @@ html.kiosk .dashboard-render-toggle { top: var(--kiosk-row); }
 
 /* Side panel and dialogs keep clear of the status bar and the home indicator. */
 html.kiosk .side-panel-inner {
-  padding-top: calc(var(--kiosk-top) + 12px);
+  padding-top: calc(var(--kiosk-top) + 18px);
   padding-bottom: calc(var(--kiosk-bottom) + 12px);
 }
 
 html.kiosk .settings-backdrop {
-  padding-top: calc(var(--kiosk-top) + 16px);
+  padding-top: calc(var(--kiosk-top) + 20px);
   padding-bottom: calc(var(--kiosk-bottom) + 16px);
 }
 

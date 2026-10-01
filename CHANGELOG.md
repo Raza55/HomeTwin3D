@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.11 – Kiosk-Abstand (01.10.2026)
+
+- Im Kiosk-Modus sitzen Logo, Wetter, Werkzeugleiste und Seitenpanel etwas tiefer, damit die Unschärfe der iPad-Statusleiste nicht mehr über die Bedienelemente reicht.
+
 ## 0.5.10 – Kiosk-Modus für Wand-Tablets (01.10.2026)
 
 - Neue Einstellung unter Darstellung: „Kiosk-Modus (Wand-Tablet)“ mit Automatisch / Ein / Aus. Automatisch erkennt, ob die App als Home-Bildschirm-App (iPad/iPhone) oder als installierte bzw. Vollbild-App läuft.

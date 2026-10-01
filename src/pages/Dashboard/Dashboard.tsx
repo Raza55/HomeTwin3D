@@ -1570,8 +1570,13 @@ export default function Dashboard() {
         if (meshMapRef.current[entityId]) applyLightState(entityId, state);
         if (blindMeshMapRef.current[entityId]) {
           const blind = blindMeshMapRef.current[entityId];
-          // The frame spans every position the panel can take, old and new.
-          if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
+          // The frame spans every position the panel can take, old and new. While the
+          // cover is still moving, lamp shadow maps wait for the final position
+          // (each refresh re-renders several lamp maps).
+          // The day demo moves many blinds in a row and refreshes all lamp maps once when it ends.
+          const moving = state.state === 'opening' || state.state === 'closing';
+          const scene = sceneCtxRef.current?.scene;
+          if (updateBlindState(blind, state) && !moving && scene && !scene.metadata?.steadyLamps) invalidateShadowsNear(scene, [blind.frame, blind.panel]);
         }
         for (const entry of smartDevicesByEntityRef.current.get(entityId) ?? []) updateSmartDeviceState(entry, state);
         if (entityId === modalEntityIdRef.current) setModalState(state);
@@ -1749,7 +1754,7 @@ export default function Dashboard() {
       const params = new URLSearchParams(location.search);
       const from = params.get('from');
       weatherRef.current?.setParticleScale(1.5);
-      controller.start(Number(params.get('speed')) || 1, from && /^\d{2}:\d{2}$/.test(from) ? from : undefined);
+      void controller.start(Number(params.get('speed')) || 1, from && /^\d{2}:\d{2}$/.test(from) ? from : undefined);
       (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo = controller;
       setDayDemoController(controller);
     }).catch(error => {

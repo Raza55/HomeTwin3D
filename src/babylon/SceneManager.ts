@@ -16,6 +16,7 @@ import {
   type AbstractEngine,
   type AbstractMesh,
 } from '@babylonjs/core';
+import type { Node as SceneNode } from '@babylonjs/core';
 import { batchStaticSunShadows } from './ShadowCasterBatch';
 import { refreshGlowOnChange } from './GlowRefresh';
 import { createPerfOverlay } from './PerfOverlay';
@@ -466,6 +467,22 @@ function sameMatrix(a: Float64Array, b: ArrayLike<number>): boolean {
   return true;
 }
 
+/**
+ * Appliances (washer, dryer) shake in place while running. That motion is a few
+ * millimetres and would otherwise re-render the whole sun shadow map every frame
+ * for as long as a programme runs; their shadow stays at the resting pose.
+ */
+const applianceMeshes = new WeakMap<AbstractMesh, boolean>();
+function isApplianceMesh(mesh: AbstractMesh): boolean {
+  let flagged = applianceMeshes.get(mesh);
+  if (flagged === undefined) {
+    flagged = false;
+    for (let node: SceneNode | null = mesh; node && !flagged; node = node.parent) flagged = !!node.metadata?.gltf?.extras?.ha_appliance;
+    applianceMeshes.set(mesh, flagged);
+  }
+  return flagged;
+}
+
 function renderSunShadowsOnChange(sg: ShadowGenerator): void {
   const map = sg.getShadowMap();
   if (!map) return;
@@ -489,10 +506,19 @@ function renderSunShadowsOnChange(sg: ShadowGenerator): void {
       lastPosition.copyFrom(sun.position);
       dirty = true;
     }
-    let animationsPlaying: boolean | undefined;
+    // Targets moved by playing animation groups (bones' nodes, morph targets), built once per frame on demand.
+    let playingTargets: Set<unknown> | undefined;
+    const animated = (mesh: AbstractMesh) => {
+      playingTargets ??= new Set(scene.animationGroups.filter(group => group.isPlaying).flatMap(group => group.targetedAnimations.map(a => a.target)));
+      if (!playingTargets.size) return false;
+      if (mesh.skeleton?.bones.some(bone => playingTargets!.has(bone) || playingTargets!.has(bone.getTransformNode()))) return true;
+      const morphs = mesh.morphTargetManager;
+      if (morphs) for (let i = 0; i < morphs.numTargets; i++) if (playingTargets.has(morphs.getTarget(i))) return true;
+      return false;
+    };
     const renderList = map.renderList ?? [];
     for (const mesh of renderList) {
-      if (mesh.metadata?.shadowBatch) continue;
+      if (mesh.metadata?.shadowBatch || isApplianceMesh(mesh)) continue;
       // Parents may recompute identical matrices, so compare values, not update flags.
       const matrix = mesh.computeWorldMatrix().m;
       const visible = mesh.isEnabled() && mesh.isVisible;
@@ -502,8 +528,9 @@ function renderSunShadowsOnChange(sg: ShadowGenerator): void {
         else casters.set(mesh, { matrix: Float64Array.from(matrix), visible, material: mesh.material });
         dirty = true;
       } else if ((mesh.skeleton || mesh.morphTargetManager) && visible) {
-        animationsPlaying ??= scene.animationGroups.some(group => group.isPlaying);
-        if (animationsPlaying) dirty = true;
+        // Only meshes a running animation actually deforms (an unrelated running
+        // appliance re-rendered the sun map every frame).
+        if (animated(mesh)) dirty = true;
       }
     }
     if (casters.size > renderList.length) {

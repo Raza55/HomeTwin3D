@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.16 – Flüssige Tagesdemo und weniger Schattenarbeit (01.10.2026)
+
+- Tagesdemo ohne Kompilier-Ruckler: Lampen bleiben während der Demo technisch aktiv (aus = Helligkeit 0), sodass Schalten und Dimmen keine neuen Shader-Varianten mehr erzeugen. Eine einmalige Vorbereitung (~7 s, mit Fortschrittsanzeige) kompiliert Shader, rendert Lampenschatten und initialisiert die Bildschirminhalte vor dem Start.
+- Spiegelreflexionen werden während der Demo nicht bei jeder Tageslichtänderung neu berechnet, Lampenschatten nicht bei jeder Rollofahrt; beides wird beim Beenden einmal nachgeholt. Sonnenschatten aktualisieren sich höchstens etwa dreimal pro Sekunde.
+- Auch im Normalbetrieb: Lampen sind nach Typ sortiert, sodass Flächen mit gleich vielen Spot- und Punktlampen dieselben Shader teilen (deutlich weniger Kompilierungen beim Schalten). Rüttelnde Waschmaschinen/Trockner lösen kein Neuzeichnen der Sonnenschatten in jedem Frame mehr aus.
+- Rollo-Fahrten berechnen Lampenschatten erst an der Endposition neu.
+- Messung (echtes Modell, ganzer Tag bei 2×): Ø 57,5 statt 43 FPS, p99 29 statt 165 ms, Shader-Kompilierungen während der Wiedergabe 69 statt 3184.
+
 ## 0.5.15 – Tagesdemo, sichtbares Wetter und weniger Hintergrundarbeit (01.10.2026)
 
 - **Tagesdemo & Benchmark** (Einstellungen → „Tagesdemo & Benchmark“ oder `?daydemo`): ein Spätsommertag von 05:30 bis 05:30 in rund fünf Minuten. 23 Kapitel mit Lichtwecker, Kaffeemaschine, Nachrichten im TV, Abwesenheitsmodus mit Saugroboter und Solar-Waschgang, Hitzeschutz, Homeoffice-PC, Unwetterwarnung, Gewitter mit Lichtautomatik, Kochen, Kinoabend mit Ambilight, Gaming mit RGB, Gute-Nacht-Routine, Nachtlicht und Schneeschauer. Die Rollen werden automatisch den vorhandenen Geräten zugeordnet (Raumnamen, Labels, Raumzonen); fehlende Geräte werden übersprungen.

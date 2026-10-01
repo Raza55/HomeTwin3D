@@ -108,9 +108,11 @@ export function setupMetalReflections(scene: Scene, meshes: AbstractMesh[]): Met
   const updateIntensity = () => {
     const ambient = hemi?.isEnabled() ? hemi.intensity : DAY_AMBIENT;
     const value = Math.min(1.2, Math.max(.12, ambient / DAY_AMBIENT));
-    if (Math.abs(value - lastIntensity) < .01) return;
+    if (Math.abs(value - lastIntensity) < .01 && (scene.metadata?.freezeMirrorProbes || Math.abs(value - capturedIntensity) <= .15)) return;
     // Daylight changed noticeably: mirrors show a stale room, capture again.
-    if (lastIntensity >= 0 && Math.abs(value - capturedIntensity) > .15) { capturedIntensity = value; probes.refresh(); }
+    // A capture costs 0.1-0.7 s; while frozen (day demo: daylight changes every
+    // few seconds) mirrors keep their capture and catch up once unfrozen.
+    if (lastIntensity >= 0 && Math.abs(value - capturedIntensity) > .15 && !scene.metadata?.freezeMirrorProbes) { capturedIntensity = value; probes.refresh(); }
     if (lastIntensity < 0) capturedIntensity = value;
     lastIntensity = value;
     for (const material of metals) if (!probes.materials.has(material)) material.environmentIntensity = value;

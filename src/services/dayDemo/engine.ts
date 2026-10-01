@@ -36,6 +36,7 @@ export interface DayDemoSnapshot {
 
 interface Transition {
   startV: number; endV: number; lastReal: number;
+  /** Minimum real time between intermediate updates. */ interval: number;
   apply(t: number, final: boolean): void;
 }
 
@@ -44,8 +45,9 @@ interface Loop { hues: number[]; period: number; brightness: number; startV: num
 interface Screen { entityId: string; kind: ScreenKind; state: string; attributes: Record<string, unknown>; title: string; startV: number; tv?: { shield: string; duration: number } }
 
 const EMIT_INTERVAL_MS = 140;
+const BLIND_INTERVAL_MS = 450;
 const LOOP_INTERVAL_MS = 380;
-const SCREEN_INTERVAL_MS = 1400;
+const SCREEN_INTERVAL_MS = 1800;
 const METRIC_INTERVAL_MS = 2500;
 const LOG_LIMIT = 8;
 
@@ -445,7 +447,8 @@ export class DayDemoEngine {
         const position = Math.round(lerp(from, action.position, ease(t)));
         const moving = !final ? (action.position > from ? 'opening' : 'closing') : position > 0 ? 'open' : 'closed';
         this.hooks.setState(blind.entityId, moving, { friendly_name: blind.label, current_position: position, current_cover_position: position });
-      });
+        // Every blind step re-renders the shadow maps of nearby lamps: fewer, larger steps.
+      }, BLIND_INTERVAL_MS);
     });
     if (!moved) return;
     const text = action.position === 0 ? { de: 'Rollos schließen', en: 'Blinds closing' }
@@ -457,8 +460,8 @@ export class DayDemoEngine {
 
   // --- Transitions ---------------------------------------------------------------
 
-  private schedule(key: string, startV: number, endV: number, apply: (t: number, final: boolean) => void): void {
-    const transition: Transition = { startV, endV, lastReal: 0, apply };
+  private schedule(key: string, startV: number, endV: number, apply: (t: number, final: boolean) => void, interval = EMIT_INTERVAL_MS): void {
+    const transition: Transition = { startV, endV, lastReal: 0, apply, interval };
     this.transitions.set(key, transition);
     if (startV <= this.virtual && endV <= this.virtual && !this.seeking) {
       apply(1, true);
@@ -474,7 +477,7 @@ export class DayDemoEngine {
       if (t >= 1) {
         this.transitions.delete(key);
         tr.apply(1, true);
-      } else if (force || now - tr.lastReal >= EMIT_INTERVAL_MS) {
+      } else if (force || now - tr.lastReal >= tr.interval) {
         tr.lastReal = now;
         tr.apply(t, false);
       }

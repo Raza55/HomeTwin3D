@@ -76,7 +76,26 @@ export function floorplanLightBudget(): number {
   return isTabletClass() ? 2 : 6;
 }
 
+/**
+ * Materials get one light slot per lamp in the order of scene.lights, and a
+ * shader variant per slot layout (spot vs point, cube vs 2D shadow). With spot
+ * and point lamps interleaved, two surfaces lit by the same kinds of lamps
+ * often need different variants ("spot, point" vs "point, spot"), so nearly
+ * every new combination of switched-on lamps compiled shaders. Grouping the
+ * lamps by type makes the variant depend only on how many of each kind reach a
+ * surface. Shading is a sum over lights, so the order changes nothing visible.
+ */
+export function groupLampsByType(scene: Scene, lamps: Set<Light>): void {
+  const rank = (light: Light) => !lamps.has(light) ? 0 : light instanceof SpotLight ? 1 : 2;
+  const ordered = scene.lights.map((light, index) => ({ light, index }))
+    .sort((a, b) => rank(a.light) - rank(b.light) || a.index - b.index).map(entry => entry.light);
+  if (ordered.every((light, i) => scene.lights[i] === light)) return;
+  scene.lights.splice(0, scene.lights.length, ...ordered);
+  for (const mesh of scene.meshes) (mesh as AbstractMesh & { _resyncLightSources(): void })._resyncLightSources();
+}
+
 export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLightRig[], meshes: AbstractMesh[], budget = floorplanLightBudget()): void {
+  groupLampsByType(scene, new Set(rigs.flatMap(rig => rig.lights)));
   // Clustered emitters are shaded by the container, which counts as one light per surface.
   const lights = rigs.flatMap(r => r.lights.filter(light => !r.clustered?.has(light)));
   const container = getClusteredContainer(scene);
@@ -84,16 +103,21 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
   const previous = scene.metadata?.floorplanInfluenceObserver;
   if (previous) scene.onBeforeRenderObservable.remove(previous);
   const previousStates = lights.map(() => ({ enabled: false, intensity: NaN, shadow: false }));
+  // Full-power output per emitter. With `steadyLamps` (day demo) lamps stay enabled
+  // while off (intensity 0) and surfaces rank them by full power: switching and
+  // dimming never change a surface's lamps, so no shader variant changes either.
+  const fullPower = new Map(rigs.flatMap(rig => rig.lights.map((light, i) => [light, rig.sources[i]?.lumens ?? 1] as const)));
   const nearest = Vector3.Zero();
   let initialized = false;
   let batchVersion = -1;
   const update = () => {
     const batches = getRenderBatchSet(scene);
     let changed = !initialized || (batches?.version ?? -1) !== batchVersion;
+    const stable = !!scene.metadata?.steadyLamps;
     for (let i = 0; i < lights.length; i++) {
       const light = lights[i], previous = previousStates[i];
       const enabled = light.isEnabled(), shadow = !!light.getShadowGenerator();
-      if (enabled !== previous.enabled || light.intensity !== previous.intensity || shadow !== previous.shadow) {
+      if (enabled !== previous.enabled || (!stable && light.intensity !== previous.intensity) || shadow !== previous.shadow) {
         changed = true;
         previous.enabled = enabled;
         previous.intensity = light.intensity;
@@ -105,7 +129,7 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
 
     const selected = new Map(lights.map(l => [l, [] as AbstractMesh[]]));
     // Light positions and eligibility are shared by every surface in this update.
-    const active = lights.filter(l => l.isEnabled() && l.intensity > 0 && l.getShadowGenerator())
+    const active = lights.filter(l => l.isEnabled() && (stable || l.intensity > 0) && l.getShadowGenerator())
       .map(light => ({ light, position: light.getAbsolutePosition(), rangeSquared: light.range * light.range }));
     type Candidate = { light: PointLight | SpotLight; contribution: number };
     // Sources of one render batch share the lamps chosen for the whole batch
@@ -130,7 +154,7 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
       for (const { light, position, rangeSquared } of active) {
         Vector3.ClampToRef(position, b.minimumWorld, b.maximumWorld, nearest);
         if (Vector3.DistanceSquared(position, nearest) > rangeSquared) continue;
-        const contribution = light.intensity / Math.max(.25, Vector3.DistanceSquared(position, b.centerWorld));
+        const contribution = (stable ? fullPower.get(light) ?? light.intensity : light.intensity) / Math.max(.25, Vector3.DistanceSquared(position, b.centerWorld));
         // Stable top-six insertion preserves the original sort's tie ordering.
         let index = 0;
         while (index < candidates.length && candidates[index].contribution >= contribution) index++;
@@ -210,9 +234,11 @@ function poseKey(light: Light): string {
 export function applyFloorplanLightState(rig: FloorplanLightRig, config: LightConfig, state: HAState): Color3 {
   const { color, factor } = floorplanLightState(state, config.warmth);
   const gain = Math.max(0, Math.min(10, config.brightness ?? 1));
+  const steady = !!rig.lights[0]?.getScene().metadata?.steadyLamps;
   rig.lights.forEach((light, i) => {
     const intensity = rig.sources[i].lumens * factor * gain;
-    const enabled = factor > 0 && gain > 0;
+    // Steady lamps (day demo) stay enabled at intensity 0: no shader variant change on switching.
+    const enabled = gain > 0 && (factor > 0 || steady);
     // Depth depends on geometry and light pose, not emitted color or power. Geometry
     // changes (doors, blinds) already mark the maps of switched-off lights as stale,
     // and Babylon keeps that flag until the light renders again. Re-rendering every
@@ -300,38 +326,60 @@ export function createLightVariantPrewarmer(scene: Scene, rigs: FloorplanLightRi
     influence.callback(scene);
     // Materials cache their readiness per render id; a new id forces the check.
     scene.incrementRenderId();
-    const meshes = new Set(rig.lights.flatMap(light => light.includedOnlyMeshes));
-    const prepare = (candidates: Iterable<AbstractMesh>) => {
-      for (const mesh of candidates) {
-        if (mesh.isDisposed()) continue;
-        const instanced = !!((mesh as AbstractMesh & { instances?: unknown[] }).instances?.length || (mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances);
-        for (const subMesh of mesh.subMeshes ?? []) subMesh.getMaterial()?.isReadyForSubMesh(mesh, subMesh, instanced);
-      }
-    };
-    prepare(meshes);
-    // The glass (transmission) pass renders the same materials in linear space
-    // with image processing deferred, which are separate shader variants. It
-    // is prepared the way RenderTargetTexture renders it: own pass id, flag set
-    // without marking materials dirty.
-    const opaque = (scene as Scene & { _transmissionHelper?: { getOpaqueTarget(): { renderPassId: number; renderList: AbstractMesh[] | null } | null } })
-      ._transmissionHelper?.getOpaqueTarget();
-    if (opaque?.renderList) {
-      const engine = scene.getEngine(), imageProcessing = scene.imageProcessingConfiguration as typeof scene.imageProcessingConfiguration & { _applyByPostProcess: boolean };
-      const previousPass = engine.currentRenderPassId, previousApply = imageProcessing._applyByPostProcess;
-      engine.currentRenderPassId = opaque.renderPassId;
-      imageProcessing._applyByPostProcess = true;
-      try {
-        prepare(opaque.renderList.filter(mesh => meshes.has(mesh)));
-      } finally {
-        engine.currentRenderPassId = previousPass;
-        imageProcessing._applyByPostProcess = previousApply;
-      }
-    }
+    prepareMeshVariants(scene, new Set(rig.lights.flatMap(light => light.includedOnlyMeshes)));
     rig.lights.forEach((light, i) => { light.setEnabled(false); light.intensity = saved[i]; });
     influence.callback(scene);
     scene.incrementRenderId();
     return true;
   };
+}
+
+/**
+ * Creates (and starts compiling) the shader variants the given meshes need for
+ * the lights as they are right now: main pass and the glass (transmission)
+ * pass. Purely JS-side preparation between two frames; nothing renders.
+ */
+export function prepareMeshVariants(scene: Scene, meshes: Set<AbstractMesh>): void {
+  const prepare = (candidates: Iterable<AbstractMesh>) => {
+    for (const mesh of candidates) {
+      if (mesh.isDisposed()) continue;
+      const instanced = !!((mesh as AbstractMesh & { instances?: unknown[] }).instances?.length || (mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances);
+      for (const subMesh of mesh.subMeshes ?? []) subMesh.getMaterial()?.isReadyForSubMesh(mesh, subMesh, instanced);
+    }
+  };
+  prepare(meshes);
+  // The glass (transmission) pass renders the same materials in linear space
+  // with image processing deferred, which are separate shader variants. It
+  // is prepared the way RenderTargetTexture renders it: own pass id, flag set
+  // without marking materials dirty.
+  const opaque = (scene as Scene & { _transmissionHelper?: { getOpaqueTarget(): { renderPassId: number; renderList: AbstractMesh[] | null } | null } })
+    ._transmissionHelper?.getOpaqueTarget();
+  if (opaque?.renderList) {
+    const engine = scene.getEngine(), imageProcessing = scene.imageProcessingConfiguration as typeof scene.imageProcessingConfiguration & { _applyByPostProcess: boolean };
+    const previousPass = engine.currentRenderPassId, previousApply = imageProcessing._applyByPostProcess;
+    engine.currentRenderPassId = opaque.renderPassId;
+    imageProcessing._applyByPostProcess = true;
+    try {
+      prepare(opaque.renderList.filter(mesh => meshes.has(mesh)));
+    } finally {
+      engine.currentRenderPassId = previousPass;
+      imageProcessing._applyByPostProcess = previousApply;
+    }
+  }
+}
+
+/**
+ * Prepares the variants for whatever lights are switched on right now, for
+ * every drawn mesh or just `only` (e.g. ahead of a scripted sequence of light
+ * combinations, where only the surfaces of toggled lamps change).
+ */
+export function prepareCurrentLightVariants(scene: Scene, only?: Iterable<AbstractMesh>): void {
+  const influence = scene.metadata?.floorplanInfluenceObserver as { callback: (scene: Scene) => void } | undefined;
+  influence?.callback(scene);
+  // Materials cache their readiness per render id; a new id forces the check.
+  scene.incrementRenderId();
+  const drawn = (mesh: AbstractMesh) => mesh.isEnabled() && mesh.isVisible && !!mesh.material && mesh.getTotalVertices() > 0;
+  prepareMeshVariants(scene, new Set([...(only ?? scene.meshes)].filter(drawn)));
 }
 
 /**
@@ -375,6 +423,38 @@ export function createShadowMapPrewarmer(scene: Scene, rigs: FloorplanLightRig[]
     }
     return false;
   };
+}
+
+/**
+ * Renders the shadow maps of all lamps that were never rendered (or went
+ * stale), the way the idle prewarmer does, but for every lamp at once. Used
+ * before a scripted sequence that switches many lamps on in quick succession.
+ * Yields between maps; returns the number of maps rendered.
+ */
+export async function prerenderLampShadowMaps(scene: Scene, isCancelled: () => boolean = () => false): Promise<number> {
+  type Target = { _shouldRender(): boolean; render(useCameraPostProcess?: boolean): void; isReadyForRendering(): boolean };
+  type SceneInternals = { _intermediateRendering: boolean };
+  let rendered = 0;
+  for (const light of scene.lights) {
+    if (isCancelled()) break;
+    if (!(light instanceof PointLight || light instanceof SpotLight)) continue;
+    const map = light.getShadowGenerator()?.getShadowMap() as unknown as Target | null | undefined;
+    if (!map || !map._shouldRender()) continue;
+    for (let tries = 0; tries < 20 && !map.isReadyForRendering(); tries++) await new Promise(resolve => setTimeout(resolve, 25));
+    if (!map.isReadyForRendering()) continue;
+    const internals = scene as unknown as SceneInternals;
+    internals._intermediateRendering = true;
+    try {
+      scene.incrementRenderId();
+      map.render(false);
+      rendered++;
+    } finally {
+      internals._intermediateRendering = false;
+    }
+    activationPoses.set(light, poseKey(light));
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  return rendered;
 }
 
 /** The clustered light container of a scene, if clustered lighting is active. */

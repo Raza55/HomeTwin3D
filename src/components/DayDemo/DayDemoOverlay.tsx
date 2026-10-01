@@ -81,6 +81,20 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
 
   const result = view.result;
 
+  if (view.preparing !== undefined) {
+    return (
+      <div className="day-demo-prep" role="status" aria-live="polite">
+        <div className="day-demo-prep-card">
+          <h2>{t('dayDemo.title')}</h2>
+          <p>{t('dayDemo.preparing')}</p>
+          <div className="day-demo-prep-track"><span style={{ width: `${Math.round(view.preparing * 100)}%` }} /></div>
+          <small>{Math.round(view.preparing * 100)} % · {t('dayDemo.preparingHint')}</small>
+          <button type="button" onClick={onExit}>{t('common.cancel')}</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="day-demo" role="region" aria-label={t('dayDemo.title')}>
       <div className="day-demo-panel">

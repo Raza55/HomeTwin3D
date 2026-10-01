@@ -7,12 +7,14 @@ import type { ScreenFrame } from './engine.ts';
 import type { ScreenKind } from './story.ts';
 import { clockLabel } from './story.ts';
 
+/** Drawing space; frames are encoded at OUTPUT size (smaller JPEG = less main-thread time per frame). */
 const W = 960, H = 540;
+const OUTPUT = { width: 640, height: 360 };
 let canvas: HTMLCanvasElement | null = null;
 
 function context(): CanvasRenderingContext2D | null {
   if (typeof document === 'undefined') return null;
-  canvas ??= Object.assign(document.createElement('canvas'), { width: W, height: H });
+  canvas ??= Object.assign(document.createElement('canvas'), OUTPUT);
   return canvas.getContext('2d');
 }
 
@@ -187,8 +189,9 @@ export function renderDemoScreen(kind: ScreenKind, frame: ScreenFrame): string |
   const ctx = context();
   if (!ctx || !canvas) return undefined;
   ctx.save();
+  ctx.setTransform(OUTPUT.width / W, 0, 0, OUTPUT.height / H, 0, 0);
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left'; ctx.globalAlpha = 1; ctx.shadowBlur = 0;
   DRAW[kind](ctx, frame);
   ctx.restore();
-  return canvas.toDataURL('image/jpeg', .82);
+  return canvas.toDataURL('image/jpeg', .78);
 }

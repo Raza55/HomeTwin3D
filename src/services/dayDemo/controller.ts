@@ -7,7 +7,8 @@ import { ArcRotateCamera, SceneInstrumentation, Vector3, type AbstractEngine, ty
 import { setSunDateOverride, updateSunPosition } from '../../babylon/SunController';
 import type { WeatherData } from '../weatherApi';
 import { DayDemoEngine, type DayDemoHooks, type DayDemoSnapshot } from './engine';
-import { CHAPTERS, DEMO_DATE, clockToVirtual, type DemoWeather } from './story';
+import { CHAPTERS, DEMO_DATE, clockToVirtual, virtualToClock, type DemoWeather } from './story';
+import { prepareCurrentLightVariants, prerenderLampShadowMaps } from '../../babylon/FloorplanLighting';
 import type { DayDemoCast } from './cast';
 import { renderDemoScreen } from './screens';
 
@@ -33,6 +34,8 @@ export interface BenchmarkResult {
 
 export interface DayDemoViewState extends DayDemoSnapshot {
   tour: boolean;
+  /** 0..1 while shader variants for the whole story are prepared; undefined when ready. */
+  preparing?: number;
   result?: BenchmarkResult;
   fps: number;
 }
@@ -73,6 +76,7 @@ export class DayDemoController {
   private frame = 0;
   private lastFrame = 0;
   private lastSunClock = NaN;
+  private lastSunUpdate = 0;
   private lastCcf = 1;
   private ccf = 1;
   private lastWeather: DemoWeather | null = null;
@@ -89,6 +93,8 @@ export class DayDemoController {
   private listeners = new Set<() => void>();
   private view: DayDemoViewState;
   private disposeFns: (() => void)[] = [];
+  private preparing: number | undefined;
+  private disposed = false;
 
   constructor(cast: DayDemoCast, hooks: Omit<DayDemoHooks, 'screen'>, deps: DayDemoSceneDeps, language: string) {
     this.deps = deps;
@@ -113,8 +119,10 @@ export class DayDemoController {
 
   // --- Control ------------------------------------------------------------------
 
-  start(speed = 1, startClock?: string): void {
+  async start(speed = 1, startClock?: string): Promise<void> {
     this.engine.setSpeed(speed);
+    await this.prepare();
+    if (this.disposed) return;
     if (startClock) { this.engine.seek(clockToVirtual(startClock)); this.engine.play(); } else this.engine.start();
     this.resetBenchmark();
     this.syncScene(true);
@@ -131,6 +139,60 @@ export class DayDemoController {
       if (!wasFinished && this.engine.isFinished) this.finish();
     };
     this.frame = requestAnimationFrame(loop);
+  }
+
+  /**
+   * Makes lamp switching free of shader work: lamps stay enabled while "off"
+   * (intensity 0) and surfaces keep the lamps they get at full power, so the
+   * light layout of every material stays fixed for the whole demo. Its shader
+   * variants (with sun shadows on and off) and all lamp shadow maps are
+   * prepared once here; otherwise each new combination of lamps compiled
+   * hundreds of variants mid-demo (stalls up to a second, surfaces missing).
+   */
+  private async prepare(): Promise<void> {
+    const { scene, sun, hemi } = this.deps;
+    // Mirror captures (0.1-0.7 s each) would follow every daylight change.
+    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true };
+    this.preparing = 0;
+    this.emit();
+    const t0 = performance.now();
+    this.engine.seek(0);
+    for (const light of scene.lights) {
+      if (light === sun || light === hemi || light.isEnabled(false) || !light.getShadowGenerator()) continue;
+      light.intensity = 0;
+      light.setEnabled(true);
+    }
+    const { latitude, longitude, northOffset } = this.deps.location();
+    // Night (no sun shadow) and day (sun shadow) need separate variants.
+    for (const clock of [3 * 60, 13 * 60]) {
+      updateSunPosition(sun, hemi, latitude, longitude, clock, northOffset, 1);
+      prepareCurrentLightVariants(scene);
+      this.preparing = this.preparing! + .3;
+      this.emit();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      if (this.disposed) return;
+    }
+    // The first frame of each screen kind initialises canvas, fonts and gradients (30-200 ms).
+    for (const kind of ['news', 'movie', 'work', 'game'] as const) renderDemoScreen(kind, { frame: 0, clock: 0, title: '', language: 'de-DE', progress: 0 });
+    const t1 = performance.now();
+    // Lamp shadow maps would otherwise render on first activation (up to ~0.1 s each).
+    const maps = await prerenderLampShadowMaps(scene, () => this.disposed);
+    const t2 = performance.now();
+    if (this.disposed) return;
+    // Variants compile in parallel; wait (bounded) until the GPU programs are ready.
+    const engine = this.deps.engine as AbstractEngine & { _compiledEffects?: Record<string, { isReady(): boolean }> };
+    const pending = () => Object.values(engine._compiledEffects ?? {}).filter(effect => !effect.isReady()).length;
+    const total = Math.max(1, pending());
+    const deadline = performance.now() + 25000;
+    while (pending() && performance.now() < deadline) {
+      this.preparing = .7 + .3 * (1 - pending() / total);
+      this.emit();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      if (this.disposed) return;
+    }
+    console.info(`[DayDemo] Prepared shader variants in ${Math.round(t1 - t0)} ms, ${maps} lamp shadow maps in ${Math.round(t2 - t1)} ms, compile wait ${Math.round(performance.now() - t2)} ms (${pending()} still compiling)`);
+    this.preparing = undefined;
+    this.emit();
   }
 
   togglePlay(): void {
@@ -178,7 +240,12 @@ export class DayDemoController {
   getView = (): DayDemoViewState => this.view;
 
   dispose(restoreCamera = true): void {
+    this.disposed = true;
     cancelAnimationFrame(this.frame);
+    // Mirrors catch up with the real daylight; lamps switch off for real again with the next HA states.
+    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false };
+    // Blinds moved without refreshing lamp shadows during the demo.
+    for (const light of this.deps.scene.lights) if (light !== this.deps.sun) light.getShadowGenerator()?.getShadowMap()?.resetRefreshCounter();
     this.disposeFns.forEach(fn => fn());
     this.instrumentation.dispose();
     this.engine.pause();
@@ -199,7 +266,7 @@ export class DayDemoController {
 
   private buildView(): DayDemoViewState {
     const fps = this.fpsWindow.length > 1 ? (this.fpsWindow.length - 1) * 1000 / (this.fpsWindow[this.fpsWindow.length - 1] - this.fpsWindow[0]) : 0;
-    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps) };
+    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps), preparing: this.preparing };
   }
 
   private syncScene(force: boolean): void {
@@ -213,13 +280,16 @@ export class DayDemoController {
     }
     const snapshot = this.engine.getSnapshot();
     const clock = snapshot.clock;
-    // Half a virtual minute is far below a visible shadow step but saves most shadow-map renders.
-    if (force || this.ccf !== this.lastCcf || !(Math.abs(clock - this.lastSunClock) < .5)) {
+    // Each sun update re-renders its shadow map: at most ~3 per second, and only after
+    // the sun moved at least a virtual minute (~0.25°, below a visible shadow step).
+    const now = performance.now();
+    const sunMoved = !(Math.abs(clock - this.lastSunClock) < 1) || this.ccf !== this.lastCcf;
+    if (force || (sunMoved && now - this.lastSunUpdate > 330)) {
+      this.lastSunUpdate = now;
       const { latitude, longitude, northOffset } = this.deps.location();
       updateSunPosition(sun, hemi, latitude, longitude, clock, northOffset, this.ccf);
       this.lastSunClock = clock; this.lastCcf = this.ccf;
     }
-    const now = performance.now();
     if (force || now - this.lastClockNotify > 400) {
       this.lastClockNotify = now;
       this.deps.onClock?.(Math.floor(clock), weather);

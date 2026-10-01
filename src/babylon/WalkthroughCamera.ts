@@ -9,6 +9,8 @@ export class WalkthroughCamera {
   mode: NavigationMode = 'normal';
   /** Next entry is scripted (day demo): skip the spawn and view search, the script sets the pose. */
   scriptedEntry = false;
+  /** Day demo: the script owns the camera; keys, mouse look and door clicks are ignored. */
+  inputLocked = false;
   readonly keys = new Set<string>();
   private eye = Vector3.Zero();
   private saved?: { target: Vector3; alpha: number; beta: number; radius: number; mode: number; minZ: number; layerMask: number; lower: number | null; upper: number | null; lowerBeta: number | null; upperBeta: number | null };
@@ -198,17 +200,20 @@ export class WalkthroughCamera {
   }
   private clear = () => { this.keys.clear(); this.drag = undefined; this.tap = undefined; this.pendingHover = undefined; if (this.canvas.style) this.canvas.style.cursor = ''; };
   private keyDown = (event: KeyboardEvent) => {
+    if (this.inputLocked) return;
     if (this.mode === 'normal' || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.code === 'Escape') { event.preventDefault(); event.stopPropagation(); this.exit(); return; }
     if (/^(Key[WASDQE]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(event.code)) { event.preventDefault(); event.stopPropagation(); this.keys.add(event.code); }
   };
   private keyUp = (event: KeyboardEvent) => { this.keys.delete(event.code); };
   private pointerDown = (event: PointerEvent) => {
+    if (this.inputLocked) return;
     if (this.mode === 'walk' && event.button === 0) this.tap = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
     if (this.mode === 'normal' || (event.button !== 2 && event.pointerType !== 'touch')) return;
     this.canvas.focus({ preventScroll: true }); this.canvas.setPointerCapture(event.pointerId); this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
   };
   private pointerMove = (event: PointerEvent) => {
+    if (this.inputLocked) return;
     if (this.tap?.id === event.pointerId && Math.hypot(event.clientX - this.tap.x, event.clientY - this.tap.y) > 6) this.tap.moved = true;
     if (this.mode === 'walk' && !this.drag) {
       this.pendingHover = event;
@@ -224,6 +229,7 @@ export class WalkthroughCamera {
       m => m.isEnabled() && m.isVisible && m.visibility > 0 && !!(m.layerMask & this.camera.layerMask) && this.meshes.has(m), false, this.camera);
   }
   private pointerUp = (event: PointerEvent) => {
+    if (this.inputLocked) return;
     if (event.type === 'pointerup' && this.mode === 'walk' && this.tap?.id === event.pointerId && !this.tap.moved
       && Math.hypot(event.clientX - this.tap.x, event.clientY - this.tap.y) <= 6) {
       const hit = this.pointerPick(event);

@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.22 – Tagesdemo: feste Kamera und eigenes Nachrichtenbild (01.10.2026)
+
+- Während der Tagesdemo gehört die Kamera dem Drehbuch: Drehen, Zoomen und Verschieben (auch Mausblick und Tasten in der Ich-Perspektive) sind gesperrt; Startansicht und Navigationsmodus-Knopf reagieren erst nach der Demo wieder.
+- Das Seitenpanel links klappt beim Start der Demo automatisch zu und kehrt danach in den vorherigen Zustand zurück.
+- Liegt im gemeinsamen Speicher ein Bild unter `objects/demo-news.jpg`, zeigt der Fernseher es beim Frühstück als Nachrichtenbild; sonst bleibt die gezeichnete Nachrichtensendung.
+
 ## 0.5.21 – Tagesdemo: Nachrichten, Waschtag und Gaming-Blick (01.10.2026)
 
 - Frühstück: Blick vom Esstisch zum Fernseher; die Nachrichten erscheinen als eigenes Bild im Abendnachrichten-Stil (Studio, Sprecher, Wetterkarte, Bauchbinde) und – wie alle Demo-Bildschirminhalte – vollflächig ohne Player-Einblendung.

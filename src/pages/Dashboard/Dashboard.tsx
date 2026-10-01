@@ -319,6 +319,7 @@ export default function Dashboard() {
   const [gridEditMode, setGridEditMode] = useState(false);
   const [panelCollapsed,setPanelCollapsed]=useState(()=>getSetting('misc').panelCollapsed ?? false);
   useEffect(()=>{updateSettings('misc',{panelCollapsed});},[panelCollapsed]);
+  const panelCollapsedRef=useRef(panelCollapsed);panelCollapsedRef.current=panelCollapsed;
   const [cardPanelOpen, setCardPanelOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<SidePanelCard | null>(null);
   // Snapshot the entity list when the card panel opens — keeps a stable ref for EntityPicker memoization.
@@ -1723,6 +1724,9 @@ export default function Dashboard() {
     let controller: DayDemoController | null = null;
     setSunLiveMode(false);
     let lastWeatherKey = '';
+    // The demo uses the whole width; the side panel comes back as it was afterwards.
+    const panelBefore = panelCollapsedRef.current;
+    setPanelCollapsed(true);
     void import('../../services/dayDemo/controller').then(({ DayDemoController }) => {
       if (disposed) return;
       const cast = buildCast(config, Object.values(displayMeshMapRef.current).map(entry => entry.config));
@@ -1751,6 +1755,7 @@ export default function Dashboard() {
           floorY: () => walkthroughRef.current?.floorY ?? 0,
           unit: () => walkthroughRef.current?.unit ?? 1,
           groundAt: (x, z) => walkthroughRef.current?.groundAt(x, z),
+          lock: on => { if (walkthroughRef.current) walkthroughRef.current.inputLocked = on; },
         },
         tvPlanes: () => Object.values(displayMeshMapRef.current).filter(entry => entry.config.kind === 'tv').map(entry => entry.plane),
         onClock: (minutes, weather) => {
@@ -1778,6 +1783,7 @@ export default function Dashboard() {
       controller?.dispose();
       setDayDemoController(null);
       setCoffeeOpen(null);
+      setPanelCollapsed(panelBefore);
       delete (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo;
       // Back to the real day: live sun, real (or no) weather, live theme.
       setSunLiveMode(true);
@@ -2065,6 +2071,7 @@ export default function Dashboard() {
   // Reset camera to home view with smooth animation
   const homingRef = useRef(false);
   const resetView = useCallback(() => {
+    if (dayDemoRef.current) return; // The day demo owns the camera.
     if (walkthroughRef.current && walkthroughRef.current.mode !== 'normal') { walkthroughRef.current.recenter(); return; }
     const ctx = sceneCtxRef.current;
     if (!ctx || !defaultTarget || homingRef.current) return;
@@ -2413,8 +2420,8 @@ export default function Dashboard() {
           </button>
           <button
             className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}
-            disabled={!sceneReady || homeViewSetting}
-            onClick={() => changeNavigationMode(nextNavigationMode(navigationMode))}
+            disabled={!sceneReady || homeViewSetting || !!dayDemoController}
+            onClick={() => { if (!dayDemoRef.current) changeNavigationMode(nextNavigationMode(navigationMode)); }}
             aria-label={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
             title={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
           >

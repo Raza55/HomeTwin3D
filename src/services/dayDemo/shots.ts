@@ -18,6 +18,8 @@ export interface WalkControl {
   /** Scene units per metre. */
   unit(): number;
   groundAt(x: number, z: number): number | undefined;
+  /** Blocks the viewer's input in first person while the script runs. */
+  lock(on: boolean): void;
 }
 
 interface Anchor {

@@ -10,7 +10,7 @@ import { DayDemoEngine, type DayDemoHooks, type DayDemoSnapshot } from './engine
 import { CHAPTERS, DEMO_DATE, clockToVirtual, virtualToClock, type DemoWeather } from './story';
 import { prepareCurrentLightVariants, prerenderLampShadowMaps } from '../../babylon/FloorplanLighting';
 import type { DayDemoCast } from './cast';
-import { renderDemoScreen } from './screens';
+import { loadNewsImage, renderDemoScreen } from './screens';
 import { ShotDirector, type WalkControl } from './shots';
 import { CHAPTER_FRAMING, SHOTS, shotAt, type Shot } from './story';
 import type { AbstractMesh } from '@babylonjs/core';
@@ -115,12 +115,14 @@ export class DayDemoController {
     this.disposeFns.push(unsubscribe);
     const observer = deps.scene.onAfterRenderObservable.add(() => this.sample());
     this.disposeFns.push(() => deps.scene.onAfterRenderObservable.remove(observer));
-    // Any manual camera input ends the tour: the viewer has taken over.
-    const canvas = deps.engine.getRenderingCanvas();
-    const takeOver = () => { if (this.tour) { this.tour = false; this.endShot(); this.emit(); } };
-    canvas?.addEventListener('pointerdown', takeOver);
-    canvas?.addEventListener('wheel', takeOver, { passive: true });
-    this.disposeFns.push(() => { canvas?.removeEventListener('pointerdown', takeOver); canvas?.removeEventListener('wheel', takeOver); });
+    // The demo owns the camera: no rotating, zooming or panning while it runs.
+    this.lockCamera();
+    deps.walk?.lock(true);
+    this.disposeFns.push(() => {
+      deps.walk?.lock(false);
+      const camera = deps.scene.activeCamera;
+      if (camera instanceof ArcRotateCamera) camera.attachControl(deps.engine.getRenderingCanvas(), true);
+    });
     const camera = deps.scene.activeCamera;
     if (camera instanceof ArcRotateCamera) this.home = { alpha: camera.alpha, beta: camera.beta, radius: camera.radius, target: camera.target.clone() };
     if (deps.walk) this.director = new ShotDirector(deps.scene, cast, deps.walk, deps.tvPlanes ?? (() => []));
@@ -187,6 +189,9 @@ export class DayDemoController {
     }
     // Camera shots: anchors, standing spots and window views need ray casts against the model.
     if (this.director) for (const shot of SHOTS) this.director.warm(shot);
+    // The installation's own news picture, if its owner placed one in the shared folder.
+    await loadNewsImage(`${import.meta.env.BASE_URL}shared/objects/demo-news.jpg`);
+    if (this.disposed) return;
     // The first frame of each screen kind initialises canvas, fonts and gradients (30-200 ms).
     for (const kind of ['news', 'movie', 'work', 'game'] as const) renderDemoScreen(kind, { frame: 0, clock: 0, title: '', language: 'de-DE', progress: 0 });
     const t1 = performance.now();
@@ -353,6 +358,7 @@ export class DayDemoController {
     if (this.shotBlind && !this.disposed) this.engine.moveBlind(this.shotBlind.entityId, this.shotBlind.previous, 2);
     this.shotBlind = null;
     if (this.deps.walk?.active()) this.deps.walk.exit();
+    if (!this.disposed) this.lockCamera();
     // Leaving first person restores an orbit centre derived from the eye position.
     // Behind the cut, start straight at the current chapter's room instead.
     const camera = this.deps.scene.activeCamera;
@@ -371,6 +377,16 @@ export class DayDemoController {
   }
 
   private cut(): void { this.cuts++; this.emit(); }
+
+  /** Detaches the viewer's camera controls (leaving first person attaches them again). */
+  private lockCamera(): void {
+    const camera = this.deps.scene.activeCamera;
+    if (camera instanceof ArcRotateCamera) {
+      camera.detachControl();
+      camera.inertialAlphaOffset = camera.inertialBetaOffset = camera.inertialRadiusOffset = 0;
+      camera.inertialPanningX = camera.inertialPanningY = 0;
+    }
+  }
 
   private updateTour(dt: number): void {
     const camera = this.deps.scene.activeCamera;

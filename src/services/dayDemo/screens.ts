@@ -26,7 +26,34 @@ function seeded(seed: number): () => number {
 
 const de = (frame: ScreenFrame) => frame.language.startsWith('de');
 
+/**
+ * Optional picture for the news (e.g. a screenshot the owner placed as
+ * `shared/objects/demo-news.jpg` of their own installation). Never part of the
+ * repository; without it the drawn studio below is shown.
+ */
+let newsImage: HTMLImageElement | null = null;
+export async function loadNewsImage(url: string): Promise<boolean> {
+  if (typeof Image === 'undefined') return false;
+  try {
+    const response = await fetch(url, { cache: 'no-cache', signal: AbortSignal.timeout(4000) });
+    // Servers may send the file as octet-stream; an HTML fallback page fails to decode below.
+    if (!response.ok || (response.headers.get('content-type') ?? '').startsWith('text/')) return false;
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(); image.src = objectUrl; });
+    newsImage = image;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function drawNews(ctx: CanvasRenderingContext2D, f: ScreenFrame): void {
+  if (newsImage) {
+    const scale = Math.max(W / newsImage.naturalWidth, H / newsImage.naturalHeight);
+    ctx.drawImage(newsImage, (W - newsImage.naturalWidth * scale) / 2, (H - newsImage.naturalHeight * scale) / 2, newsImage.naturalWidth * scale, newsImage.naturalHeight * scale);
+    return;
+  }
   // Studio: deep blue with soft light from above.
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#0b2a63'); g.addColorStop(.65, '#0a1f4f'); g.addColorStop(1, '#06132f');

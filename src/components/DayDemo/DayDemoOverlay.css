@@ -258,6 +258,14 @@
   .day-demo-stats { grid-template-columns: repeat(2, 1fr); }
 }
 
+.day-demo-day dd { font-size: 19px; }
+.day-demo-bench { margin-top: 12px; border-top: 1px solid var(--border2); padding-top: 10px; }
+.day-demo-bench summary { cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); list-style: none; }
+.day-demo-bench summary::-webkit-details-marker { display: none; }
+.day-demo-bench summary::before { content: '▸'; transition: transform .15s; }
+.day-demo-bench[open] summary::before { transform: rotate(90deg); }
+.day-demo-bench-meta { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
+
 /* Preparation: covers the scene while every light combination is compiled once. */
 .day-demo-prep {
   position: absolute;
@@ -288,3 +296,15 @@
   margin-top: 6px; height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border2);
   background: transparent; color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
 }
+
+/* Camera cut between orbit and first person: a short dip to black. */
+.day-demo-cut {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: #000;
+  pointer-events: none;
+  animation: day-demo-cut .7s ease-out both;
+}
+@keyframes day-demo-cut { 0% { opacity: .85; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .day-demo-cut { animation-duration: .01s; } }

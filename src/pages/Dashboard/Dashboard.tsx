@@ -1729,6 +1729,8 @@ export default function Dashboard() {
       controller = new DayDemoController(cast, {
         setState: (entityId, state, attributes) => ha.setState(entityId, state, attributes),
         getState: entityId => ha.getState(entityId),
+        // The coffee machine's popup opens while it brews (and closes afterwards).
+        popup: (_target, open) => setCoffeeOpen(open ? configRef.current?.model?.floorplan?.objects.find(object => object.coffee)?.id ?? null : null),
       }, {
         scene: ctx.scene, engine: ctx.engine, sun: ctx.sunLight, hemi: ctx.hemiLight, requestRender: ctx.requestRender,
         location: () => ({
@@ -1741,6 +1743,16 @@ export default function Dashboard() {
           cloudCoverFactorRef.current = ccf;
           return ccf;
         },
+        walk: {
+          enter: () => changeNavigationMode('walk'),
+          exit: () => changeNavigationMode('normal'),
+          active: () => walkthroughRef.current?.mode === 'walk',
+          pose: (eye, look) => walkthroughRef.current?.setPose(eye, look),
+          floorY: () => walkthroughRef.current?.floorY ?? 0,
+          unit: () => walkthroughRef.current?.unit ?? 1,
+          groundAt: (x, z) => walkthroughRef.current?.groundAt(x, z),
+        },
+        tvPlanes: () => Object.values(displayMeshMapRef.current).filter(entry => entry.config.kind === 'tv').map(entry => entry.plane),
         onClock: (minutes, weather) => {
           // Coarse steps keep the (large) dashboard from re-rendering every frame.
           const step = Math.floor(minutes / 5) * 5;
@@ -1765,6 +1777,7 @@ export default function Dashboard() {
       disposed = true;
       controller?.dispose();
       setDayDemoController(null);
+      setCoffeeOpen(null);
       delete (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo;
       // Back to the real day: live sun, real (or no) weather, live theme.
       setSunLiveMode(true);
@@ -2409,7 +2422,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {navigationMode !== 'normal' && <div className="walkthrough-controls" aria-label="Rundgang-Steuerung">
+        {navigationMode !== 'normal' && !dayDemoController && <div className="walkthrough-controls" aria-label="Rundgang-Steuerung">
           <span><strong>{t(`dashboard.nav.${navigationMode}`)}</strong> · WASD / Pfeiltasten · Rechts ziehen: umsehen{navigationMode === 'fly' ? ' · Q/E: ab/auf' : ' · Tür anklicken: öffnen/schließen'} · Esc: Normal</span>
           <div className="walkthrough-buttons">
             {([['KeyA', '←', 'Links'], ['KeyW', '↑', 'Vorwärts'], ['KeyS', '↓', 'Rückwärts'], ['KeyD', '→', 'Rechts'], ...(navigationMode === 'fly' ? [['KeyQ', '−', 'Abwärts'], ['KeyE', '+', 'Aufwärts']] : [])]).map(([key, icon, label]) => <button key={key} aria-label={label}

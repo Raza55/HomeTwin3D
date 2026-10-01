@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STORY, CHAPTERS, WEATHER, DAY_LENGTH, DAY_REAL_SECONDS, clockToVirtual, virtualToClock, weatherAt, realSecondsUntil, paceAt } from '../src/services/dayDemo/story.ts';
+import { STORY, CHAPTERS, WEATHER, SHOTS, DAY_LENGTH, DAY_REAL_SECONDS, clockToVirtual, virtualToClock, weatherAt, realSecondsUntil, paceAt, shotAt } from '../src/services/dayDemo/story.ts';
 import { buildCast, roomRole } from '../src/services/dayDemo/cast.ts';
 import { DayDemoEngine, hsToRgb } from '../src/services/dayDemo/engine.ts';
 
@@ -133,7 +133,11 @@ test('a full day plays through and ends with the home asleep', () => {
   assert.equal(h.states.get('switch.pc').state, 'off');
   assert.equal(h.states.get('vacuum.saugroboter').state, 'docked');
   assert.equal(h.states.get('sensor.waschmaschine_power').state, '0.4');
-  assert.ok(h.screens.some(s => s.kind === 'work') && h.screens.some(s => s.kind === 'game'));
+  assert.ok(h.screens.some(s => s.kind === 'game'), 'evening gaming screen');
+  const stats = h.engine.getSnapshot().stats;
+  assert.ok(stats.automations > 30, `automations (${stats.automations})`);
+  assert.ok(stats.lightHours > 1 && stats.rainMinutes > 30);
+  assert.ok(stats.minTemp <= 0 && stats.maxTemp >= 20 && stats.maxGust >= 60);
   const log = h.engine.getSnapshot().log;
   assert.ok(log.length > 0 && log.every(e => e.text.de && e.text.en));
 });
@@ -168,10 +172,11 @@ test('seeking replays the story state without transitions', () => {
   assert.equal(h.engine.getSnapshot().chapter.id, 'cinema');
   h.engine.seek(at('14:00'));
   assert.equal(h.states.get('media_player.tv').state, 'off');
+  assert.equal(h.states.get('switch.pc').state, 'off', 'nobody works from home: the PC appears in the evening');
+  assert.equal(h.states.get('cover.wohnzimmer').attributes.current_position, 30);
+  h.engine.seek(at('22:40'));
   assert.equal(h.states.get('switch.pc').state, 'on');
   assert.equal(h.states.get('camera.pc').attributes.entity_picture.startsWith('data:image/'), true);
-  assert.equal(h.states.get('binary_sensor.balkontuer').state, 'on');
-  assert.equal(h.states.get('cover.wohnzimmer').attributes.current_position, 30);
 });
 
 test('a home without matching rooms still gets a lively day from fallbacks', () => {
@@ -197,6 +202,36 @@ test('a routed TV shows generated frames and a moving progress bar', () => {
   assert.ok(h.states.get(route.shield).attributes.media_position > 0);
   assert.ok(h.screens.some(s => s.kind === 'movie'));
   assert.match(h.states.get(route.screenshot).attributes.entity_picture, /^data:image\/jpeg/);
+});
+
+test('the coffee popup opens while the machine brews and closes afterwards', () => {
+  const h = harness(buildCast(config));
+  const popups = [];
+  h.engine.hooks.popup = (target, open) => popups.push(`${target}:${open}`);
+  h.engine.seek(at('06:40'));
+  popups.length = 0;
+  h.engine.play();
+  while (virtualToClock(h.engine.time) < 6 * 60 + 52) h.tick(50);
+  assert.deepEqual(popups, ['coffee:true', 'coffee:false']);
+});
+
+test('camera shots stay inside the day and their chapters', () => {
+  for (const s of SHOTS) {
+    assert.ok(s.from < s.to && s.to <= DAY_LENGTH);
+    assert.equal(s.segments[0].span[0], 0); assert.equal(s.segments.at(-1).span[1], 1);
+    assert.equal(shotAt((s.from + s.to) / 2), s);
+  }
+  assert.equal(shotAt(at('12:00')), undefined);
+  assert.deepEqual(SHOTS.map(s => s.id), ['night-window', 'storm-bedroom', 'cinema', 'gaming']);
+});
+
+test('evening colour scenes change gently', () => {
+  for (const action of STORY.flatMap(b => b.actions).filter(a => a.type === 'colorloop' && a.on)) {
+    assert.ok(action.period >= 15, 'slow hue steps');
+    assert.ok(action.saturation <= 75, 'pastel rather than vivid');
+    const spread = Math.max(...action.hues) - Math.min(...action.hues);
+    assert.ok(spread <= 60, `narrow hue range (${spread})`);
+  }
 });
 
 test('HS colours convert like Home Assistant', () => {

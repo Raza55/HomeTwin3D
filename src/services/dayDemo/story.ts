@@ -54,7 +54,12 @@ export type StoryAction =
     from?: { brightness: number; kelvin?: number };
     /** Delay between consecutive lights in virtual minutes. */ stagger?: number;
   }
-  | { type: 'colorloop'; target: LightTarget; on: boolean; brightness?: number; hues?: number[]; period?: number }
+  | {
+    type: 'colorloop'; target: LightTarget; on: boolean; brightness?: number; hues?: number[];
+    /** Virtual minutes from one hue to the next. */ period?: number;
+    /** 0..100; low values give pastel shifts rather than vivid colours. */ saturation?: number;
+    /** 0..1 slow brightness breathing (dimming) on top of the hue drift. */ breathe?: number;
+  }
   | { type: 'blind'; rooms?: RoomRole[]; position: number; ramp?: number; stagger?: number }
   | { type: 'tv'; mode: TVMode; title?: Text }
   | { type: 'pc'; on: boolean; screen?: ScreenKind }
@@ -64,7 +69,9 @@ export type StoryAction =
   | { type: 'lock'; locked: boolean }
   | { type: 'fan'; rooms?: RoomRole[]; on: boolean; percentage?: number }
   | { type: 'vacuum'; phase: 'cleaning' | 'returning' | 'docked' }
-  | { type: 'appliance'; kind: 'washer' | 'dryer'; running: boolean; minutes?: number };
+  | { type: 'appliance'; kind: 'washer' | 'dryer'; running: boolean; minutes?: number }
+  /** Opens or closes a device popup on the dashboard (e.g. the coffee machine while it brews). */
+  | { type: 'popup'; target: 'coffee'; open: boolean };
 
 export interface Chapter { id: string; icon: string; title: Text; text: Text }
 
@@ -85,8 +92,15 @@ export const STORY: StoryBeat[] = [
   beat('05:30', [], {
     id: 'night', icon: 'moon',
     title: { de: 'Nacht über dem Haus', en: 'Night over the home' },
-    text: { de: 'Alles schläft. Nebel liegt über dem Park, die Rollos sind zu, kein Gerät braucht Strom.', en: 'Everyone is asleep. Fog lies over the park, blinds are closed, every device rests.' },
+    text: { de: 'Alles schläft, Nebel liegt über dem Park. Wer nachts ans Fenster tritt, löst den Bewegungsmelder aus: zwei Lichter glimmen sanft auf.', en: 'Everyone is asleep, fog lies over the park. Stepping up to the window at night triggers the motion sensor: two lights glow up softly.' },
   }),
+  beat('05:41', [
+    { type: 'light', target: { rooms: ['living'], fallback: 1 }, on: true, brightness: 14, kelvin: 2200, ramp: 2.5 },
+    { type: 'light', target: { rooms: ['outdoor'] }, on: true, brightness: 35, kelvin: 2200, ramp: 2, stagger: .5 },
+  ]),
+  beat('06:02', [
+    { type: 'light', target: { rooms: ['living', 'outdoor'] }, on: false, ramp: 2 },
+  ]),
   beat('06:10', [
     { type: 'light', target: { rooms: ['bedroom'], fallback: 1 }, on: true, brightness: 85, kelvin: 4200, from: { brightness: 1, kelvin: 2000 }, ramp: 22 },
     { type: 'echo', rooms: ['bedroom'], playing: true, title: { de: 'Sanfte Weckmusik', en: 'Gentle wake-up music' } },
@@ -113,7 +127,8 @@ export const STORY: StoryBeat[] = [
     title: { de: 'Kaffee ist fertig, bevor du es bist', en: 'Coffee is ready before you are' },
     text: { de: 'Die Kaffeemaschine heizt vor und bereitet einen Caffè Latte zu. Das Briefing warnt schon vor dem Nachmittag.', en: 'The coffee machine preheats and brews a caffè latte. The briefing already warns about the afternoon.' },
   }),
-  beat('06:43', [{ type: 'coffee', phase: 'brew', minutes: 4 }]),
+  beat('06:43', [{ type: 'coffee', phase: 'brew', minutes: 4 }, { type: 'popup', target: 'coffee', open: true }]),
+  beat('06:49', [{ type: 'popup', target: 'coffee', open: false }]),
   beat('06:56', [{ type: 'light', target: { rooms: ['hall'] }, on: false }]),
   beat('07:00', [
     { type: 'light', target: { rooms: ['bath'], fallback: 1 }, on: true, brightness: 100, kelvin: DAYLIGHT },
@@ -177,32 +192,20 @@ export const STORY: StoryBeat[] = [
     text: { de: 'Die Sonne steht im Süden, draußen 22 °C: Die Rollos fahren auf Beschattung, der Ventilator kühlt vor.', en: 'The sun is in the south, 22 °C outside: blinds move to shading, the fan pre-cools.' },
   }),
   beat('12:50', [{ type: 'appliance', kind: 'dryer', running: false }]),
-  beat('13:30', [
-    { type: 'lock', locked: false },
-    { type: 'door', kind: 'entrance', open: true },
-  ], {
-    id: 'homeoffice', icon: 'monitor',
-    title: { de: 'Homeoffice am Nachmittag', en: 'Working from home' },
-    text: { de: 'Jemand kommt zurück und startet den PC. Der Monitor zeigt den Desktop, die Balkontür wird zum Lüften geöffnet.', en: 'Someone returns and starts the PC. The monitor shows the desktop, the balcony door opens for fresh air.' },
-  }),
-  beat('13:31', [{ type: 'door', kind: 'entrance', open: false }, { type: 'fan', on: false }]),
-  beat('13:34', [{ type: 'pc', on: true, screen: 'work' }]),
-  beat('13:45', [{ type: 'door', kind: 'balcony', open: true }]),
   beat('14:15', [
-    { type: 'echo', playing: true, title: { de: 'Unwetterwarnung! Die Balkontür ist noch offen.', en: 'Severe weather warning! The balcony door is still open.' } },
     { type: 'blind', position: 100, ramp: 3, stagger: 0.5 },
+    { type: 'fan', on: false },
   ], {
     id: 'warning', icon: 'alert',
     title: { de: 'Unwetterwarnung', en: 'Severe weather warning' },
-    text: { de: 'Wolken türmen sich auf. Echo warnt vor der offenen Balkontür, die Rollos fahren zum Schutz ganz hoch.', en: 'Clouds tower up. Echo warns about the open balcony door, the blinds retract fully for protection.' },
+    text: { de: 'Wolken türmen sich auf, aufs Handy kommt eine Unwetterwarnung. Die Rollos fahren zum Schutz ganz hoch, der Ventilator geht aus.', en: 'Clouds tower up and a severe weather warning reaches the phone. The blinds retract fully for protection, the fan switches off.' },
   }),
-  beat('14:35', [{ type: 'door', kind: 'balcony', open: false }, { type: 'echo', playing: false }]),
   beat('15:00', [
     { type: 'light', target: { rooms: ['living', 'office', 'kitchen', 'dining'], fallback: 3 }, on: true, brightness: 75, kelvin: NEUTRAL, ramp: 2, stagger: 0.3 },
   ], {
     id: 'storm', icon: 'storm',
     title: { de: 'Gewitter!', en: 'Thunderstorm!' },
-    text: { de: 'Starkregen und Blitze. Der Helligkeitssensor fällt unter 50 lx – die Lichtautomatik schaltet die Räume ein.', en: 'Heavy rain and lightning. The light sensor drops below 50 lx – the automation turns the rooms on.' },
+    text: { de: 'Starkregen und Blitze. Der Helligkeitssensor fällt unter 50 lx – die Anwesenheitssimulation schaltet Licht ein, damit das Haus bewohnt wirkt.', en: 'Heavy rain and lightning. The light sensor drops below 50 lx – presence simulation turns lights on so the home looks lived in.' },
   }),
   beat('16:20', [
     { type: 'light', target: { all: true }, on: false, stagger: 0.3 },
@@ -211,7 +214,7 @@ export const STORY: StoryBeat[] = [
     title: { de: 'Die Sonne kommt zurück', en: 'The sun returns' },
     text: { de: 'Das Gewitter zieht ab, der Park glänzt nass. Mit dem Tageslicht gehen die Lampen wieder aus.', en: 'The storm moves on, the park glistens wet. With daylight back, the lamps switch off again.' },
   }),
-  beat('17:25', [{ type: 'pc', on: false }]),
+  beat('17:29', [{ type: 'lock', locked: false }]),
   beat('17:30', [
     { type: 'door', kind: 'entrance', open: true },
     { type: 'echo', playing: true, title: { de: 'Willkommen zu Hause – Feierabend-Playlist', en: 'Welcome home – after-work playlist' } },
@@ -245,23 +248,23 @@ export const STORY: StoryBeat[] = [
     { type: 'echo', playing: false },
     { type: 'light', target: { all: true, exclude: ['living', 'outdoor', 'hall'] }, on: false, stagger: 0.3 },
     { type: 'light', target: { rooms: ['living'] }, on: true, brightness: 12, kelvin: WARM, ramp: 3 },
-    { type: 'colorloop', target: { rooms: ['living', 'dining'], color: true, fallback: 2 }, on: true, brightness: 70, hues: [265, 210, 320, 190], period: 6 },
+    { type: 'colorloop', target: { rooms: ['living', 'dining'], color: true, fallback: 2 }, on: true, brightness: 50, hues: [236, 248, 258, 246], period: 30, saturation: 62, breathe: .22 },
     { type: 'tv', mode: 'movie', title: { de: 'Nordlicht – Reise ans Ende der Welt', en: 'Northern Light – Journey to the End of the World' } },
   ], {
     id: 'cinema', icon: 'film',
     title: { de: 'Kinoabend', en: 'Movie night' },
-    text: { de: 'Licht gedimmt, Farblampen folgen dem Bild wie ein Ambilight, der Fernseher zeigt den Film.', en: 'Lights dimmed, colour lamps follow the picture like an ambilight, the TV plays the film.' },
+    text: { de: 'Licht gedimmt, die Farblampen tauchen den Raum in ruhiges, langsam atmendes Nachtblau wie ein Ambilight, der Fernseher zeigt den Film.', en: 'Lights dimmed, the colour lamps bathe the room in calm, slowly breathing night blue like an ambilight, the TV plays the film.' },
   }),
   beat('22:20', [
     { type: 'tv', mode: 'off' },
     { type: 'colorloop', target: { all: true }, on: false },
     { type: 'light', target: { rooms: ['living', 'dining'] }, on: false, stagger: 0.3 },
     { type: 'pc', on: true, screen: 'game' },
-    { type: 'colorloop', target: { rooms: ['office'], color: true, fallback: 1 }, on: true, brightness: 80, hues: [190, 300], period: 3 },
+    { type: 'colorloop', target: { rooms: ['office'], color: true, fallback: 1 }, on: true, brightness: 55, hues: [205, 228, 250], period: 26, saturation: 70, breathe: .25 },
   ], {
     id: 'gaming', icon: 'gamepad',
     title: { de: 'Gaming-Session', en: 'Gaming session' },
-    text: { de: 'Der Film ist aus, der PC startet ein Spiel. RGB-Beleuchtung pulsiert in Cyan und Magenta.', en: 'The movie ends, the PC launches a game. RGB lighting pulses in cyan and magenta.' },
+    text: { de: 'Der Film ist aus, im Schlafzimmer startet der PC ein Spiel. RGB-Lüfter und Bildschirm leuchten, die Lampen atmen langsam in kühlem Blau – ein Blick hinaus in die Nacht.', en: 'The movie ends, the PC in the bedroom launches a game. RGB fans and screen glow, the lamps breathe slowly in cool blue – a look out into the night.' },
   }),
   beat('23:15', [
     { type: 'pc', on: false },
@@ -292,7 +295,7 @@ export const STORY: StoryBeat[] = [
   beat('04:45', [], {
     id: 'dawn', icon: 'sunrise',
     title: { de: 'Ein neuer Tag beginnt', en: 'A new day begins' },
-    text: { de: 'Wieder Nebel, alles ruht. Gleich beginnt der Tag von vorn – Zeit für die Benchmark-Auswertung.', en: 'Fog again, everything rests. The day is about to start over – time for the benchmark results.' },
+    text: { de: 'Wieder Nebel, alles ruht. Gleich beginnt der Tag von vorn – Zeit für die Tagesbilanz.', en: 'Fog again, everything rests. The day is about to start over – time for the summary of the day.' },
   }),
 ].sort((a, b) => a.at - b.at);
 
@@ -362,13 +365,21 @@ export function weatherAt(virtual: number): DemoWeather {
 
 /** Relative speed per part of the day: quiet hours pass faster than busy ones. */
 const PACE: { clock: string; speed: number }[] = [
-  { clock: '05:30', speed: 1.6 },
+  // Night window shot: slow enough to walk to the window and watch the lights come up.
+  { clock: '05:30', speed: 0.45 },
   { clock: '06:05', speed: 0.8 },
+  // Let the coffee machine's popup show its progress.
+  { clock: '06:42', speed: 0.35 },
+  { clock: '06:50', speed: 0.8 },
   { clock: '08:35', speed: 1.8 },
   { clock: '13:25', speed: 1 },
   { clock: '14:55', speed: .6 },
   { clock: '16:05', speed: 1 },
   { clock: '17:40', speed: 1.1 },
+  { clock: '20:15', speed: 0.7 },
+  { clock: '21:10', speed: 1.1 },
+  { clock: '22:20', speed: 0.8 },
+  { clock: '23:10', speed: 1.1 },
   { clock: '23:45', speed: 2.6 },
   { clock: '02:25', speed: 1 },
   { clock: '03:40', speed: 2.6 },
@@ -403,4 +414,52 @@ export function realSecondsUntil(virtual: number): number {
 
 export function pick(text: Text, language: string): string {
   return language.startsWith('de') ? text.de : text.en;
+}
+
+// --- Camera shots ------------------------------------------------------------------
+
+/**
+ * First-person moments during the camera tour. Anchors are found in the model:
+ * a room's window (looking out), the PC monitor or the TV (looking at them).
+ */
+export type ShotAnchor =
+  | { kind: 'window'; room?: RoomRole; near?: 'pc' | 'tv' }
+  | { kind: 'pc' }
+  | { kind: 'tv' };
+
+export interface ShotSegment {
+  /** Part of the shot (0..1). Segments in other rooms are joined by a short cut. */
+  span: [number, number];
+  at: ShotAnchor;
+  /** Eye distance from the anchor in metres, at the start and end of the segment. */
+  eye: [number, number];
+  /** Optional turn within the segment towards a second anchor (from this fraction of the segment on). */
+  pan?: { to: ShotAnchor; eye: number; from: number };
+}
+
+export interface Shot {
+  id: string; from: number; to: number; segments: ShotSegment[];
+  /** Raise the blind of the shot's window to this position while it runs (motion sensor at the window). */
+  blind?: number;
+}
+
+const shot = (id: string, from: string, to: string, segments: ShotSegment[], blind?: number): Shot => ({ id, from: clockToVirtual(from), to: clockToVirtual(to), segments, blind });
+
+export const SHOTS: Shot[] = [
+  shot('night-window', '05:32', '06:03', [
+    { span: [0, 1], at: { kind: 'window', room: 'living' }, eye: [3.2, 1.0] },
+  ], 75),
+  shot('storm-bedroom', '15:04', '15:46', [
+    { span: [0, 1], at: { kind: 'window', room: 'bedroom', near: 'pc' }, eye: [2.8, 1.1] },
+  ]),
+  shot('cinema', '20:22', '21:02', [
+    { span: [0, 1], at: { kind: 'tv' }, eye: [4.2, 3.4], pan: { to: { kind: 'window', near: 'tv' }, eye: 1.4, from: .5 } },
+  ], 70),
+  shot('gaming', '22:24', '22:58', [
+    { span: [0, 1], at: { kind: 'pc' }, eye: [2.2, 1.5], pan: { to: { kind: 'window', near: 'pc' }, eye: 1.3, from: .45 } },
+  ], 70),
+];
+
+export function shotAt(virtual: number): Shot | undefined {
+  return SHOTS.find(s => virtual >= s.from && virtual < s.to);
 }

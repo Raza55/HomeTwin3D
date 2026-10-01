@@ -33,7 +33,7 @@ export interface CastCoffee { entityId: string; ids: NonNullable<FloorplanObject
 export interface CastPC { device: ITDevice; room: RoomRole }
 export interface CastDoor { entityId: string; kind: 'entrance' | 'balcony' | 'other'; label: string }
 export interface CastAppliance { entityId: string; kind: 'washer' | 'dryer'; runningState?: string; power: boolean; remainingEntityId?: string }
-export interface CastEntity { entityId: string; label: string; room: RoomRole }
+export interface CastEntity { entityId: string; label: string; room: RoomRole; /** Blind config id (its meshes are named after it). */ id?: string }
 
 export interface DayDemoCast {
   lights: CastLight[];
@@ -102,7 +102,7 @@ export function buildCast(config: AppConfig, extraDisplays: DisplayConfig[] = []
   const blinds = new Map<string, CastEntity>();
   for (const blind of config.blinds ?? []) {
     const plan = (blind.floorplanIds ?? []).map(id => byId.get(id)).find(Boolean);
-    blinds.set(blind.entityId, { entityId: blind.entityId, label: blind.label, room: roomRole(blind.label, blind.entityId, plan?.room, roomAt(config.rooms, blind.position)?.name) });
+    blinds.set(blind.entityId, { id: blind.id, entityId: blind.entityId, label: blind.label, room: roomRole(blind.label, blind.entityId, plan?.room, roomAt(config.rooms, blind.position)?.name) });
   }
   for (const o of objects) if (o.domain === 'cover' && o.entityId && !blinds.has(o.entityId)) {
     blinds.set(o.entityId, { entityId: o.entityId, label: o.label, room: objectRoom(o) });

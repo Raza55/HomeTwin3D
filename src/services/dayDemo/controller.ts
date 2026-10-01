@@ -11,6 +11,9 @@ import { CHAPTERS, DEMO_DATE, clockToVirtual, virtualToClock, type DemoWeather }
 import { prepareCurrentLightVariants, prerenderLampShadowMaps } from '../../babylon/FloorplanLighting';
 import type { DayDemoCast } from './cast';
 import { renderDemoScreen } from './screens';
+import { ShotDirector, type WalkControl } from './shots';
+import { shotAt, type Shot } from './story';
+import type { AbstractMesh } from '@babylonjs/core';
 
 export interface DayDemoSceneDeps {
   scene: Scene;
@@ -23,6 +26,10 @@ export interface DayDemoSceneDeps {
   applyWeather(weather: WeatherData): number;
   /** Throttled: virtual clock minutes and weather for HUD, theme and side panels. */
   onClock?(clockMinutes: number, weather: WeatherData): void;
+  /** First-person camera for the tour's window/PC/TV shots (optional). */
+  walk?: WalkControl;
+  /** TV screen planes (for the cinema shot). */
+  tvPlanes?(): AbstractMesh[];
 }
 
 export interface ChapterResult { id: string; fps: number; p95: number; cpu: number; draws: number; frames: number }
@@ -36,6 +43,10 @@ export interface DayDemoViewState extends DayDemoSnapshot {
   tour: boolean;
   /** 0..1 while shader variants for the whole story are prepared; undefined when ready. */
   preparing?: number;
+  /** Increments on every camera cut (overlay fades through black). */
+  cut: number;
+  /** A first-person shot is running. */
+  inShot: boolean;
   result?: BenchmarkResult;
   fps: number;
 }
@@ -49,7 +60,7 @@ interface Bucket { frames: number; ms: number; cpu: number; draws: number; gaps:
 const CHAPTER_VIEW: Record<string, { zoom: number; tilt: number }> = {
   night: { zoom: 1.3, tilt: .12 }, wake: { zoom: .88, tilt: 0 }, sunrise: { zoom: 1.2, tilt: .1 }, coffee: { zoom: .88, tilt: 0 },
   bath: { zoom: .92, tilt: 0 }, breakfast: { zoom: .95, tilt: 0 }, away: { zoom: 1.1, tilt: .05 }, chores: { zoom: 1, tilt: 0 },
-  sunny: { zoom: 1.45, tilt: .16 }, shade: { zoom: 1.2, tilt: .08 }, homeoffice: { zoom: .92, tilt: 0 }, warning: { zoom: 1.4, tilt: .16 },
+  sunny: { zoom: 1.45, tilt: .16 }, shade: { zoom: 1.2, tilt: .08 }, warning: { zoom: 1.4, tilt: .16 },
   storm: { zoom: 1.6, tilt: .2 }, clearing: { zoom: 1.4, tilt: .14 }, home: { zoom: 1, tilt: 0 }, cooking: { zoom: .9, tilt: 0 },
   sunset: { zoom: 1.3, tilt: .14 }, cinema: { zoom: .88, tilt: 0 }, gaming: { zoom: .9, tilt: 0 }, goodnight: { zoom: 1.05, tilt: .05 },
   nightlight: { zoom: .95, tilt: 0 }, snow: { zoom: 1.6, tilt: .2 }, dawn: { zoom: 1.35, tilt: .14 },
@@ -95,6 +106,12 @@ export class DayDemoController {
   private disposeFns: (() => void)[] = [];
   private preparing: number | undefined;
   private disposed = false;
+  private director: ShotDirector | null = null;
+  private shot: Shot | null = null;
+  private shotSegment = -1;
+  private cuts = 0;
+  private parkFloor: number | undefined;
+  private shotBlind: { entityId: string; previous: number } | null = null;
 
   constructor(cast: DayDemoCast, hooks: Omit<DayDemoHooks, 'screen'>, deps: DayDemoSceneDeps, language: string) {
     this.deps = deps;
@@ -108,12 +125,13 @@ export class DayDemoController {
     this.disposeFns.push(() => deps.scene.onAfterRenderObservable.remove(observer));
     // Any manual camera input ends the tour: the viewer has taken over.
     const canvas = deps.engine.getRenderingCanvas();
-    const takeOver = () => { if (this.tour) { this.tour = false; this.emit(); } };
+    const takeOver = () => { if (this.tour) { this.tour = false; this.endShot(); this.emit(); } };
     canvas?.addEventListener('pointerdown', takeOver);
     canvas?.addEventListener('wheel', takeOver, { passive: true });
     this.disposeFns.push(() => { canvas?.removeEventListener('pointerdown', takeOver); canvas?.removeEventListener('wheel', takeOver); });
     const camera = deps.scene.activeCamera;
     if (camera instanceof ArcRotateCamera) this.home = { alpha: camera.alpha, beta: camera.beta, radius: camera.radius, target: camera.target.clone() };
+    if (deps.walk) this.director = new ShotDirector(deps.scene, cast, deps.walk, deps.tvPlanes ?? (() => []));
     setSunDateOverride(new Date(new Date().getFullYear(), DEMO_DATE.month, DEMO_DATE.day, 12));
   }
 
@@ -134,7 +152,8 @@ export class DayDemoController {
       if (document.hidden) return;
       const wasFinished = this.engine.isFinished;
       this.engine.advance(dt);
-      this.updateTour(dt);
+      this.updateShot();
+      if (!this.shot) this.updateTour(dt);
       this.syncScene(false);
       if (!wasFinished && this.engine.isFinished) this.finish();
     };
@@ -152,7 +171,9 @@ export class DayDemoController {
   private async prepare(): Promise<void> {
     const { scene, sun, hemi } = this.deps;
     // Mirror captures (0.1-0.7 s each) would follow every daylight change.
-    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true, alwaysAnimateWeather: true };
+    // Moonlight: at night the park stays visible through the windows (at least the user's own minimum).
+    this.parkFloor = Number(scene.metadata?.parkMinBrightness ?? 0);
+    scene.metadata = { ...scene.metadata, freezeMirrorProbes: true, steadyLamps: true, alwaysAnimateWeather: true, parkMinBrightness: Math.max(this.parkFloor, .4) };
     this.preparing = 0;
     this.emit();
     const t0 = performance.now();
@@ -204,6 +225,8 @@ export class DayDemoController {
   }
 
   restart(): void {
+    this.shotBlind = null;
+    this.endShot(false);
     this.result = undefined;
     this.engine.seek(0);
     this.engine.play();
@@ -213,6 +236,9 @@ export class DayDemoController {
   }
 
   seek(virtual: number): void {
+    // The jump replays every state: a shot's blind must not be "restored" afterwards.
+    this.shotBlind = null;
+    this.endShot(false);
     this.engine.seek(virtual);
     // A jump makes the frame statistics meaningless; start a fresh measurement.
     this.resetBenchmark();
@@ -226,6 +252,7 @@ export class DayDemoController {
 
   setTour(on: boolean): void {
     this.tour = on;
+    if (!on) this.endShot();
     this.tourTime = 0;
     const camera = this.deps.scene.activeCamera;
     if (on && camera instanceof ArcRotateCamera) this.home = { alpha: camera.alpha, beta: camera.beta, radius: camera.radius, target: camera.target.clone() };
@@ -241,9 +268,11 @@ export class DayDemoController {
 
   dispose(restoreCamera = true): void {
     this.disposed = true;
+    this.endShot(false);
     cancelAnimationFrame(this.frame);
     // Mirrors catch up with the real daylight; lamps switch off for real again with the next HA states.
-    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false, alwaysAnimateWeather: false };
+    this.deps.scene.metadata = { ...this.deps.scene.metadata, freezeMirrorProbes: false, steadyLamps: false, alwaysAnimateWeather: false,
+      ...(this.parkFloor !== undefined ? { parkMinBrightness: this.parkFloor } : {}) };
     // Blinds moved without refreshing lamp shadows during the demo.
     for (const light of this.deps.scene.lights) if (light !== this.deps.sun) light.getShadowGenerator()?.getShadowMap()?.resetRefreshCounter();
     this.disposeFns.forEach(fn => fn());
@@ -266,7 +295,7 @@ export class DayDemoController {
 
   private buildView(): DayDemoViewState {
     const fps = this.fpsWindow.length > 1 ? (this.fpsWindow.length - 1) * 1000 / (this.fpsWindow[this.fpsWindow.length - 1] - this.fpsWindow[0]) : 0;
-    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps), preparing: this.preparing };
+    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps), preparing: this.preparing, cut: this.cuts, inShot: !!this.shot };
   }
 
   private syncScene(force: boolean): void {
@@ -296,6 +325,46 @@ export class DayDemoController {
     }
     requestRender();
   }
+
+  /** Window, PC and TV moments in first person (only while the camera tour runs). */
+  private updateShot(): void {
+    const walk = this.deps.walk;
+    if (!this.director || !walk) return;
+    // Escape or the walk button left first person: the viewer took over.
+    if (this.shot && !walk.active()) { this.shot = null; this.tour = false; this.emit(); return; }
+    const next = this.tour && !this.engine.isFinished ? shotAt(this.engine.time) : undefined;
+    const playable = next && this.director.playable(next) ? next : undefined;
+    if (!playable) { if (this.shot) this.endShot(); return; }
+    if (this.shot?.id !== playable.id) {
+      if (this.shot) this.endShot();
+      walk.enter();
+      if (!walk.active()) return;
+      this.shot = playable; this.shotSegment = -1;
+      this.deps.scene.metadata = { ...this.deps.scene.metadata, hideMarkers: true };
+      // The blind at this window rises while the viewer stands there, and closes again afterwards.
+      const blind = playable.blind !== undefined ? this.director.blindFor(playable) : undefined;
+      const previous = blind ? this.engine.moveBlind(blind, playable.blind!, 2.5) : undefined;
+      this.shotBlind = blind && previous !== undefined && previous < playable.blind! ? { entityId: blind, previous } : null;
+    }
+    const pose = this.director.pose(playable, this.engine.time);
+    if (!pose) { this.endShot(); return; }
+    if (pose.segment !== this.shotSegment) { this.shotSegment = pose.segment; this.cut(); }
+    walk.pose(pose.eye, pose.look);
+  }
+
+  private endShot(cut = true): void {
+    if (!this.shot) return;
+    this.shot = null; this.shotSegment = -1;
+    this.deps.scene.metadata = { ...this.deps.scene.metadata, hideMarkers: false };
+    if (this.shotBlind && !this.disposed) this.engine.moveBlind(this.shotBlind.entityId, this.shotBlind.previous, 2);
+    this.shotBlind = null;
+    if (this.deps.walk?.active()) this.deps.walk.exit();
+    // The tour continues from the restored orbit pose.
+    this.tourTime = Math.max(this.tourTime, 5);
+    if (cut) this.cut();
+  }
+
+  private cut(): void { this.cuts++; this.emit(); }
 
   private updateTour(dt: number): void {
     const camera = this.deps.scene.activeCamera;

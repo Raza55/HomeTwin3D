@@ -97,6 +97,7 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
 
   return (
     <div className="day-demo" role="region" aria-label={t('dayDemo.title')}>
+      {view.cut > 0 && <div className="day-demo-cut" key={view.cut} aria-hidden />}
       <div className="day-demo-panel">
         <div className="day-demo-top">
           <div className="day-demo-clock" aria-live="off">
@@ -171,13 +172,23 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
       {result && (
         <div className="day-demo-result" role="dialog" aria-modal="false" aria-label={t('dayDemo.resultTitle')}>
           <div className="day-demo-result-head">
-            <Trophy size={22} aria-hidden />
+            <Sunrise size={22} aria-hidden />
             <div>
-              <h3>{t('dayDemo.resultTitle')}</h3>
-              <p>{result.renderer} · {result.resolution} · {result.speed}× · {result.tour ? t('dayDemo.withTour') : t('dayDemo.withoutTour')}</p>
+              <h3>{t('dayDemo.summaryTitle')}</h3>
+              <p>{t('dayDemo.summaryText')}</p>
             </div>
-            <span className="day-demo-score">{result.score.toLocaleString(language)}<small>{t('dayDemo.points')}</small></span>
           </div>
+          <dl className="day-demo-stats day-demo-day">
+            <div><dt>{t('dayDemo.statAutomations')}</dt><dd>{view.stats.automations}</dd></div>
+            <div><dt>{t('dayDemo.statLightHours')}</dt><dd>{view.stats.lightHours.toLocaleString(language, { maximumFractionDigits: 1 })} h</dd></div>
+            <div><dt>{t('dayDemo.statRain')}</dt><dd>{Math.round(view.stats.rainMinutes / 6) / 10} h</dd></div>
+            <div><dt>{t('dayDemo.statTemp')}</dt><dd>{Math.round(view.stats.minTemp)}–{Math.round(view.stats.maxTemp)} °C</dd></div>
+            <div><dt>{t('dayDemo.statGusts')}</dt><dd>{Math.round(view.stats.maxGust)} km/h</dd></div>
+            <div><dt>{t('dayDemo.statFps')}</dt><dd>{result.fps}</dd></div>
+          </dl>
+          <details className="day-demo-bench">
+            <summary><Trophy size={14} aria-hidden /> {t('dayDemo.resultTitle')} · {result.score.toLocaleString(language)} {t('dayDemo.points')}</summary>
+            <p className="day-demo-bench-meta">{result.renderer} · {result.resolution} · {result.speed}× · {result.tour ? t('dayDemo.withTour') : t('dayDemo.withoutTour')}</p>
           <dl className="day-demo-stats">
             <div><dt>Ø FPS</dt><dd>{result.fps}</dd></div>
             <div><dt>1 % Low</dt><dd>{result.low1}</dd></div>
@@ -199,6 +210,7 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
               );
             })}
           </div>
+          </details>
           <div className="day-demo-result-actions">
             <button type="button" onClick={() => controller.restart()}><RotateCcw size={15} /> {t('dayDemo.again')}</button>
             <button type="button" onClick={() => void navigator.clipboard?.writeText(JSON.stringify(result, null, 2))}>{t('dayDemo.copy')}</button>

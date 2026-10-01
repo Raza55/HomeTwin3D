@@ -16,11 +16,24 @@ export interface DayDemoHooks {
   screen?(kind: ScreenKind, frame: ScreenFrame): string | undefined;
   now?(): number;
   random?(): number;
+  /** Opens/closes a device popup (dashboard UI); ignored when seeking. */
+  popup?(target: 'coffee', open: boolean): void;
 }
 
 export interface ScreenFrame { frame: number; clock: number; title: string; language: string; progress: number }
 
 export interface LogEntry { id: number; clock: number; icon: string; text: Text }
+
+/** What the day brought (shown at the end instead of plain benchmark numbers). */
+export interface DayStats {
+  automations: number;
+  /** Lamp-hours (one lamp on for one hour = 1). */
+  lightHours: number;
+  rainMinutes: number;
+  minTemp: number;
+  maxTemp: number;
+  maxGust: number;
+}
 
 export interface DayDemoSnapshot {
   virtual: number;
@@ -32,6 +45,7 @@ export interface DayDemoSnapshot {
   chapter?: Chapter;
   weather: DemoWeather;
   log: LogEntry[];
+  stats: DayStats;
 }
 
 interface Transition {
@@ -40,7 +54,7 @@ interface Transition {
   apply(t: number, final: boolean): void;
 }
 
-interface Loop { hues: number[]; period: number; brightness: number; startV: number; offset: number }
+interface Loop { hues: number[]; period: number; brightness: number; saturation: number; breathe: number; startV: number; offset: number }
 
 interface Screen { entityId: string; kind: ScreenKind; state: string; attributes: Record<string, unknown>; title: string; startV: number; tv?: { shield: string; duration: number } }
 
@@ -104,6 +118,8 @@ export class DayDemoEngine {
   private snapshot: DayDemoSnapshot;
   private snapshotDirty = true;
   private seeking = false;
+  private stats: DayStats = DayDemoEngine.emptyStats();
+  private static emptyStats(): DayStats { return { automations: 0, lightHours: 0, rainMinutes: 0, minTemp: Infinity, maxTemp: -Infinity, maxGust: 0 }; }
   private lastNotify = 0;
   private structuralChange = false;
 
@@ -166,6 +182,7 @@ export class DayDemoEngine {
       this.virtual = Math.max(this.virtual, STORY[this.beatIndex].at);
       this.runBeat(this.beatIndex++);
     }
+    this.collectStats(target - this.virtual);
     this.virtual = target;
     this.updateTransitions(false);
     this.updateLoops(false);
@@ -192,14 +209,16 @@ export class DayDemoEngine {
     const chapter = this.chapterIndex >= 0 ? CHAPTERS[this.chapterIndex]?.chapter : undefined;
     return {
       virtual: this.virtual, clock: virtualToClock(this.virtual), playing: this.playing, finished: this.finished,
-      speed: this.speed, chapterIndex: this.chapterIndex, chapter, weather: weatherAt(this.virtual), log: [...this.log],
+      speed: this.speed, chapterIndex: this.chapterIndex, chapter, weather: weatherAt(this.virtual), log: [...this.log], stats: { ...this.stats },
     };
   }
 
   private reset(): void {
     this.virtual = 0; this.beatIndex = 0; this.finished = false; this.chapterIndex = -1;
+    this.stats = DayDemoEngine.emptyStats();
     this.transitions.clear(); this.loops.clear(); this.screens.clear(); this.pcOn.clear();
     this.log = [];
+    this.hooks.popup?.('coffee', false);
     const c = this.cast, set = this.hooks.setState.bind(this.hooks);
     for (const light of c.lights) if (this.hooks.getState(light.entityId)?.state !== 'off') set(light.entityId, 'off', { ...this.attrs(light.entityId), friendly_name: light.label, brightness: 0 });
     for (const blind of c.blinds) set(blind.entityId, 'closed', { friendly_name: blind.label, current_position: 0, current_cover_position: 0 });
@@ -230,6 +249,7 @@ export class DayDemoEngine {
   private addLog(icon: string, text: Text): void {
     if (this.seeking) return;
     this.structuralChange = true;
+    this.stats.automations++;
     this.log = [{ id: ++this.logId, clock: virtualToClock(this.virtual), icon, text }, ...this.log].slice(0, LOG_LIMIT);
   }
 
@@ -265,6 +285,11 @@ export class DayDemoEngine {
           : { de: 'PC heruntergefahren', en: 'PC shut down' });
       }
       case 'coffee': return this.coffeeAction(action.phase, action.minutes ?? 4, at);
+      case 'popup': {
+        if (action.target === 'coffee' && !this.cast.coffee.length) return;
+        if (!this.seeking) this.hooks.popup?.(action.target, action.open);
+        return;
+      }
       case 'echo': return this.echoAction(action.playing, action.rooms, action.title);
       case 'door': {
         const doors = this.cast.doors.filter(d => d.kind === action.kind);
@@ -299,6 +324,17 @@ export class DayDemoEngine {
         return this.addLog('washer', { de: `${name.de} ${action.running ? 'gestartet' : 'fertig'}`, en: `${name.en} ${action.running ? 'started' : 'finished'}` });
       }
     }
+  }
+
+  private collectStats(minutes: number): void {
+    if (minutes <= 0) return;
+    const weather = weatherAt(this.virtual);
+    const lit = this.cast.lights.reduce((n, light) => n + (this.hooks.getState(light.entityId)?.state === 'on' ? 1 : 0), 0);
+    this.stats.lightHours += lit * minutes / 60;
+    if (weather.rain > 0) this.stats.rainMinutes += minutes;
+    this.stats.minTemp = Math.min(this.stats.minTemp, weather.temperature_2m);
+    this.stats.maxTemp = Math.max(this.stats.maxTemp, weather.temperature_2m);
+    this.stats.maxGust = Math.max(this.stats.maxGust, weather.wind_gusts_10m);
   }
 
   // --- Lights ------------------------------------------------------------------
@@ -404,7 +440,7 @@ export class DayDemoEngine {
     if (!lights.length) return;
     lights.forEach((light, i) => {
       this.transitions.delete(`light:${light.entityId}`);
-      this.loops.set(light.entityId, { hues: action.hues ?? [260, 200, 320], period: action.period ?? 5, brightness: action.brightness ?? 70, startV: at, offset: i * 0.35 });
+      this.loops.set(light.entityId, { hues: action.hues ?? [240, 255], period: action.period ?? 20, brightness: action.brightness ?? 60, saturation: action.saturation ?? 70, breathe: action.breathe ?? .15, startV: at, offset: i * 0.35 });
     });
     this.lastLoop = 0;
     this.addLog('palette', { de: `${this.roomsText(lights).de}: Farbszene (${lights.length} Lampen)`, en: `${this.roomsText(lights).en}: colour scene (${lights.length} lamps)` });
@@ -423,8 +459,10 @@ export class DayDemoEngine {
       const a = loop.hues[index], b = loop.hues[(index + 1) % loop.hues.length];
       const delta = ((b - a + 540) % 360) - 180;
       const hue = (a + delta * ease(position % 1) + 360) % 360;
-      const pulse = loop.brightness * (0.82 + 0.18 * Math.sin(position * Math.PI * 2));
-      this.hooks.setState(entityId, 'on', this.lightAttrs(light, pulse, 2400, hue, 92));
+      // Mostly dimming: a slow breath (about one per 1.5 hue steps), phase-shifted per lamp.
+      const breath = Math.sin((this.virtual - loop.startV) / (loop.period * 1.5) * Math.PI * 2 + loop.offset * 2);
+      const level = loop.brightness * (1 - loop.breathe / 2 + loop.breathe / 2 * breath);
+      this.hooks.setState(entityId, 'on', this.lightAttrs(light, Math.max(3, level), 2400, hue, loop.saturation));
     }
   }
 
@@ -456,6 +494,23 @@ export class DayDemoEngine {
         : { de: `Rollos auf ${action.position} % Beschattung`, en: `Blinds to ${action.position} % shading` };
     const rooms = action.rooms ? this.roomsText(blinds) : undefined;
     this.addLog('blinds', rooms ? { de: `${rooms.de}: ${text.de}`, en: `${rooms.en}: ${text.en}` } : { de: `${text.de} (${moved})`, en: `${text.en} (${moved})` });
+  }
+
+  /** Moves one blind (camera shots: the blind at the window the viewer steps up to). */
+  moveBlind(entityId: string, position: number, ramp = 2): number | undefined {
+    const blind = this.cast.blinds.find(b => b.entityId === entityId);
+    if (!blind) return undefined;
+    const from = Number(this.hooks.getState(entityId)?.attributes.current_position ?? 0);
+    if (from === position) return from;
+    this.schedule(`blind:${entityId}`, this.virtual, this.virtual + ramp, (t, final) => {
+      const current = Math.round(lerp(from, position, ease(t)));
+      const state = !final ? (position > from ? 'opening' : 'closing') : current > 0 ? 'open' : 'closed';
+      this.hooks.setState(entityId, state, { friendly_name: blind.label, current_position: current, current_cover_position: current });
+    }, BLIND_INTERVAL_MS);
+    this.addLog('blinds', position > from
+      ? { de: `${ROOM_NAMES[blind.room].de}: Rollo am Fenster fährt hoch (Bewegung erkannt)`, en: `${ROOM_NAMES[blind.room].en}: window blind opens (motion detected)` }
+      : { de: `${ROOM_NAMES[blind.room].de}: Rollo fährt wieder herunter`, en: `${ROOM_NAMES[blind.room].en}: blind closes again` });
+    return from;
   }
 
   // --- Transitions ---------------------------------------------------------------

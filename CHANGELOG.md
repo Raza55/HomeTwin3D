@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.18 – Tagesdemo mit Kameramomenten (01.10.2026)
+
+- Ich-Perspektive in der Tagesdemo (bei aktiver Kamerafahrt): nachts ans Wohnzimmerfenster mit Blick in den nebligen Park, im Gewitter vom Schlafzimmer in den Starkregen, beim Kinoabend vom Sofa auf den Fernseher und danach hinaus, beim Gaming der leuchtende PC und der Blick aus dem Fenster. Fenster, PC und TV werden im Modell erkannt; Wände, Möbel und Vorhänge werden berücksichtigt. Das Rollo am jeweiligen Fenster fährt hoch, solange man davorsteht. Kurze Abblende bei Schnitten, Plan-Marker sind währenddessen ausgeblendet; Maus oder Tastatur übernehmen die Kamera.
+- Ruhigere Abendlichter: Ambilight und Gaming-RGB arbeiten vor allem mit langsamem Dimmen und leichten Blautönen statt schneller, kräftiger Farbwechsel.
+- Homeoffice-Szene entfernt; der PC erscheint abends beim Gaming. Bewegungsmelder schaltet nachts zwei Lichter sanft ein.
+- Das Popup der Kaffeemaschine öffnet sich automatisch, während sie Kaffee zubereitet.
+- Zum Schluss eine Tagesbilanz (Automationen, Lampenstunden, Regen, Temperatur, stärkste Böe); die Benchmark-Werte sind aufklappbar.
+
 ## 0.5.17 – Wind ohne Dauer-Rendering (01.10.2026)
 
 - Baumkronen wiegen sich erst bei spürbarem Wind (ab 15 km/h, auf Tablets ab 25 km/h, Böen anteilig). Zuvor hielt schon leichter Wind das Board dauerhaft auf 30 Bildern pro Sekunde statt der Ruhe-Bildrate (~2 pro Sekunde) – mehr Akku- und Wärmelast auf dem Wand-iPad. In der Tagesdemo bewegen sich die Bäume weiterhin bei jedem Wind.

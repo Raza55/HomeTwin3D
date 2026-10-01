@@ -167,6 +167,8 @@ export class MarkerLayer {
         const placement = marker.placement;
         placement.visible = false;
         if (!element || !projection) continue;
+        // Scripted first-person shots (day demo) show the room without plan markers.
+        if (this.scene.metadata?.hideMarkers) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         const point = spec.anchor(this.point);
         if (!point) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         marker.point.copyFrom(point);

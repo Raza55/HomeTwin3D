@@ -123,7 +123,24 @@ export class WalkthroughCamera {
       this.syncCamera(); this.canvas.focus({ preventScroll: true });
     }
   }
-  recenter(): void { if (this.mode !== 'normal') { this.eye.copyFrom(this.spawn()); this.camera.beta = Math.PI / 2; this.syncCamera(); } }
+  /** Floor height and model scale (metres → scene units) for scripted shots. */
+  get floorY(): number { return this.floor; }
+  get unit(): number { return this.scale; }
+  /** Floor height at a point, or undefined outside the apartment (scripted shots). */
+  groundAt(x: number, z: number): number | undefined { return this.ground(x, z); }
+  /** Scripted first-person pose (day demo): eye position and look-at point, no collision. */
+  setPose(eye: Vector3, lookAt: Vector3): void {
+    if (this.mode === 'normal') return;
+    const view = lookAt.subtract(eye);
+    if (view.lengthSquared() < 1e-8) return;
+    view.normalize();
+    // syncCamera places the camera at eye looking along -(cos α sin β, cos β, sin α sin β).
+    this.camera.beta = Math.acos(Math.max(-1, Math.min(1, -view.y)));
+    this.camera.alpha = Math.atan2(-view.z, -view.x);
+    this.eye.copyFrom(eye);
+    this.syncCamera();
+  }
+    recenter(): void { if (this.mode !== 'normal') { this.eye.copyFrom(this.spawn()); this.camera.beta = Math.PI / 2; this.syncCamera(); } }
   private syncCamera() {
     const c = this.camera, radius = .05 * this.scale;
     c.radius = radius;

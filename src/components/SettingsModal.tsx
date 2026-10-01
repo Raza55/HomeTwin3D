@@ -22,6 +22,7 @@ import {
 } from '../contexts/ThemeContext';
 import './SettingsModal.css';
 import FloorplanEntities from './FloorplanEntities';
+import { detectKiosk, type KioskSetting } from '../services/kioskMode';
 
 declare const __HOMETWIN_BUILD__: string;
 
@@ -221,6 +222,7 @@ export default function SettingsModal({
   const [panelOpacity, setPanelOpacity] = useState(() => getSettings().appearance.panelOpacity);
   const [panelBgColor, setPanelBgColor] = useState(() => getSettings().appearance.panelBgColor);
   const [hudVisible, setHudVisible] = useState(() => getSettings().appearance.hudVisible);
+  const [kioskMode, setKioskMode] = useState<KioskSetting>(() => getSettings().appearance.kioskMode ?? 'auto');
 
   const updateAppearance = useCallback((patch: Record<string, unknown>) => {
     updateSettings('appearance', patch as any);
@@ -567,6 +569,15 @@ export default function SettingsModal({
                   <Segmented label={t('settings.language')} value={language}
                     options={languages.map(lang => ({ value: lang, label: t(`language.${lang}`) }))}
                     onChange={setLanguage} />
+                </Row>
+                <Row label={t('settings.kiosk')} hint={`${t('settings.kioskHint')} ${detectKiosk() ? t('settings.kioskDetected') : t('settings.kioskNotDetected')}`} stacked>
+                  <Segmented label={t('settings.kiosk')} value={kioskMode}
+                    options={[
+                      { value: 'auto', label: t('settings.kioskAuto') },
+                      { value: 'on', label: t('common.on') },
+                      { value: 'off', label: t('common.off') },
+                    ]}
+                    onChange={v => { setKioskMode(v); updateAppearance({ kioskMode: v }); }} />
                 </Row>
                 <Row label={t('settings.hud')} hint={t('settings.hudHint')}>
                   <Switch label={t('settings.hud')} checked={hudVisible} onChange={v => { setHudVisible(v); updateAppearance({ hudVisible: v }); }} />

@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.10 – Kiosk-Modus für Wand-Tablets (01.10.2026)
+
+- Neue Einstellung unter Darstellung: „Kiosk-Modus (Wand-Tablet)“ mit Automatisch / Ein / Aus. Automatisch erkennt, ob die App als Home-Bildschirm-App (iPad/iPhone) oder als installierte bzw. Vollbild-App läuft.
+- Im Kiosk-Modus rücken Logo, Wetter, Werkzeugleiste, Seitenpanel und Dialoge unter die Apple-Statusleiste und weg vom Home-Balken (sichere Bildschirmränder). Die eigene Uhr entfällt, weil die Statusleiste die Zeit zeigt; Sonne/Wetter und die Werkzeugleiste teilen sich eine Zeile, so bleibt mehr Platz für das Modell.
+
 ## 0.5.9 – Stabilere Synchronisierung und weniger CPU-Arbeit (01.10.2026)
 
 - Übertragungen desselben Browsers laufen nacheinander; auf unterstützten sicheren Origins gilt das auch für mehrere Tabs. Änderungen während eines Uploads bleiben für die nächste Übertragung vorgemerkt.

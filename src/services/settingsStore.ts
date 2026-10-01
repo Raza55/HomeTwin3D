@@ -23,6 +23,8 @@ export interface AppearanceSettings {
   backdropObscure: boolean;
   backdropBlur: boolean;
   hudVisible: boolean;
+  /** Wall/tablet display layout: auto-detected home-screen app, or forced on/off. */
+  kioskMode?: 'auto' | 'on' | 'off';
   borderStyle: 'subtle' | 'large' | 'none';
   cornerRadius: 'sharp' | 'soft' | 'round';
 }
@@ -122,6 +124,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     backdropObscure: true,
     backdropBlur: true,
     hudVisible: true,
+    kioskMode: 'auto',
     borderStyle: 'subtle',
     cornerRadius: 'soft',
   },

@@ -847,7 +847,12 @@
     "settings.sensitivity.pan": "Verschieben",
     "settings.sensitivity.panHint": "Rechtsklick bzw. zwei Finger ziehen",
     "settings.sensitivity.reset": "Empfindlichkeit zurücksetzen",
-    "settings.sensitivity.title": "Empfindlichkeit"
+    "settings.sensitivity.title": "Empfindlichkeit",
+    "settings.kiosk": "Kiosk-Modus (Wand-Tablet)",
+    "settings.kioskHint": "Platz für die Apple-Statusleiste, keine eigene Uhr, Wetter und Knöpfe in einer Zeile.",
+    "settings.kioskDetected": "Erkannt: läuft als Home-Bildschirm-App.",
+    "settings.kioskNotDetected": "Erkannt: läuft im Browser.",
+    "settings.kioskAuto": "Automatisch"
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -1697,6 +1702,11 @@
     "settings.sensitivity.pan": "Pan",
     "settings.sensitivity.panHint": "Right-click or two-finger drag",
     "settings.sensitivity.reset": "Reset sensitivity",
-    "settings.sensitivity.title": "Sensitivity"
+    "settings.sensitivity.title": "Sensitivity",
+    "settings.kiosk": "Kiosk mode (wall tablet)",
+    "settings.kioskHint": "Room for the Apple status bar, no own clock, weather and buttons in one row.",
+    "settings.kioskDetected": "Detected: running as a home-screen app.",
+    "settings.kioskNotDetected": "Detected: running in the browser.",
+    "settings.kioskAuto": "Automatic"
   }
 }

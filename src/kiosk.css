@@ -1,0 +1,53 @@
+/* Kiosk mode (html.kiosk, see services/kioskMode.ts): the app runs as a wall or
+   tablet display. iOS draws its translucent status bar over the page, so
+   everything at the top moves below it (safe-area inset), the clock is left to
+   the status bar, and sun/weather share one row with the toolbar. */
+html.kiosk {
+  --kiosk-top: env(safe-area-inset-top, 0px);
+  --kiosk-bottom: env(safe-area-inset-bottom, 0px);
+  --kiosk-row: calc(var(--kiosk-top) + 10px);
+  /* Toolbar: 3 × 40px buttons + gaps + padding + border. */
+  --kiosk-toolbar-width: 138px;
+}
+
+/* Top row: logo left, sun/weather and toolbar right, all below the status bar. */
+html.kiosk .title-bar { top: var(--kiosk-row); }
+html.kiosk .corner.tl, html.kiosk .corner.tr { top: calc(var(--kiosk-top) + 6px); }
+html.kiosk .corner.bl, html.kiosk .corner.br { bottom: calc(var(--kiosk-bottom) + 6px); }
+
+html.kiosk .hud-clock { display: none; }
+
+html.kiosk .time-display {
+  top: var(--kiosk-row);
+  right: calc(32px + var(--kiosk-toolbar-width) + 10px);
+  min-height: 38px;
+  box-sizing: border-box;
+}
+
+html.kiosk .dashboard-render-toggle { top: var(--kiosk-row); }
+
+/* Side panel and dialogs keep clear of the status bar and the home indicator. */
+html.kiosk .side-panel-inner {
+  padding-top: calc(var(--kiosk-top) + 12px);
+  padding-bottom: calc(var(--kiosk-bottom) + 12px);
+}
+
+html.kiosk .settings-backdrop {
+  padding-top: calc(var(--kiosk-top) + 16px);
+  padding-bottom: calc(var(--kiosk-bottom) + 16px);
+}
+
+html.kiosk .walkthrough-controls { bottom: calc(var(--kiosk-bottom) + 24px); }
+html.kiosk .home-view-overlay { padding-top: var(--kiosk-top); }
+
+@media (max-width: 768px) {
+  html.kiosk .time-display { right: calc(18px + var(--kiosk-toolbar-width) + 8px); }
+  /* The bottom panel holds the side panel content: only the home indicator matters. */
+  html.kiosk .side-panel-inner { padding-top: 12px; }
+}
+
+/* Narrow phones: no room for one row, the toolbar goes below the weather again. */
+@media (max-width: 520px) {
+  html.kiosk .time-display { right: 18px; }
+  html.kiosk .dashboard-render-toggle { top: calc(var(--kiosk-row) + 52px); }
+}

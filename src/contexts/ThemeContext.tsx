@@ -4,6 +4,7 @@ import { getSetting, getSettings, updateSettings } from '../services/settingsSto
 import type { AppSettings } from '../services/settingsStore';
 import { SYSTEM_LOCATION } from '../constants/location';
 import { isTabletClass } from '../babylon/DeviceClass';
+import { applyKioskMode, watchDisplayMode } from '../services/kioskMode';
 
 type ThemeMode = 'dark' | 'light' | 'auto' | 'system';
 type ResolvedTheme = 'dark' | 'light';
@@ -137,6 +138,8 @@ function applyAppearance(resolved: ResolvedTheme) {
   root.setProperty('--panel-border-width', '1px');
   root.setProperty('--corner-radius', '12px');
 
+  applyKioskMode(s.kioskMode);
+
   // Notify listeners (e.g. 3D scene) that appearance changed
   window.dispatchEvent(new CustomEvent('appearance-changed'));
 }
@@ -210,6 +213,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, [theme]);
+
+  // Kiosk auto-detection follows display-mode changes (e.g. entering fullscreen).
+  useEffect(() => watchDisplayMode(() => applyKioskMode(getSettings().appearance.kioskMode)), []);
 
   // Apply data-theme attribute AND custom appearance variables
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { ArcRotateCamera, Camera, Ray, Vector3, type AbstractMesh, type Scene, type Node } from '@babylonjs/core';
+import type { HaDoorClicks } from '../components/DoorStatus';
 import { RoomDoors } from './RoomDoors';
 
 export type NavigationMode = 'normal' | 'walk' | 'fly';
@@ -164,7 +165,8 @@ export class WalkthroughCamera {
       const event = this.pendingHover; this.pendingHover = undefined;
       if (this.mode === 'walk' && !this.drag) {
         const hit = this.pointerPick(event);
-        const cursor = hit?.pickedMesh && this.roomDoors.has(hit.pickedMesh) && hit.distance <= 4 * this.scale ? 'pointer' : 'default';
+        const door = hit?.pickedMesh && (this.roomDoors.has(hit.pickedMesh) || this.haDoors()?.has(hit.pickedMesh));
+        const cursor = door && hit.distance <= 4 * this.scale ? 'pointer' : 'default';
         if (this.canvas.style.cursor !== cursor) this.canvas.style.cursor = cursor;
       }
     }
@@ -223,6 +225,8 @@ export class WalkthroughCamera {
     this.camera.beta = Math.max(.05, Math.min(Math.PI - .05, this.camera.beta - (event.clientY - this.drag.y) * .003));
     this.drag.x = event.clientX; this.drag.y = event.clientY; this.syncCamera();
   };
+  /** HA door rigs (entrance, balcony) registered by DoorStatus. */
+  private haDoors(): HaDoorClicks | undefined { return this.scene.metadata?.haDoorClicks; }
   private pointerPick(event: PointerEvent) {
     const rect = this.canvas.getBoundingClientRect();
     return this.scene.pick(event.clientX - rect.left, event.clientY - rect.top,
@@ -233,7 +237,7 @@ export class WalkthroughCamera {
     if (event.type === 'pointerup' && this.mode === 'walk' && this.tap?.id === event.pointerId && !this.tap.moved
       && Math.hypot(event.clientX - this.tap.x, event.clientY - this.tap.y) <= 6) {
       const hit = this.pointerPick(event);
-      if (hit?.pickedMesh && hit.distance <= 4 * this.scale) this.roomDoors.toggle(hit.pickedMesh);
+      if (hit?.pickedMesh && hit.distance <= 4 * this.scale && !this.roomDoors.toggle(hit.pickedMesh)) this.haDoors()?.toggle(hit.pickedMesh);
     }
     if (this.tap?.id === event.pointerId) this.tap = undefined;
     if (this.drag?.id === event.pointerId) this.drag = undefined;

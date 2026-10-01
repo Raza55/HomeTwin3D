@@ -16,7 +16,7 @@ import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH
 import { coffeeAlertEntityIds } from '../../services/coffeeState';
 import { notifyEntityStates } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
-import DoorStatus from '../../components/DoorStatus';
+import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -1238,6 +1238,7 @@ export default function Dashboard() {
       let pressedBlindId: string | null = null;
       let pressedTubeId: string | null = null;
       let pressedSmartDeviceId: string | null = null;
+      let pressedDoorMesh: AbstractMesh | null = null;
       let hoveredLightEntityId: string | null = null;
 
       ctx.scene.onPointerDown = (evt, pickResult) => {
@@ -1245,6 +1246,9 @@ export default function Dashboard() {
         if (matchingRef.current) return;
         if (evt.button > 0) return;
         if (!pickResult.hit || !pickResult.pickedMesh) return;
+        if ((ctx.scene.metadata?.haDoorClicks as HaDoorClicks | undefined)?.has(pickResult.pickedMesh)) {
+          pressedDoorMesh = pickResult.pickedMesh; pressStartX = evt.clientX; pressStartY = evt.clientY; return;
+        }
         const meta = pickResult.pickedMesh.metadata as { itFloorplanId?: string; entityId?: string; unassignedFloorplanId?: string; displayId?: string; blindId?: string; tubeId?: string; smartDeviceId?: string } | null;
         if(meta?.itFloorplanId){pressedITId=meta.itFloorplanId;pressStartX=evt.clientX;pressStartY=evt.clientY;return;}
 
@@ -1295,6 +1299,11 @@ export default function Dashboard() {
         if(pressedITId){const id=pressedITId;pressedITId=null;if(Math.hypot(_evt.clientX-pressStartX,_evt.clientY-pressStartY)<=MOVE_THRESHOLD){closeQuick();setITOpen(id);}return;}
         if (walkthroughRef.current?.mode !== 'normal' && walkthroughRef.current) return;
         if (matchingRef.current) return;
+        if (pressedDoorMesh) {
+          const mesh = pressedDoorMesh; pressedDoorMesh = null;
+          if (Math.hypot(_evt.clientX - pressStartX, _evt.clientY - pressStartY) <= MOVE_THRESHOLD) (ctx.scene.metadata?.haDoorClicks as HaDoorClicks | undefined)?.toggle(mesh);
+          return;
+        }
         if(pressedFloorplanId){const id=pressedFloorplanId;pressedFloorplanId=null;if(Math.hypot(_evt.clientX-pressStartX,_evt.clientY-pressStartY)<=MOVE_THRESHOLD){closeQuick();setMatchingCategory(configRef.current?.model?.floorplan?.objects.find(o=>o.id===id)?.domain==='light'?'light':'other');setMatchingObjectId(id);setMatchingOpen(true);}return;}
         if (pressedSmartDeviceId) {
           const dx = _evt.clientX - pressStartX;
@@ -1384,7 +1393,8 @@ export default function Dashboard() {
           else leaveQuick();
         }
         if (nextHoveredLight) setLightTouchZoneHovered(meshMapRef.current[nextHoveredLight], true);
-        if (pickResult.hit && (meshMeta?.unassignedFloorplanId || meshMeta?.entityId || meshMeta?.displayId || meshMeta?.blindId || meshMeta?.tubeId || meshMeta?.smartDeviceId)) {
+        const door = pickResult.hit && pickResult.pickedMesh && (ctx.scene.metadata?.haDoorClicks as HaDoorClicks | undefined)?.has(pickResult.pickedMesh);
+        if (door || pickResult.hit && (meshMeta?.unassignedFloorplanId || meshMeta?.entityId || meshMeta?.displayId || meshMeta?.blindId || meshMeta?.tubeId || meshMeta?.smartDeviceId)) {
           canvas!.style.cursor = 'pointer';
         } else {
           canvas!.style.cursor = 'default';

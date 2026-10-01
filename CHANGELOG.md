@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.27 – Türen per Klick öffnen, Flurschrank an der Haustür (02.10.2026)
+
+- Türen mit Türkontakt (Haustür, Balkon- und Fenstertüren) lassen sich per Klick auf das Türblatt öffnen und wieder schließen, in der normalen Ansicht und im Laufmodus. Das ist nur Darstellung: Es wird nichts geschaltet, und sobald der Türkontakt in Home Assistant seinen Zustand ändert, gilt wieder der echte Zustand.
+- Modellwerkzeuge v107–v110: Der Flurschrank neben der Haustür steht jetzt an der Ecke und ist 28 cm schmaler, die Haustür schwenkt nicht mehr in den Schrank und öffnet bis 75°.
+
 ## 0.5.26 – Tagesdemo: Das Board als Fernbedienung (01.10.2026)
 
 - Neue Szene zur Dämmerung: Ein sichtbarer Finger tippt im 3D-Plan aufs Rollo, im Rollo-Popup auf „Alle Rollos im Raum schließen“ – die Rollos fahren gemeinsam herunter. Danach tippt er eine Lampe an, wählt im Licht-Popup Violett und zieht die Helligkeit auf 45 %. Alles läuft über die echten Popups und Service-Aufrufe.

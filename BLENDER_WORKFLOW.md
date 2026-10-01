@@ -6,7 +6,33 @@ sie bestätigt nicht den aktuellen Inhalt eines beliebigen Browsers.
 
 **Ablauf für jede Modelländerung (Blender → GLB-Patch → Import): [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md).**
 
-## Schlafzimmer v106 (29.09.2026) – aktueller Modellstand
+## Haustür-Öffnungswinkel v108–v110 (02.10.2026) – aktueller Modellstand
+
+Die Haustür öffnet nur noch bis 75° statt 90° (Benutzerwahl; Zwischenstände v108 = 80°, v109 = 77°).
+`tools/entrance-swing-v1NN.py` setzt `ha_door_geometry.swingDegrees` an den Türteilen und das Maximum der Blender-Steuerung;
+`node tools/entrance-swing-v1NN.mjs` überträgt den Wert in `extras.ha_door` des Knotens `Haustuer_Rechts`. Die Geometrie bleibt unverändert.
+Neueste Dateien: `Wohnung_v110_3Dash_Haustuer75.blend/.glb`. Direkt in den gemeinsamen Add-on-Stand übernommen (Revision 256; Backups unter `.private/backups/`).
+
+Seit diesem Stand lassen sich HA-Türen (Haustür, Balkon-/Fenstertüren) per Klick auf das Türblatt öffnen und schließen,
+im normalen Modus und im Laufmodus (`DoorStatus` stellt `scene.metadata.haDoorClicks` bereit). Das ist eine lokale Darstellung:
+Sobald der Türkontakt in HA seinen Zustand ändert, gilt wieder der HA-Zustand.
+
+## Flurschrank v107 (02.10.2026)
+
+Die Haustür schwang beim Öffnen in den Glasschrank daneben (frei waren nur ca. 53°, die Animation öffnet 90°).
+`tools/entrance-cabinet-v107.py` (auf der v106-Quelle) schiebt den Schrank entlang seiner Wand bis an die Ecke (Ende der Sockelleiste, 5 mm Abstand, +9,1 cm)
+und macht ihn 28 cm schmaler (1,20 → 0,92 m). Jede Glastür verliert 14 cm innerhalb der Verglasung (stetige, stückweise lineare Abbildung entlang der Schrankachse),
+so behalten Seitenwände, Rahmen, Ringgriffe, Griffschilder und Schubladenbügel ihre Form. Die Burg auf dem Kranz wird einheitlich entlang der Achse skaliert (77 %);
+eine gemeinsame Funktion für alle Burgteile ist nötig, weil der optimierte GLB Vertices zwischen Mauer und Türmen teilt.
+Ein 2D-Kollisionstest (Separating Axis, Haustürblatt samt Beschlägen gegen den Schrankgrundriss) ergibt: Die Tür ist bis über 90° frei, `swingDegrees` bleibt 90.
+
+Das Skript speichert `Wohnung_v107_3Dash_Flurschrank.blend` und die Operationen (`map_axis`, `scale_axis`, `translate`) in `.qa/entrance-cabinet-v107.json`.
+`node tools/entrance-cabinet-v107.mjs` wendet dieselben Funktionen auf den optimierten v106-GLB an (95 Operationen, 7.676 Dreiecke, bei überlappenden Boxen gewinnt die kleinste;
+geteilte Vertices müssen auf dieselbe Position fallen). Kontrolle: Schrankgrenzen im GLB entlang der Achse stimmen auf 0,1 mm mit Blender überein.
+Import über `tools/entrance-cabinet-v107-import.html` (Backups `config:before-entrance-cabinet-v107` / `model:before-entrance-cabinet-v107`).
+Am 02.10.2026 direkt in den gemeinsamen Add-on-Stand übernommen (Revision 253, Backup der vorherigen `state.json` unter `.private/backups/`).
+
+## Schlafzimmer v106 (29.09.2026)
 
 `tools/bedroom-v106.py` (auf der v105-Quelle) ändert:
 - Gepolstertes Kopfteil: Oberkante 1,09 → 0,92 m. Nur die oberen Vertices wandern, die Fase bleibt erhalten; der Hue-Lightstrip auf der Kante folgt.

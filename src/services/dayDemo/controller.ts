@@ -30,8 +30,6 @@ export interface DayDemoSceneDeps {
   walk?: WalkControl;
   /** TV screen planes (for the cinema shot). */
   tvPlanes?(): AbstractMesh[];
-  /** Switches the plan to the energy chapters' look (sketch, see-through) and back, for preparing its shaders. */
-  sketchView?(on: boolean): void;
   /** Stops a running board interaction (finger + popup) on jumps and at the end. */
   cancelControl?(): void;
 }
@@ -207,12 +205,9 @@ export class DayDemoController {
     for (const clock of [3 * 60, 13 * 60]) {
       updateSunPosition(sun, hemi, latitude, longitude, clock, northOffset, 1);
       prepareCurrentLightVariants(scene);
-      // The energy chapters (at night) show the see-through sketch model: its variants too.
-      if (clock < 12 * 60 && this.deps.sketchView) {
-        this.deps.sketchView(true);
-        prepareCurrentLightVariants(scene);
-        this.deps.sketchView(false);
-      }
+      // Not the energy chapters' sketch view: switching it on and off here (all lamps dark) left the
+      // lamps lighting fewer surfaces later (the video evening lost its Hue Sync glow). Its switch in
+      // the demo happens behind a veil instead.
       this.preparing = this.preparing! + .3;
       this.emit();
       await new Promise(resolve => setTimeout(resolve, 0));

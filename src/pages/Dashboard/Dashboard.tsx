@@ -31,7 +31,7 @@ import { isDisabledForDebug } from '../../babylon/DebugFlags';
 import { setupGlowOccluders } from '../../babylon/GlowOccluder';
 import { invalidateShadowsNear } from '../../babylon/ShadowRange';
 import { batchStaticSunShadows } from '../../babylon/ShadowCasterBatch';
-import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance, setSketchTransparency } from '../../babylon/ModelLoader';
+import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance } from '../../babylon/ModelLoader';
 import { disposeImportedObject, loadImportedObject, type ImportedObjectLoadResult } from '../../babylon/ImportedObjectLoader';
 import { createEdgeOutline, type EdgeOutlineControls } from '../../babylon/EdgeOutline';
 import {
@@ -1844,10 +1844,6 @@ export default function Dashboard() {
         },
         tvPlanes: () => Object.values(displayMeshMapRef.current).filter(entry => entry.config.kind === 'tv').map(entry => entry.plane),
         cancelControl: () => touch?.cancel(),
-        sketchView: on => {
-          applyTexturesRef.current(on ? false : getSetting('render').showTextures, false);
-          setSketchTransparency(ctx.scene, on ? .45 : 1);
-        },
         onClock: (minutes, weather) => {
           // Coarse steps keep the (large) dashboard from re-rendering every frame.
           const step = Math.floor(minutes / 5) * 5;
@@ -1908,13 +1904,15 @@ export default function Dashboard() {
             setDemoEnergyMode(mode);
             // Lift the veil once three frames in a row are quick again (at most 3 s).
             let quick = 0, last = performance.now();
-            const until = last + 3000;
+            const lift = () => { ctx.scene.onAfterRenderObservable.remove(observer); clearTimeout(timer); if (switchId === veilSwitch) setDemoVeil(false); };
             const observer = ctx.scene.onAfterRenderObservable.add(() => {
               const now = performance.now();
               quick = now - last < 40 ? quick + 1 : 0;
               last = now;
-              if (quick >= 3 || now > until) { ctx.scene.onAfterRenderObservable.remove(observer); if (switchId === veilSwitch) setDemoVeil(false); }
+              if (quick >= 3) lift();
             });
+            // At the latest after 3 s, also when no frames come (paused demo, resting render loop).
+            const timer = setTimeout(lift, 3000);
           }));
         }
         if (id === 'visitor') wildlifeRef.current?.visit();

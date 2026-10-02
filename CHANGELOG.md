@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.46 – Demo: Hue-Sync-Stimmung beim Videoabend wieder da (03.10.2026)
+
+- Der Videoabend zeigt wieder das atmosphärische Hue-Sync-Licht rund um den Fernseher. Ursache war die mit 0.5.43 eingeführte Vorbereitung der Skizzenansicht vor dem Demostart: Das Umschalten bei dunklen Lampen ließ sie danach weniger Flächen beleuchten. Die Vorbereitung entfällt; der Wechsel zur Energieansicht liegt weiter hinter dem Schleier.
+- Der Schleier beim Wechsel zur Energieansicht hebt sich spätestens nach 3 s auch dann, wenn keine Bilder gerendert werden (z. B. pausierte Demo).
+- Modell v111 (Schreibtisch: Monitor aus dem Standfuß, Kopfhörer auf der Erhöhung, Studiomikrofon) ist im Add-on-Stand; die Skripte liegen unter `tools/desk-v111.*`.
+
 ## 0.5.45 – Demo: Küche zum Schluss aus etwas Abstand (02.10.2026)
 
 - Kochen: Nach dem Blick zu den Spots geht die Kamera langsam Richtung Esstisch zurück – Spots, ihr rötliches Licht und die ganze Küchenzeile in einem Bild.

@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.31 – Energiefluss im Skizzenmodus (02.10.2026)
+
+- Neue Energieansicht im Skizzenmodus (Texturen aus, Blitz-Knopf oben rechts): Alle Verbraucher aus dem Energie-Dashboard von Home Assistant erscheinen im 3D-Plan als leuchtende Kugeln in Raumfarben, mit animierten Stromlinien von der Zuleitung (Haustür). Größe, Linienstärke und Tempo folgen der aktuellen Leistung; Beschriftungen zeigen Watt und Anteil.
+- Seitenpanel „Energiefluss“: Leistung jetzt, Verbrauch heute (kWh), Anteile je Raum und eine Liste aller Verbraucher mit Watt, Anteil und Tagesverbrauch.
+- Leistungssensoren, Namen und Räume werden aus Home Assistant gelesen; Rollo-Motoren erscheinen an ihrem Rollo, Steckdosen an passenden Objekten oder Modellteilen, sonst in ihrem Bereich. Positionen lassen sich über `energyPlacement` in der privaten Konfiguration korrigieren.
+- Tests für Tagesdemo und Energiefluss laufen jetzt auch in der CI.
+
 ## 0.5.30 – Tagesdemo: Intro und Spiegel bei Nacht (02.10.2026)
 
 - Vor dem Start zeigt die Tagesdemo 16 Sekunden lang eine Intro-Karte: HomeTwin3D als App (Add-on) in Home Assistant, 3D-Frontend für aktuelle Apple- und Samsung-Tablets sowie Windows-PCs, Steuerung und Status im 3D-Plan, Basis als Open Source auf GitHub. Mit Countdown, „Jetzt starten“ und Beenden. Ein Autorenname kann über die privaten Installationswerte (`installation.author`) ergänzt werden.

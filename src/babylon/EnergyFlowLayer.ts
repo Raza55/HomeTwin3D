@@ -17,6 +17,12 @@ export interface EnergyNode {
   source: EnergyPlacementSource;
 }
 
+/**
+ * Flows and orbs render in their own group after the (see-through) model, so walls in
+ * front never fade them; the group keeps its own depth for lines crossing each other.
+ */
+const ENERGY_GROUP = 1;
+
 /** Room colours: distinct, readable on the light sketch model and in dark mode. */
 const ROOM_COLORS = ['#0ea5e9', '#f43f5e', '#f59e0b', '#22c55e', '#8b5cf6', '#f97316', '#14b8a6', '#ec4899', '#84cc16', '#6366f1'];
 
@@ -215,7 +221,7 @@ export class EnergyFlowLayer {
     this.hubOrb.position.copyFrom(hub);
     const hubMaterial = new StandardMaterial('energy-hub-mat', this.scene);
     hubMaterial.disableLighting = true; hubMaterial.emissiveColor = new Color3(1, 1, 1);
-    this.hubOrb.material = hubMaterial; this.hubOrb.isPickable = false;
+    this.hubOrb.material = hubMaterial; this.hubOrb.isPickable = false; this.hubOrb.renderingGroupId = ENERGY_GROUP;
     for (const node of nodes) {
       const color = Color3.FromHexString(node.color);
       const path = this.arc(hub, node.position);
@@ -240,7 +246,7 @@ export class EnergyFlowLayer {
       haloMaterial.disableLighting = true; haloMaterial.emissiveColor = color; haloMaterial.opacityTexture = this.haloTexture;
       haloMaterial.alphaMode = 1; // additive glow
       halo.material = haloMaterial;
-      for (const mesh of [tube, orb, halo]) mesh.metadata = { ...mesh.metadata, energyFlow: true };
+      for (const mesh of [tube, orb, halo]) { mesh.metadata = { ...mesh.metadata, energyFlow: true }; mesh.renderingGroupId = ENERGY_GROUP; }
       this.flows.push({ node, tube, orb, halo, dash, material, orbMaterial, length, watts: 0, share: 0, path });
       this.applySize(this.flows[this.flows.length - 1]);
     }
@@ -260,7 +266,7 @@ export class EnergyFlowLayer {
     const u = this.unit, on = flow.watts >= 1, s = Math.sqrt(flow.share);
     const radius = on ? (.014 + .05 * s) * u : .006 * u;
     MeshBuilder.CreateTube(flow.tube.name, { path: flow.path, radius, tessellation: 6, instance: flow.tube });
-    flow.material.alpha = on ? .7 + .3 * s : .3;
+    flow.material.alpha = on ? .85 + .15 * s : .35;
     const diameter = on ? (.16 + .4 * s) * u : .08 * u;
     flow.orb.scaling.setAll(diameter);
     flow.orbMaterial.alpha = on ? 1 : .45;

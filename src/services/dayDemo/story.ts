@@ -236,15 +236,17 @@ export const STORY: StoryBeat[] = [
   }),
   beat('17:33', [{ type: 'door', kind: 'entrance', open: false }]),
   beat('18:45', [
-    // Friendly warm white in the kitchen (bright enough to cook), fading in visibly.
-    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 90, kelvin: 3000, ramp: 1.5 },
+    // Cold white to start cooking; the colour then turns warm white and finally a cosy reddish glow (below).
+    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 100, kelvin: 5500, ramp: 1 },
     { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 70, kelvin: 2700, ramp: 2 },
     { type: 'fan', rooms: ['kitchen'], on: true, percentage: 60 },
   ], {
     id: 'cooking', icon: 'utensils',
     title: { de: 'Kochen', en: 'Cooking' },
-    text: { de: 'Freundliches, warmes Licht in der Küche, gedimmtes Licht am Esstisch, die Lüftung läuft mit.', en: 'Friendly warm light in the kitchen, dimmed light at the dining table, ventilation on.' },
+    text: { de: 'Kaltweißes Arbeitslicht zum Schnippeln, dann wird es warmweiß und zum Essen rötlich gemütlich; die Lüftung läuft mit.', en: 'Cool white task light for chopping, then warm white and a cosy reddish glow for dinner; ventilation on.' },
   }),
+  beat('18:56', [{ type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 90, kelvin: 3000, ramp: 4 }]),
+  beat('19:08', [{ type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 80, hue: 12, saturation: 62, ramp: 4 }]),
   beat('19:35', [{ type: 'fan', on: false }, { type: 'light', target: { rooms: ['kitchen'] }, on: true, brightness: 30, kelvin: WARM, ramp: 2 }]),
   beat('19:36', [
     { type: 'door', kind: 'window', open: true },
@@ -570,7 +572,8 @@ export const SHOTS: Shot[] = [
   shot('cooking', '18:46', '19:25', [
     { t: 0, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 8 },
     { t: .55, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
-    { t: 1, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 46 },
+    // Then up to the kitchen lamps while their light turns from warm white to a reddish glow.
+    { t: 1, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 14, drop: -1.1 },
   ]),
   // The blinds are down for the night: the shot stays inside and turns to the glowing colour lamps.
   shot('cinema', '20:22', '21:02', [
@@ -581,9 +584,9 @@ export const SHOTS: Shot[] = [
   shot('gaming', '22:24', '22:58', [
     { t: 0, eye: { at: { kind: 'pc' }, metres: 1.6 }, look: { kind: 'pc' } },
     { t: .4, eye: { at: { kind: 'pc' }, metres: 1.4 }, look: { kind: 'pc' } },
-    // Step back and look down at the desk: the PC case glows in rainbow colours. Hold there.
-    { t: .72, eye: { at: { kind: 'pc' }, metres: 1.5, height: 2.1 }, look: { kind: 'pcCase' }, drop: .55 },
-    { t: 1, eye: { at: { kind: 'pc' }, metres: 1.5, height: 2.1 }, look: { kind: 'pcCase' }, drop: .55 },
+    // Sit down in front of the desk (the chair stands behind): the whole PC case under it glows in rainbow colours. Hold there.
+    { t: .72, eye: { at: { kind: 'pc' }, metres: 1.2, height: .93 }, look: { kind: 'pcCase' } },
+    { t: 1, eye: { at: { kind: 'pc' }, metres: 1.1, height: .9 }, look: { kind: 'pcCase' } },
   ]),
 ];
 

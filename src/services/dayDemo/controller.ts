@@ -91,6 +91,8 @@ export class DayDemoController {
   private tour = true;
   private tourTime = 0;
   private framing = { zoom: 1, tilt: 0 };
+  /** How far the orbit rises above its path to stay clear of neighbouring houses (radians). */
+  private lift = 0;
   private focusKey = '';
   private focusPoint: Vector3 | null = null;
   private home: { alpha: number; beta: number; radius: number; target: Vector3 } | null = null;
@@ -461,10 +463,42 @@ export class DayDemoController {
     const beta = this.home.beta + (cinematicBeta - this.home.beta) * smooth + .08 * Math.sin(t * Math.PI * 2 / 29) * smooth;
     // A slow orbit (about 1.5 minutes per turn) shows each room from changing sides.
     camera.alpha += dt / 1000 * .07 * smooth;
-    camera.beta = Math.max(camera.lowerBetaLimit ?? .05, Math.min(camera.upperBetaLimit ?? 1.5, beta));
     const zoom = 1 + (this.framing.zoom - 1) * smooth;
-    const radius = this.home.radius * zoom * (1 + .04 * Math.sin(t * Math.PI * 2 / 37) * smooth);
-    camera.radius = Math.max(camera.lowerRadiusLimit ?? 0, Math.min(camera.upperRadiusLimit ?? Infinity, radius));
+    const radius = Math.max(camera.lowerRadiusLimit ?? 0, Math.min(camera.upperRadiusLimit ?? Infinity, this.home.radius * zoom * (1 + .04 * Math.sin(t * Math.PI * 2 / 37) * smooth)));
+    // Never inside or behind a neighbouring house: rise (smaller beta) until camera and view are clear.
+    const wanted = Math.max(camera.lowerBetaLimit ?? .05, Math.min(camera.upperBetaLimit ?? 1.5, beta));
+    const clear = this.clearBeta(camera.target, camera.alpha, wanted, radius);
+    this.lift += (wanted - clear - this.lift) * (wanted - clear > this.lift ? 1 - Math.exp(-dt / 250) : follow);
+    camera.beta = Math.max(.12, wanted - this.lift);
+    camera.radius = radius;
+  }
+
+  /** Largest beta ≤ `beta` whose camera position and line of sight stay out of the neighbouring houses. */
+  private clearBeta(target: Vector3, alpha: number, beta: number, radius: number): number {
+    const buildings = (this.deps.scene.metadata?.buildings as { points: [number, number][]; top: number }[] | undefined) ?? [];
+    // The last outline is the flat's own building (the camera may look down into it).
+    const others = buildings.slice(0, -1);
+    if (!others.length) return beta;
+    const inPolygon = (x: number, z: number, points: [number, number][]) => {
+      let hit = false;
+      for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const [xi, zi] = points[i], [xj, zj] = points[j];
+        if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    // With 2 m to spare around the facades (the near plane would cut into a wall).
+    const inside = (x: number, y: number, z: number) => others.some(b => y <= b.top + 1.5
+      && [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dz]) => inPolygon(x + dx, z + dz, b.points)));
+    const blocked = (b: number) => {
+      const cx = radius * Math.cos(alpha) * Math.sin(b), cy = radius * Math.cos(b), cz = radius * Math.sin(alpha) * Math.sin(b);
+      // Camera and the outer part of the view (near the target, our own walls may be in the way).
+      for (const k of [1, .85, .7, .55, .4]) if (inside(target.x + cx * k, target.y + cy * k, target.z + cz * k)) return true;
+      return false;
+    };
+    let b = beta;
+    while (b > .15 && blocked(b)) b -= .03;
+    return b;
   }
 
 

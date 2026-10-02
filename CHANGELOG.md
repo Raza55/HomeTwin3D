@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.44 – Demo: Kamera nie in Nachbarhäusern, ganzer PC beim Gaming, Lichtfarbe beim Kochen (02.10.2026)
+
+- Die Rundflug-Kamera der Demo steigt über Nachbarhäuser, statt hineinzufahren oder hinter einer Fassade zu landen (Umrisse und Dachhöhen, 2 m Abstand); greift bei jeder Startansicht, z. B. beim Schneeschauer am Ende.
+- Gaming: Die Kamera sitzt vor dem Schreibtisch auf Tischhöhe und zeigt das ganze beleuchtete PC-Gehäuse statt nur einem Ausschnitt von oben.
+- Kochen: Das Küchenlicht wechselt sichtbar von kaltweiß über warmweiß zu einem rötlichen Ton; zum Schluss schaut die Kamera zu den Spots hoch.
+
 ## 0.5.43 – Performance-Pass, freundliches Kochlicht (02.10.2026)
 
 - Demo: Beim Kochen geht freundliches warmweißes Licht in der Küche an (3000 K, sanft eingeblendet).

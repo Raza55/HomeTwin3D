@@ -4,7 +4,7 @@ import { Zap, X } from 'lucide-react';
 import type { AppConfig, DisplayConfig, HAState } from '../../types';
 import { EnergyFlowLayer, placeConsumers, type EnergyNode } from '../../babylon/EnergyFlowLayer';
 import { setSketchTransparency } from '../../babylon/ModelLoader';
-import { energyInPeriod, energyShares, loadEnergyConsumers, powerWatts, type EnergyConsumer, type EnergyPeriod } from '../../services/energyFlow';
+import { energyInPeriod, energyShares, loadEnergyConsumers, powerWatts, resolveConsumers, type EnergyConsumer, type EnergyPeriod, type EnergyPrefs, type EnergyRegistry } from '../../services/energyFlow';
 import { useMapMarkers } from '../useMapMarkers';
 import { useLanguage } from '../../contexts/LanguageContext';
 import './EnergyFlowView.css';
@@ -52,6 +52,8 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
   const layer = useRef<EnergyFlowLayer | null>(null);
   const positions = useRef(new Map<string, Vector3>());
   const labels = useRef<Record<string, HTMLDivElement | null>>({});
+  // For finding power sensors again once Home Assistant's states have arrived (right after a reload they may not).
+  const source = useRef<{ prefs: EnergyPrefs; registry: EnergyRegistry; seen: number } | null>(null);
   const unit = config.model?.scale ?? 1;
 
   // Hide the other plan markers and make the model see-through while the energy view is open.
@@ -64,8 +66,9 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
   useEffect(() => {
     if (!connection) return;
     let cancelled = false;
-    loadEnergyConsumers(connection, states()).then(({ consumers: list, registry }) => {
+    loadEnergyConsumers(connection, states()).then(({ consumers: list, registry, prefs }) => {
       if (cancelled) return;
+      source.current = { prefs, registry, seen: Object.keys(states()).length };
       setConsumers(list);
       if (!list.length) return;
       const placed = placeConsumers(scene, config, list, registry, displays());
@@ -85,6 +88,13 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
     if (!consumers?.length) return;
     const poll = () => {
       const current = states();
+      // Power sensors are recognised by their state (W, device_class power): look again when more states are known.
+      const count = Object.keys(current).length;
+      if (source.current && count > source.current.seen && consumers.some(c => !c.powerEntityId)) {
+        source.current.seen = count;
+        const again = resolveConsumers(source.current.prefs, source.current.registry, current);
+        if (again.some((c, i) => c.powerEntityId !== consumers[i]?.powerEntityId)) { setConsumers(again); return; }
+      }
       const { total: sum, items } = energyShares(consumers, c => c.powerEntityId ? powerWatts(current[c.powerEntityId]) : 0);
       layer.current?.update(new Map(items.map(i => [i.consumer.id, { watts: i.watts, share: i.share }])));
       // Rounded for the labels: their raster only redraws when the text changes.

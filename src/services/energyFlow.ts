@@ -18,6 +18,7 @@ export interface EnergyConsumer {
   includedIn?: string;
 }
 
+export type EnergyPrefs = Prefs;
 interface Prefs { device_consumption?: { stat_consumption: string; stat_rate?: string; name?: string; included_in_stat?: string }[] }
 interface EntityEntry { entity_id: string; device_id?: string | null; area_id?: string | null; name?: string | null; original_name?: string | null; disabled_by?: string | null }
 interface DeviceEntry { id: string; area_id?: string | null; name?: string | null; name_by_user?: string | null }
@@ -33,7 +34,7 @@ interface Requester { request(message: Record<string, unknown>): Promise<unknown
 const asArray = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
 
 /** Reads the energy dashboard and the registries (read-only). Empty without an energy dashboard. */
-export async function loadEnergyConsumers(ha: Requester, states: Record<string, HAState>): Promise<{ consumers: EnergyConsumer[]; registry: EnergyRegistry }> {
+export async function loadEnergyConsumers(ha: Requester, states: Record<string, HAState>): Promise<{ consumers: EnergyConsumer[]; registry: EnergyRegistry; prefs: EnergyPrefs }> {
   const [prefs, entities, devices, areas] = await Promise.all([
     ha.request({ type: 'energy/get_prefs' }).catch(() => ({})),
     ha.request({ type: 'config/entity_registry/list' }).catch(() => []),
@@ -41,7 +42,7 @@ export async function loadEnergyConsumers(ha: Requester, states: Record<string, 
     ha.request({ type: 'config/area_registry/list' }).catch(() => []),
   ]);
   const registry: EnergyRegistry = { entities: asArray(entities), devices: asArray(devices), areas: asArray(areas) };
-  return { consumers: resolveConsumers((prefs ?? {}) as Prefs, registry, states), registry };
+  return { consumers: resolveConsumers((prefs ?? {}) as Prefs, registry, states), registry, prefs: (prefs ?? {}) as Prefs };
 }
 
 /** Energy dashboard entries → consumers with name, area and live power sensor. */

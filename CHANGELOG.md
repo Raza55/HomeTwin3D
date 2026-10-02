@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.32 – Energiefluss: Gerätetypen, Hauptschalter, Zeitraum (02.10.2026)
+
+- Verbraucher werden nach Gerätetyp platziert (Fernseher, PC, Waschmaschine, Trockner, Kaffeemaschine, Kühlschrank, NAS) – auch bei abweichender Schreibweise und nur innerhalb ihres Bereichs; mehrere Steckdosen an einem Gerät liegen nebeneinander.
+- Die Zuleitung beginnt am Verbraucher „Main Switch“ / Hauptschalter / Zähler, sonst an der Haustür.
+- Im Panel lässt sich der Verbrauch zwischen Heute, Diese Woche und Dieser Monat umschalten.
+
 ## 0.5.31 – Energiefluss im Skizzenmodus (02.10.2026)
 
 - Neue Energieansicht im Skizzenmodus (Texturen aus, Blitz-Knopf oben rechts): Alle Verbraucher aus dem Energie-Dashboard von Home Assistant erscheinen im 3D-Plan als leuchtende Kugeln in Raumfarben, mit animierten Stromlinien von der Zuleitung (Haustür). Größe, Linienstärke und Tempo folgen der aktuellen Leistung; Beschriftungen zeigen Watt und Anteil.

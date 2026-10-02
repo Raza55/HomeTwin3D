@@ -435,6 +435,7 @@ export default function Dashboard() {
   const [energyView, setEnergyView] = useState(() => getSetting('render').energyView ?? true);
   const changeEnergyView = useCallback((on: boolean) => { setEnergyView(on); updateSettings('render', { energyView: on }); }, []);
   const energyStates = useCallback(() => lastStatesRef.current, []);
+  const energyLampPoint = useCallback((entityId: string) => meshMapRef.current[entityId]?.bulb?.getAbsolutePosition().clone() ?? null, []);
   const energyDisplays = useCallback(() => Object.values(displayMeshMapRef.current).map(entry => ({ config: entry.config, plane: entry.plane })), []);
   const [sketchColor, setSketchColor] = useState(() => getSetting('render').sketchColor);
   const [sketchSpecular, setSketchSpecular] = useState(() => getSetting('render').sketchSpecular);
@@ -2586,7 +2587,7 @@ export default function Dashboard() {
         />
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
-        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haStatus === 'connected' && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} onClose={() => changeEnergyView(false)} /></Suspense>}
+        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haStatus === 'connected' && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} onClose={() => changeEnergyView(false)} /></Suspense>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} />}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && <TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/>}

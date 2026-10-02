@@ -6,9 +6,15 @@
  */
 import type { HAState } from '../types';
 
+/** Filter layers of the energy view. */
+export type EnergyCategory = 'device' | 'blind' | 'light';
+
 export interface EnergyConsumer {
   /** The energy statistic (kWh) from the energy dashboard. */
   id: string;
+  category: EnergyCategory;
+  /** A single lamp (its own PowerCalc sensor), shown at the lamp: the light entity. */
+  lamp?: string;
   name: string;
   /** Live power sensor (W): the dashboard's `stat_rate`, else a power sensor of the same device. */
   powerEntityId?: string;
@@ -20,7 +26,7 @@ export interface EnergyConsumer {
 
 export type EnergyPrefs = Prefs;
 interface Prefs { device_consumption?: { stat_consumption: string; stat_rate?: string; name?: string; included_in_stat?: string }[] }
-interface EntityEntry { entity_id: string; device_id?: string | null; area_id?: string | null; name?: string | null; original_name?: string | null; disabled_by?: string | null }
+interface EntityEntry { entity_id: string; device_id?: string | null; area_id?: string | null; name?: string | null; original_name?: string | null; disabled_by?: string | null; platform?: string | null }
 interface DeviceEntry { id: string; area_id?: string | null; name?: string | null; name_by_user?: string | null }
 
 export interface EnergyRegistry {
@@ -57,8 +63,13 @@ export function resolveConsumers(prefs: Prefs, registry: EnergyRegistry, states:
     const device = entity?.device_id ? deviceById.get(entity.device_id) : undefined;
     const friendly = states[entry.stat_consumption]?.attributes.friendly_name;
     const name = entry.name || device?.name_by_user || device?.name || (typeof friendly === 'string' ? friendly : '') || entry.stat_consumption.split('.')[1];
+    const siblings = entity?.device_id ? byDevice.get(entity.device_id) ?? [] : [];
+    // Blind motors drive a cover; lights are lamps or estimated light groups (e.g. PowerCalc "Licht Küche").
+    const category: EnergyCategory = siblings.some(e => e.entity_id.startsWith('cover.')) ? 'blind'
+      : siblings.some(e => e.entity_id.startsWith('light.')) || (entity?.platform === 'powercalc' && !entity.device_id) || /^(licht|light|lights|beleuchtung)\b/i.test(name) ? 'light' : 'device';
     return {
       id: entry.stat_consumption,
+      category,
       name,
       powerEntityId: entry.stat_rate || powerSensorOf(entry.stat_consumption, entity?.device_id ? byDevice.get(entity.device_id) ?? [] : [], states),
       deviceId: entity?.device_id || undefined,
@@ -68,6 +79,32 @@ export function resolveConsumers(prefs: Prefs, registry: EnergyRegistry, states:
   });
   const names = cleanNames(consumers.map(c => c.name));
   return consumers.map((c, i) => ({ ...c, name: names[i] }));
+}
+
+/**
+ * Single lamps with their own estimated sensors (PowerCalc puts them on the lamp's device):
+ * the "individual lamps" layer shows them at the lamps instead of the room groups.
+ */
+export function lampConsumers(registry: EnergyRegistry, states: Record<string, HAState>, lights: { entityId: string; label: string }[]): EnergyConsumer[] {
+  const entityById = new Map(registry.entities.map(e => [e.entity_id, e]));
+  const deviceById = new Map(registry.devices.map(d => [d.id, d]));
+  const seen = new Set<string>();
+  const result: EnergyConsumer[] = [];
+  for (const light of lights) {
+    const entry = entityById.get(light.entityId);
+    if (!entry?.device_id) continue;
+    const siblings = registry.entities.filter(e => e.device_id === entry.device_id && e.platform === 'powercalc' && !e.disabled_by && e.entity_id.startsWith('sensor.'));
+    const unit = (id: string) => String(states[id]?.attributes.unit_of_measurement ?? '');
+    const energy = siblings.find(e => states[e.entity_id]?.attributes.device_class === 'energy' || /wh$/i.test(unit(e.entity_id)) || /_energy$/.test(e.entity_id));
+    if (!energy || seen.has(energy.entity_id)) continue;
+    seen.add(energy.entity_id);
+    const power = siblings.find(e => e !== energy && (isPowerState(states[e.entity_id]) || /_power$/.test(e.entity_id)));
+    result.push({
+      id: energy.entity_id, category: 'light', lamp: light.entityId, name: light.label,
+      powerEntityId: power?.entity_id, deviceId: entry.device_id, areaId: entry.area_id || deviceById.get(entry.device_id)?.area_id || undefined,
+    });
+  }
+  return result;
 }
 
 const isPowerState = (state: HAState | undefined) => {

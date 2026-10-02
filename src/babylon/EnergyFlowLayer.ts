@@ -6,7 +6,7 @@ import { floorplanId } from './FloorplanBindings';
 import { deviceKinds, isSupplyName, matchScore, type EnergyConsumer, type EnergyRegistry } from '../services/energyFlow';
 
 /** How a consumer found its place (shown for feedback). */
-export type EnergyPlacementSource = 'override' | 'blind' | 'object' | 'model' | 'room' | 'home';
+export type EnergyPlacementSource = 'override' | 'lamp' | 'blind' | 'object' | 'model' | 'room' | 'home';
 
 export interface EnergyNode {
   id: string;
@@ -15,6 +15,8 @@ export interface EnergyNode {
   color: string;
   position: Vector3;
   source: EnergyPlacementSource;
+  /** A single lamp: its label only shows while it is on. */
+  lamp: boolean;
 }
 
 /**
@@ -42,7 +44,7 @@ const centerOf = (meshes: AbstractMesh[]): Vector3 | null => {
  * a floorplan object or display with a matching label, a model part with a
  * matching name, or a spot around its room's centre.
  */
-export function placeConsumers(scene: Scene, config: AppConfig, consumers: EnergyConsumer[], registry: EnergyRegistry, displays: { config: DisplayConfig; plane: AbstractMesh }[]): { nodes: EnergyNode[]; hub: Vector3 } {
+export function placeConsumers(scene: Scene, config: AppConfig, consumers: EnergyConsumer[], registry: EnergyRegistry, displays: { config: DisplayConfig; plane: AbstractMesh }[], lampPoint: (entityId: string) => Vector3 | null = () => null): { nodes: EnergyNode[]; hub: Vector3 } {
   const scale = config.model?.scale ?? 1;
   const meshes = scene.meshes.filter(m => !m.isDisposed() && m.getTotalVertices() > 0 && !m.name.startsWith('energy-'));
   const all = centerOf(meshes) ?? Vector3.Zero();
@@ -117,6 +119,7 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
     let position: Vector3 | null = null, source: EnergyPlacementSource = 'home';
     const override = config.energyPlacement?.[consumer.id];
     if (override) { position = new Vector3(override.x, override.y, override.z); source = 'override'; }
+    if (!position && consumer.lamp) { const at = lampPoint(consumer.lamp); if (at) { position = at.clone(); source = 'lamp'; } }
     if (!position && consumer.deviceId) {
       const motorOf = registry.entities.find(e => e.device_id === consumer.deviceId && e.entity_id.startsWith('cover.'));
       const panel = motorOf ? blindPanel(motorOf.entity_id) : null;
@@ -153,11 +156,12 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
       const index = used.get('') ?? 0; used.set('', index + 1);
       position = new Vector3(all.x + index * .4 * scale, floor + .9 * scale, all.z);
     }
-    return { id: consumer.id, name: consumer.name, roomName, color: colorFor(roomName), position, source };
+    return { id: consumer.id, name: consumer.name, roomName, color: colorFor(roomName), position, source, lamp: !!consumer.lamp };
   });
 
   // Two consumers at one device (e.g. two TV plugs): side by side instead of on top of each other.
   nodes.forEach((node, i) => {
+    if (node.lamp) return;
     let k = 0;
     while (nodes.slice(0, i).some(other => Vector3.Distance(other.position, node.position) < .25 * scale) && k < 8) {
       k++;

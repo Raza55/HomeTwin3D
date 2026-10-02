@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanNames, deviceKinds, energyInPeriod, energyShares, isSupplyName, matchScore, periodStart, powerWatts, resolveConsumers } from '../src/services/energyFlow.ts';
+import { cleanNames, deviceKinds, energyInPeriod, energyShares, isSupplyName, lampConsumers, matchScore, periodStart, powerWatts, resolveConsumers } from '../src/services/energyFlow.ts';
 
 const state = (value, unit = 'W', extra = {}) => ({ entity_id: 'x', state: String(value), attributes: { unit_of_measurement: unit, ...extra } });
 
@@ -97,4 +97,33 @@ test('device types and the supply are recognised by name', () => {
   assert.ok(isSupplyName('Main Switch'));
   assert.ok(isSupplyName('Hauptzähler'));
   assert.ok(!isSupplyName('Schreibtisch'));
+});
+
+test('consumers fall into the layers devices, blinds and lights', () => {
+  const prefs = { device_consumption: [{ stat_consumption: 'sensor.plug_tv_energy' }, { stat_consumption: 'sensor.blind_motor_energy' }, { stat_consumption: 'sensor.light_group_energy', name: 'Licht Küche' }] };
+  const registry = {
+    entities: [
+      { entity_id: 'sensor.plug_tv_energy', device_id: 'tv' },
+      { entity_id: 'sensor.blind_motor_energy', device_id: 'blind' }, { entity_id: 'cover.example_blind', device_id: 'blind' },
+      { entity_id: 'sensor.light_group_energy', platform: 'powercalc' },
+    ],
+    devices: [{ id: 'tv', name: 'TV' }, { id: 'blind', name: 'Motor' }], areas: [],
+  };
+  assert.deepEqual(resolveConsumers(prefs, registry, {}).map(c => c.category), ['device', 'blind', 'light']);
+});
+
+test('single lamps are found by their estimated sensors on the lamp device', () => {
+  const registry = {
+    entities: [
+      { entity_id: 'light.example_lamp', device_id: 'lamp', area_id: 'kitchen' },
+      { entity_id: 'sensor.example_lamp_power', device_id: 'lamp', platform: 'powercalc' },
+      { entity_id: 'sensor.example_lamp_energy', device_id: 'lamp', platform: 'powercalc' },
+      { entity_id: 'light.example_strip', device_id: 'strip' },
+    ],
+    devices: [{ id: 'lamp', name: 'Lamp' }, { id: 'strip', name: 'Strip' }], areas: [],
+  };
+  const states = { 'sensor.example_lamp_power': state(4.2, 'W', { device_class: 'power' }), 'sensor.example_lamp_energy': state(.1, 'kWh', { device_class: 'energy' }) };
+  const lamps = lampConsumers(registry, states, [{ entityId: 'light.example_lamp', label: 'Lampe' }, { entityId: 'light.example_strip', label: 'Strip' }]);
+  assert.equal(lamps.length, 1);
+  assert.deepEqual({ ...lamps[0] }, { id: 'sensor.example_lamp_energy', category: 'light', lamp: 'light.example_lamp', name: 'Lampe', powerEntityId: 'sensor.example_lamp_power', deviceId: 'lamp', areaId: 'kitchen' });
 });

@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.36 – Energiefluss: Ebenen und einzelne Lampen (02.10.2026)
+
+- Ebenen im Energiepanel: Geräte, Rollos und Licht lassen sich ein- und ausblenden (Rollos standardmäßig aus); die Auswahl bleibt auf dem Gerät gespeichert.
+- „Lampen einzeln“: Statt der Licht-Gruppen pro Raum erscheint jede Lampe mit eigenem (z. B. PowerCalc-)Sensor an ihrer Position im Modell – ohne Doppelzählung; Beschriftungen nur, solange eine Lampe an ist.
+- Nach dem Neuladen zeigt die Energieansicht nicht mehr 0 W: Leistungssensoren werden erkannt, sobald Home Assistant die Zustände geliefert hat.
+- Stromlinien und Verbrauchspunkte werden nach dem durchsichtigen Modell gezeichnet und bleiben voll sichtbar.
+
 ## 0.5.35 – Energiefluss: Bereiche ohne Objekte (02.10.2026)
 
 - Verbraucher in Home-Assistant-Bereichen ohne zugeordnete Objekte landen nicht mehr neben dem Gebäude: Der Bereich wird über gleichnamige Objekte, Raumbezeichnungen oder Rollos gefunden (z. B. „Kaffeezone“ an der Kaffeemaschine, „Balkon“ am Balkon).

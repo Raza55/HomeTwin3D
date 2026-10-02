@@ -17,7 +17,8 @@ import {
 
 interface Tree { x: number; z: number; trunk: number; perches: Vector3[] }
 interface Obstacle { x: number; z: number; halfX: number; halfZ: number }
-interface Courtyard { treeCenter: Vector3; playCenter: Vector3; benchCenter: Vector3; playBenchCenter: Vector3; trees?: Tree[]; obstacles?: Obstacle[]; seats?: Vector3[] }
+interface Deck { x: number; z: number; y: number; halfX: number; halfZ: number }
+interface Courtyard { treeCenter: Vector3; playCenter: Vector3; benchCenter: Vector3; playBenchCenter: Vector3; trees?: Tree[]; obstacles?: Obstacle[]; seats?: Vector3[]; decks?: Deck[] }
 interface OutdoorWeather { clouds: number; wet: number; snow: number; fog: number }
 
 export interface WildlifeOptions { reduced?: boolean }
@@ -30,7 +31,7 @@ export interface Wildlife {
 }
 
 const CAT_SCALE = 1.6;
-const BIRD_SCALE = 3;
+const BIRD_SCALE = 2.6;
 const TAU = Math.PI * 2;
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -54,13 +55,20 @@ class BirdFlapPlugin extends MaterialPluginBase {
       CUSTOM_VERTEX_DEFINITIONS: '#ifdef HT_BIRD\nattribute vec4 htFlap;\n#endif',
       CUSTOM_VERTEX_UPDATE_POSITION: `#ifdef HT_BIRD
         {
+          // Wing vertices: beside the body and ahead of the tail. Inner and outer wing bend separately.
           float htSide = positionUpdated.x < 0. ? -1. : 1.;
-          float htOut = max(0., abs(positionUpdated.x) - .03);
-          float htReach = htOut * mix(1., .25, htFlap.z);
-          positionUpdated.z -= htOut * .6 * htFlap.z;
-          float htAngle = htFlap.y * (sin(htBirdTime * htFlap.w + htFlap.x) + .15);
-          positionUpdated.x = htSide * (.03 + htReach * cos(htAngle));
-          positionUpdated.y += htReach * sin(htAngle);
+          float htOut = max(0., abs(positionUpdated.x) - .03) * step(-.09, positionUpdated.z);
+          if (htOut > 0.) {
+            float htFold = mix(1., .25, htFlap.z);
+            float htReach = htOut * htFold;
+            positionUpdated.z -= htOut * .6 * htFlap.z;
+            float htAngle = htFlap.y * (sin(htBirdTime * htFlap.w + htFlap.x) + .15);
+            float htOuterAngle = htAngle * 1.55 - .08 * htFlap.y;
+            float htInner = min(htReach, .06 * htFold), htOuter = htReach - htInner;
+            vec2 htTip = htInner * vec2(cos(htAngle), sin(htAngle)) + htOuter * vec2(cos(htOuterAngle), sin(htOuterAngle));
+            positionUpdated.x = htSide * (.03 + htTip.x);
+            positionUpdated.y += htTip.y;
+          }
         }
         #endif`,
     };
@@ -142,7 +150,7 @@ function buildCat(scene: Scene): Mesh {
   };
   const sphere = (name: string, segments = 7) => MeshBuilder.CreateSphere(name, { diameter: 1, segments }, scene);
   add(sphere('cat-body', 9), 0, fur, new Vector3(0, .27, 0), new Vector3(.17, .17, .4), undefined, true);
-  add(sphere('cat-chest'), 0, light, new Vector3(0, .3, .16), new Vector3(.13, .15, .14));
+  add(sphere('cat-neck'), 0, fur, new Vector3(0, .345, .19), new Vector3(.135, .16, .15), undefined, true);
   add(sphere('cat-head', 9), 0, fur, new Vector3(0, .43, .25), new Vector3(.19, .17, .175), undefined, true);
   add(sphere('cat-cheeks'), 0, light, new Vector3(0, .395, .29), new Vector3(.15, .08, .09));
   add(sphere('cat-muzzle'), 0, light, new Vector3(0, .4, .325), new Vector3(.08, .06, .05));
@@ -173,9 +181,17 @@ function buildCat(scene: Scene): Mesh {
     const colors = new Float32Array(count * 4);
     for (let i = 0; i < count; i++) {
       // Tabby stripes across the back, the head and the tail.
-      const y = positions[i * 3 + 1], z = positions[i * 3 + 2];
+      const x = positions[i * 3], y = positions[i * 3 + 1], z = positions[i * 3 + 2];
       const stripe = stripes && y > .29 && Math.sin((z + y * .6) * 46) > .55 ? .72 : 1;
-      colors.set([color.r * stripe, color.g * stripe, color.b * stripe, 1], i * 4);
+      let c = color.scale(stripe);
+      if (stripes) {
+        // Pale belly, bib and muzzle that blend into the fur (no hard band at the neck).
+        const clamp = (v: number) => Math.min(1, Math.max(0, v));
+        const bellyShare = clamp((.215 - y) / .05);
+        const bib = clamp(1 - Math.abs(x) / .065) * clamp((z - .13) / .07) * clamp((.385 - y) / .07);
+        c = Color3.Lerp(c, light, Math.max(bellyShare, bib));
+      }
+      colors.set([c.r, c.g, c.b, 1], i * 4);
       tags.push(part);
     }
     data.colors = colors;
@@ -190,21 +206,51 @@ function buildCat(scene: Scene): Mesh {
 }
 
 function buildBird(scene: Scene): Mesh {
-  // Forward +z, wings along x; vertices beyond |x| = .03 belong to the wings.
-  const positions = [
-    0, 0, .13, 0, .03, 0, .03, 0, .01, -.03, 0, .01, 0, -.025, 0, 0, 0, -.11, // 0 nose, 1 back, 2/3 sides, 4 belly, 5 tail root
-    .045, 0, -.17, -.045, 0, -.17, // 6/7 tail fan
-    .03, 0, .045, .03, 0, -.035, .115, 0, .035, .19, 0, -.035, // 8-11 left wing
-    -.03, 0, .045, -.03, 0, -.035, -.115, 0, .035, -.19, 0, -.035, // 12-15 right wing
-  ];
-  const indices = [0, 1, 2, 0, 3, 1, 0, 2, 4, 0, 4, 3, 1, 5, 2, 1, 3, 5, 4, 2, 5, 4, 5, 3, 5, 6, 7,
-    8, 10, 9, 9, 10, 11, 12, 13, 14, 13, 15, 14];
-  const normals: number[] = [];
-  VertexData.ComputeNormals(positions, indices, normals);
-  const data = new VertexData();
-  data.positions = positions; data.indices = indices; data.normals = normals;
+  // A small songbird, forward +z: body, head with beak, tail fan, two-part wings (|x| > .03 flaps).
+  const back = new Color3(.42, .33, .25), belly = new Color3(.86, .78, .66), cap = new Color3(.24, .2, .18);
+  const wing = new Color3(.36, .28, .21), tip = new Color3(.2, .17, .15), beakColor = new Color3(.95, .66, .18);
+  const datas: VertexData[] = [];
+  const shaped = (mesh: Mesh, color: (x: number, y: number, z: number) => Color3) => {
+    mesh.bakeCurrentTransformIntoVertices();
+    const data = VertexData.ExtractFromMesh(mesh), positions = data.positions ?? [];
+    const colors = new Float32Array(positions.length / 3 * 4);
+    for (let i = 0; i < positions.length / 3; i++) { const c = color(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]); colors.set([c.r, c.g, c.b, 1], i * 4); }
+    data.colors = colors; datas.push(data); mesh.dispose();
+  };
+  const body = MeshBuilder.CreateSphere('bird-body', { diameter: 1, segments: 6 }, scene);
+  body.scaling.set(.054, .05, .15);
+  // Brown back, pale belly, softly blended.
+  shaped(body, (_x, y) => Color3.Lerp(back, belly, Math.min(1, Math.max(0, (.004 - y) / .016))));
+  const head = MeshBuilder.CreateSphere('bird-head', { diameter: .05, segments: 6 }, scene);
+  head.position.set(0, .024, .068);
+  shaped(head, (_x, y, z) => y > .03 ? cap : z > .085 && y < .02 ? belly : back);
+  const beak = MeshBuilder.CreateCylinder('bird-beak', { diameterTop: 0, diameterBottom: .016, height: .028, tessellation: 5 }, scene);
+  beak.rotation.x = Math.PI / 2; beak.position.set(0, .02, .104);
+  shaped(beak, () => beakColor);
+  for (const side of [-1, 1]) {
+    const eye = MeshBuilder.CreateSphere('bird-eye', { diameter: .009, segments: 3 }, scene);
+    eye.position.set(side * .019, .03, .082);
+    shaped(eye, () => new Color3(.03, .03, .03));
+  }
+  // Flat parts: tail fan and wings (both faces drawn).
+  const flat = (points: number[][], triangles: number[], color: (x: number, z: number) => Color3) => {
+    const data = new VertexData();
+    data.positions = points.flat(); data.indices = triangles;
+    const normals: number[] = []; VertexData.ComputeNormals(data.positions, triangles, normals); data.normals = normals;
+    data.uvs = points.flatMap(() => [0, 0]);
+    data.colors = points.flatMap(([x, , z]) => { const c = color(x, z); return [c.r, c.g, c.b, 1]; });
+    datas.push(data);
+  };
+  flat([[0, .004, -.1], [.042, -.002, -.205], [0, -.003, -.215], [-.042, -.002, -.205]], [0, 1, 2, 0, 2, 3], () => tip);
+  for (const side of [1, -1]) {
+    const pts = [[.03, .006, .035], [.03, .006, -.04], [.09, .008, .045], [.09, .008, -.055], [.2, .004, -.03], [.17, .004, -.072], [.13, .005, -.078]]
+      .map(([x, y, z]) => [x * side, y, z]);
+    const tris = [0, 2, 3, 0, 3, 1, 2, 4, 3, 3, 4, 5, 3, 5, 6];
+    flat(pts, side > 0 ? tris : tris.map((_, i, a) => a[i - i % 3 + [0, 2, 1][i % 3]]), x => Math.abs(x) > .14 ? tip : wing);
+  }
+  const merged = datas.reduce((a, b) => { a.merge(b); return a; });
   const bird = new Mesh('wildlife-birds', scene);
-  data.applyToMesh(bird);
+  merged.applyToMesh(bird);
   bird.isPickable = false;
   return bird;
 }
@@ -212,7 +258,8 @@ function buildBird(scene: Scene): Mesh {
 // ---------------------------------------------------------------- behaviour
 
 type CatStep =
-  | { kind: 'walk' | 'run'; to: Vector3 }
+  /** `direct`: straight there, no detours (along the top of a bench). */
+  | { kind: 'walk' | 'run'; to: Vector3; direct?: boolean }
   | { kind: 'sit' | 'lie'; time: number }
   | { kind: 'jump'; to: Vector3 }
   /** A short leap forward from wherever the cat is then. */
@@ -236,6 +283,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   const groveTrees = (courtyard.trees ?? []).filter(t => t.trunk > .3);
   const obstacles = courtyard.obstacles ?? [];
   const seats = courtyard.seats ?? [];
+  const decks = courtyard.decks ?? [];
   const weather = () => (scene.metadata?.outdoorWeather as OutdoorWeather | undefined) ?? { clouds: 0, wet: 0, snow: 0, fog: 0 };
   const night = () => (scene.metadata?.sunAltitudeDeg ?? 30) < -4;
   const badWeather = () => { const w = weather(); return w.wet > 0 || w.snow > 0; };
@@ -292,8 +340,11 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       const corners = 'halfX' in hit
         ? [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => ground(hit.x + sx * (hit.halfX + m), hit.z + sz * (hit.halfZ + m)))
         : (() => { const d = to.subtract(at); const side = new Vector3(-d.z, 0, d.x).normalize().scale(hit.trunk + m + .2); return [ground(hit.x + side.x, hit.z + side.z), ground(hit.x - side.x, hit.z - side.z)]; })();
-      const usable = corners.filter(c => !blockedBy(c, margin * .8) && !segmentHit(at, c));
-      const options = usable.length ? usable : corners;
+      // Not the point the cat already stands on (it would always count as reachable).
+      const candidates = corners.filter(c => Vector3.Distance(c, at) > .2);
+      const usable = candidates.filter(c => !blockedBy(c, margin * .8) && !segmentHit(at, c));
+      const options = usable.length ? usable : candidates;
+      if (!options.length) break;
       const best = options.reduce((b, c) => Vector3.Distance(at, c) + Vector3.Distance(c, to) < Vector3.Distance(at, b) + Vector3.Distance(b, to) ? c : b);
       path.push(best); at = best;
     }
@@ -320,7 +371,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   const catState = {
     present: false, away: new URLSearchParams(location.search).has('wildlife') ? 1 : rand(12, 35), pos: Vector3.Zero(), heading: 0, speed: 0,
     steps: [] as CatStep[], step: null as CatStep | null, path: [] as Vector3[], timer: 0, jumpFrom: Vector3.Zero(), jumpT: 0,
-    height: 0, sit: 0, lie: 0, swish: 0, nextSwish: 3, sheltering: false, arrived: false, stuck: 0,
+    height: 0, sit: 0, lie: 0, swish: 0, nextSwish: 3, sheltering: false, arrived: false, stuck: 0, planned: [] as Vector3[],
   };
   const spots = () => [courtyard.treeCenter, courtyard.playCenter, courtyard.benchCenter, courtyard.playBenchCenter, middle]
     .map(p => free(ground(p.x + rand(-3.5, 3.5), p.z + rand(-3.5, 3.5))));
@@ -341,12 +392,40 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       { kind: 'jump', to: free(ground(seat.x - side * 1.2, seat.z + rand(-.6, .6))) },
     ];
   };
+  /** A spot on a vent-bench deck (top height). */
+  const onDeck = (d: Deck, along = rand(-.85, .85)) => new Vector3(d.x + rand(-.35, .35) * d.halfX, d.y, d.z + along * d.halfZ);
+  /**
+   * The broad vent benches in front of the flat: up onto the deck, stroll along it, sit and lie
+   * there, sometimes hop across to the other bench, then jump down.
+   */
+  const deckTime = (first: Deck, long = false, side = Math.random() < .5 ? 1 : -1): CatStep[] => {
+    const up = onDeck(first);
+    const steps: CatStep[] = [
+      { kind: 'walk', to: free(ground(first.x + side * (first.halfX + .55), up.z)) }, { kind: 'sit', time: rand(.6, 1.2) }, { kind: 'jump', to: up },
+      { kind: 'sit', time: rand(2, 4) },
+    ];
+    let deck = first;
+    const turns = long ? 3 : Math.round(rand(1, 3));
+    for (let i = 0; i < turns; i++) {
+      const r = Math.random();
+      const other = decks.find(d => d !== deck);
+      if (r < .3 && other) {
+        // Across the gap onto the other bench.
+        steps.push({ kind: 'walk', to: onDeck(deck, Math.sign(other.z - deck.z) * .9), direct: true }, { kind: 'sit', time: rand(.5, 1) }, { kind: 'jump', to: onDeck(other, Math.sign(deck.z - other.z) * .7) });
+        deck = other;
+      } else steps.push({ kind: 'walk', to: onDeck(deck), direct: true });
+      steps.push(Math.random() < .6 || long ? { kind: 'lie', time: long ? rand(18, 28) : rand(8, 18) } : { kind: 'sit', time: rand(4, 8) });
+    }
+    steps.push({ kind: 'sit', time: rand(2, 4) }, { kind: 'jump', to: free(ground(deck.x - side * (deck.halfX + .6), deck.z + rand(-1, 1))) });
+    return steps;
+  };
   const planVisit = (): CatStep[] => {
     const steps: CatStep[] = [];
     const count = Math.round(rand(4, 7));
     for (let i = 0; i < count; i++) {
       const r = Math.random();
-      if (r < .38 && seats.length) steps.push(...chill(pick(seats)));
+      if (r < .3 && decks.length) steps.push(...deckTime(pick(decks)));
+      else if (r < .42 && seats.length > decks.length) steps.push(...chill(pick(seats.slice(decks.length))));
       else if (r < .55) steps.push({ kind: 'walk', to: pick(spots()) }, { kind: 'sit', time: rand(4, 9) });
       else if (r < .68) steps.push({ kind: 'run', to: pick(spots()) }, { kind: 'sit', time: rand(2, 4) });
       else if (r < .84 && groveTrees.length) steps.push({ kind: 'hide', tree: pick(groveTrees), time: rand(5, 10) });
@@ -385,7 +464,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
     if (s.stuck > 1.5) { s.path = [s.path[s.path.length - 1]]; s.stuck = 0; }
     return false;
   };
-  const startPath = (to: Vector3) => { catState.path = route(catState.pos, to); };
+  const startPath = (to: Vector3) => { catState.path = route(catState.pos, to); catState.planned = [flat(catState.pos), ...catState.path]; };
 
   const updateCat = (dt: number) => {
     const s = catState;
@@ -411,7 +490,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       if (s.step.kind === 'pounce') s.step = { kind: 'jump', to: free(s.pos.add(new Vector3(Math.sin(s.heading), 0, Math.cos(s.heading)).scale(1.4))) }; s.timer = 0; s.jumpT = 0; s.arrived = false; s.stuck = 0;
       s.jumpFrom = s.pos.clone(); s.jumpFrom.y = s.height;
       const step = s.step;
-      if (step.kind === 'walk' || step.kind === 'run') startPath(step.to);
+      if (step.kind === 'walk' || step.kind === 'run') { if (step.direct) { catState.path = [flat(step.to)]; catState.planned = [...catState.path]; } else startPath(step.to); }
       else if (step.kind === 'hide') startPath(behind(step.tree));
       else if (step.kind === 'leave') startPath(exits.reduce((best, e) => Vector3.Distance(s.pos, e) < Vector3.Distance(s.pos, best) ? e : best));
     }
@@ -494,21 +573,35 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   };
 
   // ---- birds
+  // Buildings (outlines and roof heights): birds fly over them or around them, never through.
+  const buildings = (scene.metadata?.buildings as { points: [number, number][]; top: number }[] | undefined) ?? [];
+  const inPolygon = (x: number, z: number, pts: [number, number][]) => {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, zi] = pts[i], [xj, zj] = pts[j];
+      if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  const buildingAt = (p: Vector3, margin = 2) => buildings.find(b => p.y < b.top + margin
+    && [[0, 0], [margin, 0], [-margin, 0], [0, margin], [0, -margin]].some(([dx, dz]) => inPolygon(p.x + dx, p.z + dz, b.points)));
   // Lawn in front of the flat (towards the courtyard): visible from the plan view.
   const toYard = middle.subtract(new Vector3(bounds.x, 0, bounds.z)); toYard.y = 0; toYard.normalize();
   const edge = Math.min(bounds.halfX / Math.max(.01, Math.abs(toYard.x)), bounds.halfZ / Math.max(.01, Math.abs(toYard.z)));
   const lawn: Vector3[] = [];
   for (let i = 0; i < 12; i++) {
     const p = free(ground(bounds.x + toYard.x * (edge + rand(2.5, 9)) + away.x * rand(-9, 9), bounds.z + toYard.z * (edge + rand(2.5, 9)) + away.z * rand(-9, 9)));
-    lawn.push(p);
+    if (!buildingAt(p, 2.5)) lawn.push(p);
   }
-  const benchLawn = [courtyard.benchCenter, courtyard.playCenter].flatMap(c => [0, 1, 2].map(() => free(ground(c.x + rand(-4, 4), c.z + rand(-4, 4)))));
+  const benchLawn = [courtyard.benchCenter, courtyard.playCenter].flatMap(c => [0, 1, 2].map(() => free(ground(c.x + rand(-4, 4), c.z + rand(-4, 4))))).filter(p => !buildingAt(p, 2.5));
   const groundPerches = new Set<Vector3>([...lawn, ...benchLawn]);
-  const perches = [...allTrees.flatMap(t => t.perches), ...groundPerches];
+  // Tree crowns that reach into a building (park trees by the houses) are no place to sit.
+  const treePerches = allTrees.flatMap(t => t.perches).filter(p => !buildingAt(p, .8));
+  const perches = [...treePerches, ...groundPerches];
   const count = perches.length ? (options.reduced ? 6 : 12) : 0;
   const birdMesh = buildBird(scene);
   const birdMaterial = new StandardMaterial('wildlife-bird-material', scene);
-  birdMaterial.diffuseColor = new Color3(.25, .23, .21); birdMaterial.specularColor = Color3.Black(); birdMaterial.backFaceCulling = false;
+  birdMaterial.specularColor = Color3.Black(); birdMaterial.backFaceCulling = false;
   const flap = new BirdFlapPlugin(birdMaterial);
   birdMesh.material = birdMaterial;
   birdMesh.metadata = { reportsOwnMotion: true };
@@ -521,11 +614,17 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   const canopy = (p: Vector3) => Math.hypot(p.x - courtyard.treeCenter.x, p.z - courtyard.treeCenter.z) < 16 && p.y - groundY > 6 && p.y - groundY < 20;
   const skyTarget = (): Vector3 => {
     // Often across the flat itself, a few metres above the roof: visible from the plan view too.
-    if (Math.random() < .4) return new Vector3(bounds.x + rand(-1, 1) * bounds.halfX, groundY + rand(9, 15), bounds.z + rand(-1, 1) * bounds.halfZ);
-    for (let i = 0; ; i++) {
-      const p = new Vector3(flightCenter.x + rand(-28, 28), groundY + rand(4, 22), flightCenter.z + rand(-28, 28));
-      if (!canopy(p) || i > 20) return p;
+    let p = new Vector3(bounds.x + rand(-1, 1) * bounds.halfX, groundY + rand(9, 15), bounds.z + rand(-1, 1) * bounds.halfZ);
+    if (Math.random() >= .4) {
+      for (let i = 0; i < 20; i++) {
+        p = new Vector3(flightCenter.x + rand(-28, 28), groundY + rand(4, 22), flightCenter.z + rand(-28, 28));
+        if (!canopy(p) && !buildingAt(p, 3)) break;
+      }
     }
+    // Over a building: well above its roof.
+    const below = buildingAt(p, 3);
+    if (below) p.y = below.top + rand(3, 6);
+    return p;
   };
   const freePerch = (from?: Vector3[]) => { const free = (from ?? perches).filter(p => !occupied.has(p)); return free.length ? pick(free) : null; };
   const birds: Bird[] = [];
@@ -569,7 +668,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
     }
     b.timer -= dt;
     if (b.state === 'fly' && (b.timer < 0 || grounded)) {
-      const perch = freePerch(grounded ? allTrees.flatMap(t => t.perches) : undefined);
+      const perch = freePerch(grounded ? treePerches : undefined);
       if (perch) land(b, perch); else b.timer = rand(4, 8);
     }
     const to = b.target.subtract(b.pos), dist = to.length();
@@ -577,7 +676,15 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
     const landing = b.state === 'land';
     const cruise = landing ? Math.min(7, Math.max(1.2, dist * 1.1)) : 7.5;
     const desired = to.normalize().scale(cruise);
-    const steer = desired.subtract(b.vel), maxTurn = (landing && dist < 6 ? 14 : 5) * dt;
+    // A building ahead (or around the bird): climb and turn away from its middle.
+    // (Not on the last metres of a landing: lawn spots and trees may stand close to a wall.)
+    const ahead = b.pos.add(b.vel.scale(.9)), wall = landing && dist < 4 ? undefined : buildingAt(ahead) ?? buildingAt(b.pos);
+    if (wall) {
+      const mid = wall.points.reduce((m, [x, z]) => m.addInPlaceFromFloats(x / wall.points.length, 0, z / wall.points.length), Vector3.Zero());
+      const out = new Vector3(b.pos.x - mid.x, 0, b.pos.z - mid.z).normalize().scale(cruise * .6);
+      desired.set(out.x, Math.max(desired.y, 4.5), out.z);
+    }
+    const steer = desired.subtract(b.vel), maxTurn = (landing && dist < 6 || wall ? 14 : 5) * dt;
     if (steer.length() > maxTurn) steer.normalize().scaleInPlace(maxTurn);
     const before = Math.atan2(b.vel.x, b.vel.z);
     b.vel.addInPlace(steer);
@@ -641,9 +748,11 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       // Straight to the vent bench, lie there for a while; three birds on the lawn nearby.
       const seat = stageSeat ?? courtyard.benchCenter;
       const from = exits.reduce((best, e) => Vector3.Distance(e, seat) < Vector3.Distance(best, seat) ? e : best);
-      // Close by already, so a camera on the bench sees it arrive within a few seconds.
-      const start = Vector3.Lerp(from, flat(seat), .85);
-      arrive(free(start), [...chill(seat, true), { kind: 'hide', tree: groveTrees[0] ?? { x: seat.x, z: seat.z, trunk: .4, perches: [] }, time: 5 }, { kind: 'leave' }]);
+      // Close by already (on the side facing the way in), so a camera on the bench sees it within seconds.
+      const deck = decks[0];
+      const side = deck && from.x > deck.x ? 1 : -1;
+      const start = deck ? ground(deck.x + side * (deck.halfX + 2.2), deck.z + rand(-1, 1)) : Vector3.Lerp(from, flat(seat), .85);
+      arrive(free(start), [...(deck ? deckTime(deck, true, side) : chill(seat, true)), { kind: 'hide', tree: groveTrees[0] ?? { x: seat.x, z: seat.z, trunk: .4, perches: [] }, time: 5 }, { kind: 'leave' }]);
       const near = benchLawn.filter(p => Vector3.Distance(p, seat) < 7);
       birds.slice(0, 3).forEach(b => { const perch = freePerch(near); if (perch) { if (b.state === 'perch') { b.state = 'fly'; b.vel.set(0, 3, 0); } land(b, perch); } });
     },
@@ -654,6 +763,6 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       if (scene.metadata) scene.metadata = { ...scene.metadata, wildlifeAnimating: false };
     },
   };
-  if (import.meta.env?.DEV) (window as Window & { __wildlife?: Wildlife }).__wildlife = api;
+  if (import.meta.env?.DEV) (window as Window & { __wildlife?: Wildlife & { cat?: unknown } }).__wildlife = Object.assign(api, { cat: catState });
   return api;
 }

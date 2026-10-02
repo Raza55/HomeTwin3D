@@ -62,8 +62,11 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  walkway('park-home-entrance',[[pathX,entryZ],host.entrance],1.5*SITE_SCALE,path,true);
  walkway('park-bench-side-path',[benchNorth,[pathX,entryZ],benchSouth],1.6*SITE_SCALE,path,true);
  const setbackHeight=2.0;
+ // Outlines and roof heights (world space) for anything that must fly around them (wildlife).
+ const buildings:{points:[number,number][];top:number}[]=[];
  const building=(name:string,points:[number,number][],height:number)=>{
   const poly=points.map(([x,z])=>new Vector3(center.x+x,groundY,center.z+z));
+  buildings.push({points:poly.map(q=>[q.x,q.z] as [number,number]),top:groundY+height});
   const middle=poly.reduce((sum,p)=>sum.add(p),Vector3.Zero()).scale(1/poly.length);
   const shell=(outline:Vector3[],base:number,h:number,suffix:string)=>{
    const positions:number[]=[],indices:number[]=[],uvs:number[]=[];
@@ -132,7 +135,7 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  // Photo references: open plane-tree grove, ventilation benches and balcony play area.
  const courtyard=createCourtyardDetails(scene,hostRoot,center,groundY,
   {x:grove[0],z:grove[1]},pathX,material,{x:playground[0],z:playground[1]},entryZ+1);
- scene.metadata={...scene.metadata,courtyard,parkTrees,siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
+ scene.metadata={...scene.metadata,courtyard,parkTrees,buildings:[...buildings,{points:host.footprint.map(([x,z])=>[center.x+x,center.z+z] as [number,number]),top:center.y+size.y/2}],siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
  // Everything above is static: one draw per material instead of ~100 meshes and instances.
  const merge=mergeStaticExterior([root,hostRoot],hostRoot,m=>m.name.endsWith('-batch'));
  hostRoot.getChildMeshes(false).forEach(m=>{if(m.name.endsWith('-batch'))m.freezeWorldMatrix();});

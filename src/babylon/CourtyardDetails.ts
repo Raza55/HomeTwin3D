@@ -134,10 +134,21 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
   for(let i=0;i<22;i++){const a=i*2.4,y=2.6+random()*2.8,r=(5.9-y)*.38;const tip=p(x+Math.cos(a)*r,y,z+Math.sin(a)*r);branch('young-tree-branch',p(x,y-.7,z),tip,.025);leaves.push({m:tuft(tip,.5,foliage[i%4]),r:.5});}
   trees[trees.length-1].perches=outerPerches(leaves,center.x+x,center.z+z,3);
  }
+ // Footprints the courtyard cat walks around (world space, centre and half extents).
+ const box2=(x:number,z:number,halfX:number,halfZ:number)=>({x:center.x+x,z:center.z+z,halfX,halfZ});
  // Geometry is static: reduce thousands of individual details to one draw per material.
  for(const [mat,parts] of batches){const merged=Mesh.MergeMeshes(parts,true,true,undefined,false,false);if(merged){merged.name=mat.name+'-batch';merged.material=mat;merged.parent=parent;merged.isPickable=false;merged.receiveShadows=true;}}
  return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,trees,
   // Solid vent benches (centre, half extents) and seats an animal could jump onto (top heights).
-  obstacles:[0,1].map(i=>({x:center.x+benchX,z:center.z+bz+benchShift-3.1+i*5.2,halfX:.78,halfZ:2.25})),
-  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ),p(seatX-.15,.5,seatZ),p(playX-1,1.1,playZ+1.6)],dispose:()=>textures.forEach(t=>t.dispose())};
+  obstacles:[
+   // Both vent benches as one block: the 0.7 m gap between them is no path.
+   box2(benchX,bz+benchShift-.5,.78,4.85),
+   box2(beamX,beamZ,.3,1.15),box2(seatX-.1,seatZ,.35,1.0),box2(benchX-1.2,bz+benchShift+5,.22,.22),
+   ...posts.map(([x,z])=>box2(playX+x,playZ+z,.16,.16)),box2(playX+.6,playZ-.7,1.15,.75), // posts, rope net
+   ...shrubs.map(([dx,dz])=>{const [x,z]=aroundPlay(dx,dz);return box2(x,z,.75,.75);}),box2(entryShrubX,entryShrubZ,.95,.95),
+   ...[[2,12],[-5,25],[6,34]].map(([dx,dz])=>{const [x,z]=aroundPlay(dx,dz);return box2(x,z,.2,.2);}),
+  ],
+  // The two broad vent-bench decks in front of the flat (seat top, centre, half extents of the slats).
+  decks:[0,1].map(i=>({x:center.x+benchX,z:center.z+bz+benchShift-3.1+i*5.2,y:groundY+.87,halfX:.68,halfZ:2.05})),
+  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ),p(seatX+.03,.5,seatZ),p(playX-1,1.1,playZ+1.6)],dispose:()=>textures.forEach(t=>t.dispose())};
 }

@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.42 – Vögel mit Gestalt, nichts mehr durch Gebäude und Bänke (02.10.2026)
+
+- Vögel: richtiger kleiner Singvogel mit Kopf, Schnabel, Augen, Schwanzfächer und zweiteiligen Flügeln, die beim Schlagen abknicken; brauner Rücken, heller Bauch.
+- Vögel fliegen über oder um Gebäude herum statt hindurch (Umrisse und Dachhöhen aller Häuser); Sitzplätze in Baumkronen, die in ein Haus ragen, entfallen.
+- Katze: läuft um alle Hindernisse im Hof (Lüftungsbänke als ein Block, Balken, Spielplatzbank, Mülleimer, Pfosten, Netz, Sträucher, junge Bäume); ein Wegfehler, der sie quer durch eine Bank führen konnte, ist behoben. Hals ohne harte Farbkante, heller Latz und Bauch gehen weich ins Fell über.
+- Katze auf den großen Lüftungsbänken vor der Wohnung: springt irgendwo auf die Fläche, läuft darauf entlang, sitzt und liegt, springt auch zur anderen Bank hinüber.
+
 ## 0.5.41 – Katze mit Augen, mehr Vögel, Demo mit Hofbesuch und Energiefluss (02.10.2026)
 
 - Katze: Augen mit Pupillen, Nase, Innenohren, Pfoten, Tigerstreifen; springt öfter auf Lüftungsbänke, Bänke und Spielplatzpfosten und liegt dort zum Chillen. Wege führen jetzt über Umwegpunkte um Bänke und Stämme (kein Hängenbleiben mehr); Ein- und Ausgänge liegen auf der Hofachse, weg vom Gebäude.

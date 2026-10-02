@@ -22,7 +22,7 @@ Die folgenden Ergänzungen und Prüfungen vom 28. und 27.09.2026 bleiben als his
 - TV Dial fordert Quellenwechsel über ein HA-Event an; die eigentliche Schaltfolge bleibt in der HA-Automation.
 - Wasserleck- und Batteriewarnungen an räumlichen Ankern. Batterien werden über HA-Geräteidentität zugeordnet.
 - Budgetierte Marker-Verdeckung, weniger Schatten-Neuberechnungen, wiederverwendete Marker-Vektoren und zustandsabhängige IT-Materialupdates.
-- Modellwerkzeuge für v94–v110 (Ablauf: [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md)) sowie zwei dokumentierte QA-Beispielbilder in der README.
+- Modellwerkzeuge für v94–v111 (Ablauf: [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md)) sowie zwei dokumentierte QA-Beispielbilder in der README.
 
 Bedienung, Zuordnungen, Installationsabhängigkeiten und Grenzen: [Geräte und Warnungen](docs/DEVICES_AND_ALERTS.md).
 
@@ -43,7 +43,7 @@ Summe: **112 JS-/TS-Tests und 5 Python-Tests**. Keine realen Gerätebefehle und 
 
 - Webapp: React/TypeScript mit Babylon.js, statischer Vite-Build und direkter Home-Assistant-WebSocket-Verbindung.
 - Paketversion in `package.json`: `0.2.1`; Add-on-Version in `3dash-addon/config.yaml`: `0.5.9` (Stand 01.10.2026). Diese Nummern sind unabhängig von den Wohnungsmodell-Versionen.
-- Lokale Modellreihe bis `Wohnung_v110_3Dash_Haustuer75.blend` und `.glb` in `../blender/`. Das Vorhandensein der Dateien beweist nicht, welche Version ein bestimmter Browser gerade geladen hat.
+- Lokale Modellreihe bis `Wohnung_v111_3Dash_Schreibtisch.blend` und `.glb` in `../blender/`. Das Vorhandensein der Dateien beweist nicht, welche Version ein bestimmter Browser gerade geladen hat.
 - Das Repository enthält Quellcode, Werkzeuge und Simulationsmodell. Persönliche `.blend`-/GLB-Dateien im Nachbarordner, `.qa/`, `dist/`, `node_modules/` und Browserdaten werden nicht mit Git übertragen.
 - Der Add-on-Dockerfile baut aus `Raza55/HomeTwin3D`, Branch `main`. Git-Push und Deployment bleiben getrennte Schritte; siehe README.
 

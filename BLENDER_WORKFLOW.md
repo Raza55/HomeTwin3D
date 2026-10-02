@@ -6,7 +6,21 @@ sie bestätigt nicht den aktuellen Inhalt eines beliebigen Browsers.
 
 **Ablauf für jede Modelländerung (Blender → GLB-Patch → Import): [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md).**
 
-## Haustür-Öffnungswinkel v108–v110 (02.10.2026) – aktueller Modellstand
+## Schreibtisch Schlafzimmer v111 (03.10.2026) – aktueller Modellstand
+
+Drei Korrekturen am Schreibtisch (`tools/desk-v111.py` auf der v110-Quelle, `node tools/desk-v111.mjs` auf den optimierten v110-GLB):
+- Monitor (Bildfläche, Rückseite, Leinwand, Webcam) 8 cm höher: Die Unterkante steckte im Gelenk des V-Standfußes.
+- Kopfhörer (Muscheln und Bügel) 1,85 cm höher: Die Muscheln ragten in die Monitorerhöhung.
+- Mikrofon neu modelliert: Gitterkorb mit Bändern, Korpus, Zierring, Bügel mit seitlichen Knöpfen, Plakette und dünne Stange (1.032 Dreiecke, neues Material `SZ_Mikrofon_Korb`);
+  Standfuß und Wandbrett bleiben. Die alte Kapsel und der Stab (532 Dreiecke) sind entfernt.
+
+Monitor, Standfuß, Kopfhörer und Mikrofon teilen `SZ_Schwarz` und überlappende Boxen. Der Patch ordnet Dreiecke deshalb über ihre Eckpunkte zu
+(exakte Blender-Weltvertices, 0,3 mm Raster); Kurvenobjekte (Standfußbeine, Kopfhörerbügel) wurden beim Export anders tesselliert und nehmen die übrigen Dreiecke
+in ihrer Box, bei Überschneidung die tiefer liegende Box. Der Standfuß ist als `keep` erfasst, damit nichts von ihm mitwandert.
+Der PC-Marker im Manifest steigt mit dem Monitor (+0,08 m). Neueste Dateien: `Wohnung_v111_3Dash_Schreibtisch.blend/.glb` (+52 KB).
+Direkt in den gemeinsamen Add-on-Stand übernommen (Revision 260 per `npm run addon:sync`; Backups unter `.private/backups/`).
+
+## Haustür-Öffnungswinkel v108–v110 (02.10.2026)
 
 Die Haustür öffnet nur noch bis 75° statt 90° (Benutzerwahl; Zwischenstände v108 = 80°, v109 = 77°).
 `tools/entrance-swing-v1NN.py` setzt `ha_door_geometry.swingDegrees` an den Türteilen und das Maximum der Blender-Steuerung;

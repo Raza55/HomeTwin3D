@@ -47,6 +47,8 @@ export interface DayDemoViewState extends DayDemoSnapshot {
   tour: boolean;
   /** 0..1 while shader variants for the whole story are prepared; undefined when ready. */
   preparing?: number;
+  /** Intro card before the day starts: reading time in ms and when it ends (performance.now()). */
+  intro?: { ms: number; until: number };
   /** Increments on every camera cut (overlay fades through black). */
   cut: number;
   /** A first-person shot is running. */
@@ -99,6 +101,8 @@ export class DayDemoController {
   private view: DayDemoViewState;
   private disposeFns: (() => void)[] = [];
   private preparing: number | undefined;
+  private intro: { ms: number; until: number } | undefined;
+  private introDone: (() => void) | null = null;
   private disposed = false;
   private director: ShotDirector | null = null;
   private shot: Shot | null = null;
@@ -134,10 +138,24 @@ export class DayDemoController {
 
   // --- Control ------------------------------------------------------------------
 
-  async start(speed = 1, startClock?: string): Promise<void> {
+  /** Reading time of the intro card (about the board, where it runs) before the day starts. */
+  static readonly INTRO_MS = 16000;
+
+  async start(speed = 1, startClock?: string, intro = !startClock): Promise<void> {
     this.engine.setSpeed(speed);
     await this.prepare();
     if (this.disposed) return;
+    if (intro) {
+      this.intro = { ms: DayDemoController.INTRO_MS, until: performance.now() + DayDemoController.INTRO_MS };
+      this.emit();
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(resolve, DayDemoController.INTRO_MS);
+        this.introDone = () => { clearTimeout(timer); resolve(); };
+      });
+      this.intro = undefined; this.introDone = null;
+      this.emit();
+      if (this.disposed) return;
+    }
     if (startClock) { this.engine.seek(clockToVirtual(startClock)); this.engine.play(); } else this.engine.start();
     this.resetBenchmark();
     this.syncScene(true);
@@ -218,6 +236,9 @@ export class DayDemoController {
     this.emit();
   }
 
+  /** Ends the intro card early ("Start now"). */
+  skipIntro(): void { this.introDone?.(); }
+
   togglePlay(): void {
     if (this.engine.isPlaying) this.engine.pause();
     else {
@@ -235,6 +256,7 @@ export class DayDemoController {
     this.engine.play();
     this.resetBenchmark();
     this.syncScene(true);
+    this.captureMirrors();
     this.emit();
   }
 
@@ -248,6 +270,7 @@ export class DayDemoController {
     this.resetBenchmark();
     this.result = undefined;
     this.syncScene(true);
+    this.captureMirrors();
     this.emit();
   }
 
@@ -272,6 +295,7 @@ export class DayDemoController {
 
   dispose(restoreCamera = true): void {
     this.disposed = true;
+    this.introDone?.();
     this.deps.cancelControl?.();
     this.endShot(false);
     cancelAnimationFrame(this.frame);
@@ -300,7 +324,7 @@ export class DayDemoController {
 
   private buildView(): DayDemoViewState {
     const fps = this.fpsWindow.length > 1 ? (this.fpsWindow.length - 1) * 1000 / (this.fpsWindow[this.fpsWindow.length - 1] - this.fpsWindow[0]) : 0;
-    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps), preparing: this.preparing, cut: this.cuts, inShot: !!this.shot };
+    return { ...this.engine.getSnapshot(), tour: this.tour, result: this.result, fps: Math.round(fps), preparing: this.preparing, intro: this.intro, cut: this.cuts, inShot: !!this.shot };
   }
 
   private syncScene(force: boolean): void {
@@ -384,7 +408,18 @@ export class DayDemoController {
     if (cut) this.cut();
   }
 
-  private cut(): void { this.cuts++; this.emit(); }
+  private cut(): void {
+    this.cuts++;
+    // Mirrors re-capture the room behind the dip to black (their reflections would stay in daylight).
+    this.captureMirrors();
+    this.emit();
+  }
+
+  /** Mirrors are frozen during the demo; at cuts and jumps they take a fresh picture of the room. */
+  private captureMirrors(): void {
+    const scene = this.deps.scene;
+    scene.metadata = { ...scene.metadata, mirrorCaptureRequest: (scene.metadata?.mirrorCaptureRequest ?? 0) + 1 };
+  }
 
   /** Detaches the viewer's camera controls (leaving first person attaches them again). */
   private lockCamera(): void {

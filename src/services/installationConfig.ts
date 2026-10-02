@@ -11,12 +11,14 @@ export interface InstallationConfig {
   entities?: Record<string, string>;
   location?: { label: string; latitude: number; longitude: number };
   mediaProxyTarget?: string;
+  /** Who built this installation's board (shown in the day demo's intro). */
+  author?: string;
 }
 declare const __HOMETWIN_INSTALLATION__: InstallationConfig;
 
 const STORAGE_KEY = 'hometwin:installation';
 const built: InstallationConfig = typeof __HOMETWIN_INSTALLATION__ === 'undefined' ? {} : __HOMETWIN_INSTALLATION__;
-const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location;
+const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location || !!value.author;
 
 function stored(): InstallationConfig {
   try {
@@ -48,13 +50,14 @@ export function sanitizeInstallation(value: unknown): InstallationConfig {
     && Math.abs(location.latitude as number) <= 90 && Math.abs(location.longitude as number) <= 180) {
     result.location = { label: location.label.slice(0, 80), latitude: location.latitude as number, longitude: location.longitude as number };
   }
+  if (typeof input.author === 'string' && input.author.trim()) result.author = input.author.trim().slice(0, 80);
   return result;
 }
 
 /** Values to publish with the shared installation (no LAN addresses: the media proxy target stays local). */
 export function publishableInstallation(): InstallationConfig | undefined {
-  const { entities, location } = installation;
-  return hasValues({ entities, location }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}) } : undefined;
+  const { entities, location, author } = installation;
+  return hasValues({ entities, location, author }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}), ...(author ? { author } : {}) } : undefined;
 }
 
 /**
@@ -70,7 +73,7 @@ export function storeInstallation(value: unknown): boolean {
   if (before === serialized) return false;
   localStorage.setItem(STORAGE_KEY, serialized);
   if (!hasValues(built)) {
-    delete installation.entities; delete installation.location;
+    delete installation.entities; delete installation.location; delete installation.author;
     Object.assign(installation, next);
   }
   return true;

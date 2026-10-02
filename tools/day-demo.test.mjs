@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { STORY, CHAPTERS, WEATHER, SHOTS, DAY_LENGTH, DAY_REAL_SECONDS, clockToVirtual, virtualToClock, weatherAt, realSecondsUntil, paceAt, shotAt } from '../src/services/dayDemo/story.ts';
 import { buildCast, roomRole } from '../src/services/dayDemo/cast.ts';
 import { DayDemoEngine, hsToRgb } from '../src/services/dayDemo/engine.ts';
+import { sanitizeInstallation } from '../src/services/installationConfig.ts';
 
 const at = clock => clockToVirtual(clock);
 const box = { position: { x: 0, y: 0, z: 0 }, size: { width: 1, height: 1, depth: 1 }, rotationY: 0 };
@@ -285,4 +286,10 @@ test('blinds report their commands, and stay down from sunset until the morning'
   const opens = STORY.filter(b => (b.at > evening || b.at + DAY_LENGTH < sunrise) && b.actions.some(a => (a.type === 'blind' || (a.type === 'control' && a.kind === 'blinds')) && a.position > 0));
   assert.deepEqual(opens, []);
   assert.deepEqual(SHOTS.filter(s => s.from > evening && s.blind !== undefined).map(s => s.id), []);
+});
+
+test('the intro names its author only from the installation values', () => {
+  assert.equal(sanitizeInstallation({ author: '  Example Author  ' }).author, 'Example Author');
+  assert.equal(sanitizeInstallation({ author: 42 }).author, undefined);
+  assert.equal(sanitizeInstallation({ author: 'x'.repeat(200) }).author.length, 80);
 });

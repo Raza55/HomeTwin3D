@@ -104,10 +104,13 @@ export function setupMetalReflections(scene: Scene, meshes: AbstractMesh[]): Met
   const probes = setupMirrorProbes(scene, mirrorGroups, environment);
 
   const hemi = scene.getLightByName('hemi') as HemisphericLight | null;
-  let lastIntensity = -1, capturedIntensity = -1;
+  let lastIntensity = -1, capturedIntensity = -1, captureRequest = scene.metadata?.mirrorCaptureRequest ?? 0;
   const updateIntensity = () => {
     const ambient = hemi?.isEnabled() ? hemi.intensity : DAY_AMBIENT;
     const value = Math.min(1.2, Math.max(.12, ambient / DAY_AMBIENT));
+    // The day demo asks for a capture behind its camera cuts (the screen dips to black there).
+    const request = scene.metadata?.mirrorCaptureRequest ?? 0;
+    if (request !== captureRequest) { captureRequest = request; capturedIntensity = value; lastIntensity = -2; probes.refresh(); }
     if (Math.abs(value - lastIntensity) < .01 && (scene.metadata?.freezeMirrorProbes || Math.abs(value - capturedIntensity) <= .15)) return;
     // Daylight changed noticeably: mirrors show a stale room, capture again.
     // A capture costs 0.1-0.7 s; while frozen (day demo: daylight changes every
@@ -116,6 +119,9 @@ export function setupMetalReflections(scene: Scene, meshes: AbstractMesh[]): Met
     if (lastIntensity < 0) capturedIntensity = value;
     lastIntensity = value;
     for (const material of metals) if (!probes.materials.has(material)) material.environmentIntensity = value;
+    // Mirrors show their last capture: dim it with the daylight since then (dusk, night) until the next one.
+    const relative = Math.min(1.6, Math.max(.1, value / Math.max(.05, capturedIntensity)));
+    for (const material of probes.materials) material.environmentIntensity = relative;
   };
   updateIntensity();
   const observer: Observer<Scene> | null = scene.onBeforeRenderObservable.add(updateIntensity);

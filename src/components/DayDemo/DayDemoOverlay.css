@@ -262,3 +262,46 @@ p.day-demo-chapter {
 }
 @keyframes day-demo-cut { 0% { opacity: .85; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .day-demo-cut { animation-duration: .01s; } }
+
+/* Intro card: what the board is and where it runs, before the day starts. */
+.day-demo-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: day-demo-in .5s ease both;
+}
+.day-demo-intro-card {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 26px 28px 20px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: var(--panel-border-width, 1px) solid color-mix(in srgb, var(--border2) 80%, transparent);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+}
+.day-demo-intro-card h2 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: .01em; }
+.day-demo-intro-subtitle { margin: 4px 0 0; font-size: 15px; color: var(--accent); }
+.day-demo-intro-author { margin: 10px 0 0; font-size: 14px; color: color-mix(in srgb, var(--text) 85%, transparent); }
+.day-demo-intro-card ul { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 11px; }
+.day-demo-intro-card li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14.5px; line-height: 1.45; }
+.day-demo-intro-card li svg { color: var(--accent); margin-top: 1px; }
+.day-demo-intro-track { margin-top: 20px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.day-demo-intro-track span { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; animation: day-demo-intro-fill linear both; }
+@keyframes day-demo-intro-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.day-demo-intro-card footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.day-demo-intro-card footer small { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-demo-intro-close { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; }
+.day-demo-intro-close:hover { color: var(--text); border-color: var(--accent); }
+@media (max-width: 720px) {
+  .day-demo-intro-card { padding: 20px 18px 16px; }
+  .day-demo-intro-card h2 { font-size: 23px; }
+  .day-demo-intro-card li { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .day-demo-intro, .day-demo-intro-track span { animation: none; } }

@@ -60,7 +60,7 @@ function roomBox(scene: Scene, origin: Vector3, ignore: AbstractMesh[]): { cente
 }
 
 export interface MirrorProbes {
-  /** Materials that reflect a captured probe (their environment strength is left at 1). */
+  /** Materials that reflect a captured probe (MetalReflections dims them with the daylight since the capture). */
   readonly materials: ReadonlySet<PBRMaterial>;
   /** Re-capture all mirrors, one per frame (e.g. after daylight changes). */
   refresh(): void;

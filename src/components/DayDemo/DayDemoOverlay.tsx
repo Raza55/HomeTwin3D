@@ -9,6 +9,7 @@ import type { DayDemoController } from '../../services/dayDemo/controller';
 import { CHAPTERS, DAY_LENGTH, clockLabel, pick, realSecondsUntil, virtualToClock } from '../../services/dayDemo/story';
 import { getSunPosition } from '../../babylon/SunController';
 import { useLanguage } from '../../contexts/LanguageContext';
+import DayDemoIntro from './DayDemoIntro';
 import './DayDemoOverlay.css';
 
 type Icon = LucideIcon;
@@ -93,6 +94,8 @@ export default function DayDemoOverlay({ controller, latitude, longitude, onExit
       </div>
     );
   }
+
+  if (view.intro) return <DayDemoIntro ms={view.intro.ms} until={view.intro.until} onStart={() => controller.skipIntro()} onExit={onExit} />;
 
   return (
     <div className="day-demo" role="region" aria-label={t('dayDemo.title')}>

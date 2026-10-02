@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.30 – Tagesdemo: Intro und Spiegel bei Nacht (02.10.2026)
+
+- Vor dem Start zeigt die Tagesdemo 16 Sekunden lang eine Intro-Karte: HomeTwin3D als App (Add-on) in Home Assistant, 3D-Frontend für aktuelle Apple- und Samsung-Tablets sowie Windows-PCs, Steuerung und Status im 3D-Plan, Basis als Open Source auf GitHub. Mit Countdown, „Jetzt starten“ und Beenden. Ein Autorenname kann über die privaten Installationswerte (`installation.author`) ergänzt werden.
+- Spiegel werden in der Abenddämmerung und nachts dunkler: Ihre Reflexion folgt dem Tageslicht seit der letzten Aufnahme; in der Tagesdemo nehmen sie den Raum bei jedem Kameraschnitt (hinter der Abblende) und nach Sprüngen neu auf.
+
 ## 0.5.29 – Tagesdemo: stimmige Rollo-Abfolge (02.10.2026)
 
 - Board-Szene: „Alle Rollos im Raum schließen“ im Rollo-Popup schließt jetzt wirklich (die Demo-Rollos melden ihre unterstützten Befehle); Rollos derselben Story-Räume, die in Home Assistant einem anderen Bereich zugeordnet sind, folgen kurz danach.

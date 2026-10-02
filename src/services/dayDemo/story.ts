@@ -99,7 +99,7 @@ export const STORY: StoryBeat[] = [
   beat('05:30', [], {
     id: 'night', icon: 'moon',
     title: { de: 'Dämmerung', en: 'Dawn' },
-    text: { de: 'Läuft auf aktuellen Apple- und Android-Tablets. Blick vom Eingang ins Wohnzimmer: Es dämmert, der Wind biegt die Bäume, ein Bewegungsmelder öffnet das Rollo und weckt zwei Lichter.', en: 'Runs on recent Apple and Android tablets. View from the entrance into the living room: dawn breaks, the wind bends the trees, a motion sensor raises the blind and wakes two lights.' },
+    text: { de: 'Blick vom Eingang ins Wohnzimmer: Es dämmert, der Morgenwind biegt die Bäume, ein Bewegungsmelder öffnet das Rollo und weckt zwei Lichter.', en: 'View from the entrance into the living room: dawn breaks, the morning wind bends the trees, a motion sensor raises the blind and wakes two lights.' },
   }),
   beat('05:41', [
     { type: 'light', target: { rooms: ['living'], fallback: 1 }, on: true, brightness: 14, kelvin: 2200, ramp: 2.5 },

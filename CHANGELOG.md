@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.35 – Energiefluss: Bereiche ohne Objekte (02.10.2026)
+
+- Verbraucher in Home-Assistant-Bereichen ohne zugeordnete Objekte landen nicht mehr neben dem Gebäude: Der Bereich wird über gleichnamige Objekte, Raumbezeichnungen oder Rollos gefunden (z. B. „Kaffeezone“ an der Kaffeemaschine, „Balkon“ am Balkon).
+
 ## 0.5.34 – Energiefluss: Quartal, Halbjahr, Jahr (02.10.2026)
 
 - Der Verbrauch lässt sich zusätzlich nach Quartal, Halbjahr und Jahr anzeigen (Liste, Anteile und Raumbalken folgen dem Zeitraum); längere Zeiträume nutzen Monatsstatistiken.

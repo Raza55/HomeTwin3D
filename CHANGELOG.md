@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.34 – Energiefluss: Quartal, Halbjahr, Jahr (02.10.2026)
+
+- Der Verbrauch lässt sich zusätzlich nach Quartal, Halbjahr und Jahr anzeigen (Liste, Anteile und Raumbalken folgen dem Zeitraum); längere Zeiträume nutzen Monatsstatistiken.
+
 ## 0.5.33 – Energiefluss: Zeiträume, durchsichtiges Modell (02.10.2026)
 
 - Panel mit „Jetzt | Heute | Woche | Monat“: Bei einem Zeitraum sortiert die Liste nach dessen kWh, Anteile und Raumbalken folgen dem Zeitraumverbrauch; die aktuelle Leistung steht als Hinweis daneben.

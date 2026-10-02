@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 145;
+export const DAY_REAL_SECONDS = 153;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -411,6 +411,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '16:05', speed: 1.1 },
   { clock: '17:27', speed: 0.3 },
   { clock: '17:36', speed: 1.1 },
+  // Cooking: long enough to look along the lit kitchen counter.
+  { clock: '18:44', speed: 0.3 },
+  { clock: '19:26', speed: 1.1 },
   { clock: '19:34', speed: 0.35 },
   // Board interactions run in real time: the clock nearly stands still meanwhile.
   { clock: '19:44', speed: 0.12 },
@@ -537,6 +540,12 @@ export const SHOTS: Shot[] = [
     // Further back in the room: the whole window with the rain, the glowing PC at the side.
     { t: 0, eye: { at: BEDROOM_WINDOW, metres: 3.2, over: true }, look: BEDROOM_WINDOW },
     { t: 1, eye: { at: BEDROOM_WINDOW, metres: 2.7, over: true }, look: BEDROOM_WINDOW },
+  ]),
+  // Cooking: from the dining table along the lit kitchen counter (as in the opening, without the coffee machine).
+  shot('cooking', '18:46', '19:25', [
+    { t: 0, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 8 },
+    { t: .55, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
+    { t: 1, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 46 },
   ]),
   // The blinds are down for the night: the shot stays inside and turns to the glowing colour lamps.
   shot('cinema', '20:22', '21:02', [

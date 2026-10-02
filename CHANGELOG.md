@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.40 – Demo: Kochen an der Küchenzeile (02.10.2026)
+
+- Tagesdemo: Beim Kochen steht die Kamera am Esstisch und schwenkt langsam an der beleuchteten Küchenzeile entlang (Spüle, Kochfeld, Messer); die Szene läuft dafür etwas langsamer (Tag 153 s statt 145 s).
+
 ## 0.5.39 – Tiere draußen, Energieansicht ohne leeren Skizzenmodus (02.10.2026)
 
 - Neu (optional, Einstellungen → Qualität → „Tiere draußen“): Eine Katze besucht ab und zu den Hof – läuft, rennt, springt auf Bänke, versteckt sich hinter Bäumen und sucht bei Regen oder Schnee Schutz unter einem großen Baum. Vögel fliegen über Hof und Wohnung und landen in den Baumkronen; nachts und bei schlechtem Wetter bleiben sie sitzen. Alles im Code erzeugt (keine Assets), drei Draw-Calls, Bewegung im Shader; der Render-Loop ruht, solange nichts Sichtbares sich bewegt. `?wildlife` lässt die Katze sofort erscheinen.

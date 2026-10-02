@@ -356,6 +356,17 @@ export function setSketchAppearance(scene: Scene, sketchColor: string, sketchSpe
   mat.specularColor = new Color3(s, s, s);
 }
 
+/**
+ * See-through sketch model (energy view): the flows and devices show through walls and
+ * furniture. The depth pre-pass draws only the front-most surface, a clean glass look.
+ */
+export function setSketchTransparency(scene: Scene, alpha: number): void {
+  const mat = getOrCreateCartoonMaterial(scene);
+  const value = Math.max(.05, Math.min(1, alpha));
+  mat.alpha = value;
+  mat.needDepthPrePass = value < 1;
+}
+
 interface RenderStyleOptions {
   showTextures: boolean;
   sketchColor: string;

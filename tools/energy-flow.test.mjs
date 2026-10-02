@@ -82,6 +82,8 @@ test('device types and the supply are recognised by name', () => {
   assert.ok(deviceKinds('Waschmachine').has('washer'));
   assert.ok(deviceKinds('Qnap Extension').has('nas'));
   assert.equal(deviceKinds('Nachttisch').size, 0);
+  assert.deepEqual([...deviceKinds('Schreibtisch')], ['desk']);
+  assert.deepEqual([...deviceKinds('Kinderzimmer PCSchreibtisch')].sort(), ['desk', 'pc']);
   assert.ok(isSupplyName('Main Switch'));
   assert.ok(isSupplyName('Hauptzähler'));
   assert.ok(!isSupplyName('Schreibtisch'));

@@ -182,6 +182,8 @@ const KINDS: [string, RegExp][] = [
   ['coffee', /kaffee|coffee|espresso/i],
   ['fridge', /k(ü|ue|u)hl(schrank|box)|fridge|freezer|gefrier/i],
   ['nas', /(^|[^a-z])(nas|qnap|synology|server)/i],
+  // A desk plug feeds the PC workplace (monitor, lamp, PC).
+  ['desk', /schreibtisch|desk|arbeitsplatz/i],
 ];
 
 export function deviceKinds(text: string): Set<string> {

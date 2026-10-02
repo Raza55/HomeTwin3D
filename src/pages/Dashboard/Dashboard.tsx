@@ -20,7 +20,7 @@ import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, ImageOff, Zap } from 'lucide-react';
+import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, Zap } from 'lucide-react';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
 import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, Matrix, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
@@ -2462,6 +2462,7 @@ export default function Dashboard() {
         )}
 
         <div className="dashboard-render-toggle">
+          {/* Always the same four buttons: textures, energy view, navigation mode, recentre. */}
           <button
             className={`dashboard-icon-btn dashboard-texture-btn${showTextures ? ' active' : ''}`}
             onClick={() => handleShowTexturesChange(!showTextures)}
@@ -2469,26 +2470,20 @@ export default function Dashboard() {
             aria-pressed={showTextures}
             title={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
           >
-            {showTextures
-              ? <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
-              : <ImageOff size={18} strokeWidth={1.7} aria-hidden="true" />}
+            <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
           </button>
-          {!showTextures && !dayDemoController && <button
-            className={`dashboard-icon-btn${energyView ? ' active' : ''}`}
-            onClick={() => changeEnergyView(!energyView)}
-            aria-pressed={energyView}
-            aria-label={energyView ? t('energy.hide') : t('energy.show')}
-            title={energyView ? t('energy.hide') : t('energy.show')}
+          <button
+            className={`dashboard-icon-btn${!showTextures && energyView ? ' active' : ''}`}
+            disabled={!!dayDemoController}
+            onClick={() => {
+              // The energy view lives on the sketch model: from the textured view it switches over.
+              if (showTextures) { handleShowTexturesChange(false); changeEnergyView(true); } else changeEnergyView(!energyView);
+            }}
+            aria-pressed={!showTextures && energyView}
+            aria-label={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
+            title={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
           >
             <Zap size={18} strokeWidth={1.7} aria-hidden="true" />
-          </button>}
-          <button
-            className="dashboard-icon-btn"
-            onClick={resetView}
-            aria-label={t('common.recenter')}
-            title={t('common.recenter')}
-          >
-            <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
           </button>
           <button
             className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}
@@ -2498,6 +2493,14 @@ export default function Dashboard() {
             title={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
           >
             {navigationMode === 'normal' ? <Orbit size={18} strokeWidth={1.7} aria-hidden="true" /> : navigationMode === 'walk' ? <Footprints size={18} strokeWidth={1.7} aria-hidden="true" /> : <Move3d size={18} strokeWidth={1.7} aria-hidden="true" />}
+          </button>
+          <button
+            className="dashboard-icon-btn"
+            onClick={resetView}
+            aria-label={t('common.recenter')}
+            title={t('common.recenter')}
+          >
+            <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
           </button>
         </div>
 

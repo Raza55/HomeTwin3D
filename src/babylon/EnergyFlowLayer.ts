@@ -63,6 +63,8 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
     if (o.appliance) kinds.add(o.appliance.kind);
     if (o.coffee) kinds.add('coffee');
     if (o.it) { if (o.it.kind === 'pc') kinds.add('pc'); for (const device of o.it.devices) kinds.add(device.kind); }
+    // A PC stands at a desk: the desk plug goes there.
+    if (kinds.has('pc')) kinds.add('desk');
     return kinds;
   };
   const objects = [

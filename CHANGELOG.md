@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.37 – Energiefluss: rollierende Zeiträume, Leistung sofort (02.10.2026)
+
+- Quartal, Halbjahr und Jahr zählen jetzt die letzten 3, 6 bzw. 12 Monate bis heute statt des Kalenderzeitraums; der angebrochene erste Monat wird tageweise gezählt.
+- Die aktuelle Leistung der Steckdosen erscheint nach dem Neuladen sofort: Der Leistungssensor des Geräts wird auch erkannt, bevor sein Zustand angekommen ist.
+
 ## 0.5.36 – Energiefluss: Ebenen und einzelne Lampen (02.10.2026)
 
 - Ebenen im Energiepanel: Geräte, Rollos und Licht lassen sich ein- und ausblenden (Rollos standardmäßig aus); die Auswahl bleibt auf dem Gerät gespeichert.

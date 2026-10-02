@@ -27,6 +27,18 @@ test('consumers come from the energy dashboard with name, area and live power se
   assert.equal(consumers[2].name, 'Rollo Motor');
 });
 
+test('a plug power sensor is found by name before its state has arrived', () => {
+  const prefs = { device_consumption: [{ stat_consumption: 'sensor.plug_coffee_energy' }] };
+  const registry = {
+    entities: [
+      { entity_id: 'sensor.plug_coffee_energy', device_id: 'coffee' }, { entity_id: 'sensor.plug_tv_watt', device_id: 'coffee' },
+      { entity_id: 'sensor.plug_coffee_power', device_id: 'coffee' },
+    ],
+    devices: [{ id: 'coffee', name: 'Plug' }], areas: [],
+  };
+  assert.equal(resolveConsumers(prefs, registry, {})[0].powerEntityId, 'sensor.plug_coffee_power');
+});
+
 test('names lose the plug brand and units, glued words are split', () => {
   assert.deepEqual(cleanNames(['mPowerPlug Toaster', 'mPowerPlug Kaffeemachine Telefon', 'mPowerPlug Waschmachine', 'mPowerPlug PC', 'WohnzimmerRolloLinks Energy']),
     ['Toaster', 'Kaffeemachine Telefon', 'Waschmachine', 'PC', 'Wohnzimmer Rollo Links']);
@@ -66,10 +78,17 @@ test("today's energy sums the day's statistics per consumer", async () => {
   assert.equal(message.type, 'recorder/statistics_during_period');
   assert.equal(new Date(message.start_time).getHours(), 0);
   assert.equal(message.period, 'day');
-  // A year needs only monthly rows.
-  await energyInPeriod(ha, ['sensor.plug_tv_energy'], 'year', new Date(2026, 9, 2, 15));
-  assert.equal(message.period, 'month');
-  assert.deepEqual(new Date(message.start_time), new Date(2026, 0, 1));
+});
+
+test('the last 12 months: daily rows for the partial first month, monthly rows after it', async () => {
+  const messages = [];
+  const ha = { request: async m => { messages.push(m); return { 'sensor.plug_tv_energy': m.period === 'day' ? [{ change: 1 }, { change: 2 }] : [{ change: 10 }, { change: 20 }] }; } };
+  const year = await energyInPeriod(ha, ['sensor.plug_tv_energy'], 'year', new Date(2026, 9, 2, 15));
+  assert.deepEqual(year, { 'sensor.plug_tv_energy': 33 });
+  assert.deepEqual(messages.map(m => [m.period, new Date(m.start_time), m.end_time && new Date(m.end_time)]), [
+    ['day', new Date(2025, 9, 2), new Date(2025, 10, 1)],
+    ['month', new Date(2025, 10, 1), undefined],
+  ]);
 });
 
 test('periods start at midnight, on Monday and on the first of the month', () => {
@@ -78,11 +97,11 @@ test('periods start at midnight, on Monday and on the first of the month', () =>
   assert.deepEqual(periodStart('week', friday), new Date(2026, 8, 28));
   assert.deepEqual(periodStart('month', friday), new Date(2026, 9, 1));
   assert.deepEqual(periodStart('week', new Date(2026, 9, 4, 9)), new Date(2026, 8, 28));
-  assert.deepEqual(periodStart('quarter', friday), new Date(2026, 9, 1));
-  assert.deepEqual(periodStart('quarter', new Date(2026, 7, 20)), new Date(2026, 6, 1));
-  assert.deepEqual(periodStart('half', friday), new Date(2026, 6, 1));
-  assert.deepEqual(periodStart('half', new Date(2026, 2, 5)), new Date(2026, 0, 1));
-  assert.deepEqual(periodStart('year', friday), new Date(2026, 0, 1));
+  assert.deepEqual(periodStart('quarter', friday), new Date(2026, 6, 2));
+  assert.deepEqual(periodStart('quarter', new Date(2026, 7, 20)), new Date(2026, 4, 20));
+  assert.deepEqual(periodStart('half', friday), new Date(2026, 3, 2));
+  assert.deepEqual(periodStart('half', new Date(2026, 2, 5)), new Date(2025, 8, 5));
+  assert.deepEqual(periodStart('year', friday), new Date(2025, 9, 2));
 });
 
 test('device types and the supply are recognised by name', () => {

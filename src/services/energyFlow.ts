@@ -120,7 +120,9 @@ function powerSensorOf(energyId: string, siblings: EntityEntry[], states: Record
   for (const guess of [energyId.replace(/_(energy|energie|consumption|verbrauch)(_\w+)?$/, '_power'), energyId.replace(/energy/, 'power')]) {
     if (guess !== energyId && isPowerState(states[guess])) return guess;
   }
-  return undefined;
+  // Right after a reload not every state may be known yet: the device's "…_power" sensor by name.
+  const named = siblings.find(e => e.entity_id.startsWith('sensor.') && /_power$/.test(e.entity_id) && !states[e.entity_id]);
+  return named?.entity_id;
 }
 
 /**
@@ -169,24 +171,31 @@ export type EnergyPeriod = 'day' | 'week' | 'month' | 'quarter' | 'half' | 'year
 /** Start of the current day, week (Monday), month, quarter, half-year or year in local time. */
 export function periodStart(period: EnergyPeriod, now = new Date()): Date {
   const month = now.getMonth();
-  const firstMonth = { quarter: month - month % 3, half: month - month % 6, year: 0 } as Record<string, number>;
-  if (period in firstMonth) return new Date(now.getFullYear(), firstMonth[period], 1);
+  // Quarter, half-year and year are rolling: the last 3, 6 or 12 months up to today.
+  const back = { quarter: 3, half: 6, year: 12 } as Record<string, number>;
+  if (period in back) return new Date(now.getFullYear(), month - back[period], now.getDate());
   const start = new Date(now.getFullYear(), month, period === 'month' ? 1 : now.getDate());
   if (period === 'week') start.setDate(start.getDate() - (start.getDay() + 6) % 7);
   return start;
 }
 
-/** Energy per statistic (kWh) since the start of the day, week or month, from the recorder's daily statistics. */
+/** Energy per statistic (kWh) since the start of the day, week or month, or over the last 3/6/12 months, from the recorder's statistics. */
 export async function energyInPeriod(ha: Requester, ids: string[], period: EnergyPeriod = 'day', now = new Date()): Promise<Record<string, number>> {
   if (!ids.length) return {};
   const midnight = periodStart(period, now);
-  const result = await ha.request({
-    // Daily rows up to a month, monthly rows for quarters and years (fewer rows, same sum).
-    type: 'recorder/statistics_during_period', start_time: midnight.toISOString(), statistic_ids: ids,
-    period: ['day', 'week', 'month'].includes(period) ? 'day' : 'month', types: ['change'], units: { energy: 'kWh' },
-  }).catch(() => ({})) as Record<string, { change?: number | null }[]>;
+  const rows = (start: Date, end: Date | undefined, step: 'day' | 'month') => ha.request({
+    type: 'recorder/statistics_during_period', start_time: start.toISOString(), ...(end ? { end_time: end.toISOString() } : {}),
+    statistic_ids: ids, period: step, types: ['change'], units: { energy: 'kWh' },
+  }).catch(() => ({})) as Promise<Record<string, { change?: number | null }[]>>;
+  // Daily rows up to a month. Longer periods: monthly rows count whole calendar months,
+  // so the partial first month comes from daily rows and the rest from monthly rows (fewer rows, same sum).
+  const firstOfNext = new Date(midnight.getFullYear(), midnight.getMonth() + 1, 1);
+  const parts = ['day', 'week', 'month'].includes(period) || midnight.getDate() === 1
+    ? [rows(midnight, undefined, ['day', 'week', 'month'].includes(period) ? 'day' : 'month')]
+    : [rows(midnight, firstOfNext, 'day'), rows(firstOfNext, undefined, 'month')];
+  const results = await Promise.all(parts);
   const today: Record<string, number> = {};
-  for (const id of ids) today[id] = (result?.[id] ?? []).reduce((sum, row) => sum + (Number(row.change) || 0), 0);
+  for (const id of ids) today[id] = results.reduce((total, result) => total + (result?.[id] ?? []).reduce((sum, row) => sum + (Number(row.change) || 0), 0), 0);
   return today;
 }
 

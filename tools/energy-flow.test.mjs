@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanNames, energyShares, energyToday, matchScore, powerWatts, resolveConsumers } from '../src/services/energyFlow.ts';
+import { cleanNames, deviceKinds, energyInPeriod, energyShares, isSupplyName, matchScore, periodStart, powerWatts, resolveConsumers } from '../src/services/energyFlow.ts';
 
 const state = (value, unit = 'W', extra = {}) => ({ entity_id: 'x', state: String(value), attributes: { unit_of_measurement: unit, ...extra } });
 
@@ -61,8 +61,28 @@ test('labels match device names despite spelling and compound words', () => {
 test("today's energy sums the day's statistics per consumer", async () => {
   let message;
   const ha = { request: async m => { message = m; return { 'sensor.plug_tv_energy': [{ change: .4 }, { change: .25 }] }; } };
-  const today = await energyToday(ha, ['sensor.plug_tv_energy', 'sensor.plug_coffee_energy'], new Date(2026, 9, 2, 15));
+  const today = await energyInPeriod(ha, ['sensor.plug_tv_energy', 'sensor.plug_coffee_energy'], 'day', new Date(2026, 9, 2, 15));
   assert.deepEqual(today, { 'sensor.plug_tv_energy': .65, 'sensor.plug_coffee_energy': 0 });
   assert.equal(message.type, 'recorder/statistics_during_period');
   assert.equal(new Date(message.start_time).getHours(), 0);
+});
+
+test('periods start at midnight, on Monday and on the first of the month', () => {
+  const friday = new Date(2026, 9, 2, 15, 30);
+  assert.deepEqual(periodStart('day', friday), new Date(2026, 9, 2));
+  assert.deepEqual(periodStart('week', friday), new Date(2026, 8, 28));
+  assert.deepEqual(periodStart('month', friday), new Date(2026, 9, 1));
+  assert.deepEqual(periodStart('week', new Date(2026, 9, 4, 9)), new Date(2026, 8, 28));
+});
+
+test('device types and the supply are recognised by name', () => {
+  assert.deepEqual([...deviceKinds('Fernsehr Wonzimmer2')], ['tv']);
+  assert.deepEqual([...deviceKinds('PC')], ['pc']);
+  assert.ok(deviceKinds('Kinderzimmer Kühlschrank').has('fridge'));
+  assert.ok(deviceKinds('Waschmachine').has('washer'));
+  assert.ok(deviceKinds('Qnap Extension').has('nas'));
+  assert.equal(deviceKinds('Nachttisch').size, 0);
+  assert.ok(isSupplyName('Main Switch'));
+  assert.ok(isSupplyName('Hauptzähler'));
+  assert.ok(!isSupplyName('Schreibtisch'));
 });

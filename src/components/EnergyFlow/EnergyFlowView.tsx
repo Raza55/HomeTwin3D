@@ -3,7 +3,7 @@ import { Vector3, type AbstractMesh, type Scene } from '@babylonjs/core';
 import { Zap, X } from 'lucide-react';
 import type { AppConfig, DisplayConfig, HAState } from '../../types';
 import { EnergyFlowLayer, placeConsumers, type EnergyNode } from '../../babylon/EnergyFlowLayer';
-import { energyShares, energyToday, loadEnergyConsumers, powerWatts, type EnergyConsumer } from '../../services/energyFlow';
+import { energyInPeriod, energyShares, loadEnergyConsumers, powerWatts, type EnergyConsumer, type EnergyPeriod } from '../../services/energyFlow';
 import { useMapMarkers } from '../useMapMarkers';
 import { useLanguage } from '../../contexts/LanguageContext';
 import './EnergyFlowView.css';
@@ -22,6 +22,7 @@ interface Reading { id: string; watts: number; share: number }
 
 const POLL_MS = 2000;
 const TODAY_MS = 5 * 60 * 1000;
+const PERIODS: EnergyPeriod[] = ['day', 'week', 'month'];
 
 const formatWatts = (watts: number, language: string) => watts >= 1000
   ? `${(watts / 1000).toLocaleString(language, { maximumFractionDigits: 2 })} kW`
@@ -39,6 +40,7 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
   const [readings, setReadings] = useState<Reading[]>([]);
   const [total, setTotal] = useState(0);
   const [today, setToday] = useState<Record<string, number>>({});
+  const [period, setPeriod] = useState<EnergyPeriod>('day');
   const [error, setError] = useState(false);
   const layer = useRef<EnergyFlowLayer | null>(null);
   const positions = useRef(new Map<string, Vector3>());
@@ -86,21 +88,22 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
     return () => clearInterval(timer);
   }, [consumers, states]);
 
-  // Today's energy per consumer (recorder statistics), refreshed every 5 minutes.
+  // Energy per consumer since the start of the day, week or month (recorder statistics), refreshed every 5 minutes.
   useEffect(() => {
     if (!connection || !consumers?.length) return;
     let cancelled = false;
-    const load = () => energyToday(connection, consumers.map(c => c.id)).then(values => { if (!cancelled) setToday(values); });
+    setToday({});
+    const load = () => energyInPeriod(connection, consumers.map(c => c.id), period).then(values => { if (!cancelled) setToday(values); });
     void load();
     const timer = setInterval(load, TODAY_MS);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [connection, consumers]);
+  }, [connection, consumers, period]);
 
   const byId = useMemo(() => new Map(readings.map(r => [r.id, r])), [readings]);
   const nodeById = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
 
   useMapMarkers(scene, () => [
-    { id: 'energy:hub', element: () => labels.current.hub, anchor: (out: Vector3) => out.copyFrom(positions.current.get('hub') ?? Vector3.Zero()), display: 'flex', interactive: false, energy: true, offset: { x: 0, y: -22 } },
+    { id: 'energy:hub', element: () => labels.current.hub, anchor: (out: Vector3) => out.copyFrom(positions.current.get('hub') ?? Vector3.Zero()), display: 'flex', interactive: false, energy: true, offset: { x: 0, y: -22 }, stack: { group: 'energy', width: 140, height: 26 } },
     ...nodes.map(node => ({
       id: `energy:${node.id}`, element: () => labels.current[node.id], interactive: false, energy: true, display: 'flex',
       anchor: (out: Vector3) => out.copyFrom(positions.current.get(node.id) ?? node.position),
@@ -147,7 +150,10 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
             : !consumers.length ? <p className="energy-empty">{t('energy.none')}</p> : <>
               <div className="energy-totals">
                 <div><span>{t('energy.now')}</span><strong>{formatWatts(total, language)}</strong></div>
-                <div><span>{t('energy.today')}</span><strong>{todayTotal.toLocaleString(language, { maximumFractionDigits: 2 })} kWh</strong></div>
+                <div><span>{t(`energy.period.${period}`)}</span><strong>{todayTotal.toLocaleString(language, { maximumFractionDigits: todayTotal >= 100 ? 0 : todayTotal >= 10 ? 1 : 2 })} kWh</strong></div>
+              </div>
+              <div className="energy-periods" role="group" aria-label={t('energy.period')}>
+                {PERIODS.map(p => <button key={p} type="button" className={p === period ? 'active' : ''} aria-pressed={p === period} onClick={() => setPeriod(p)}>{t(`energy.period.${p}`)}</button>)}
               </div>
               <div className="energy-rooms" role="img" aria-label={rooms.map(r => `${r.name} ${roomTotal ? Math.round(r.watts / roomTotal * 100) : 0} %`).join(', ')}>
                 {rooms.filter(r => r.watts > 0).map(r => <span key={r.name} style={{ flexGrow: r.watts, background: r.color }} title={`${r.name} · ${formatWatts(r.watts, language)}`} />)}

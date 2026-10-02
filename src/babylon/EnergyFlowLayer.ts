@@ -1,9 +1,9 @@
 import {
   Color3, DynamicTexture, Mesh, MeshBuilder, StandardMaterial, Texture, Vector3, type AbstractMesh, type Observer, type Scene,
 } from '@babylonjs/core';
-import type { AppConfig, DisplayConfig, RoomConfig } from '../types';
+import type { AppConfig, DisplayConfig, FloorplanObject, RoomConfig } from '../types';
 import { floorplanId } from './FloorplanBindings';
-import { matchScore, type EnergyConsumer, type EnergyRegistry } from '../services/energyFlow';
+import { deviceKinds, isSupplyName, matchScore, type EnergyConsumer, type EnergyRegistry } from '../services/energyFlow';
 
 /** How a consumer found its place (shown for feedback). */
 export type EnergyPlacementSource = 'override' | 'blind' | 'object' | 'model' | 'room' | 'home';
@@ -57,10 +57,18 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
   // Labelled candidates: floorplan objects (by their meshes) and screens.
   const byFloorplan = new Map<string, AbstractMesh[]>();
   for (const mesh of meshes) { const id = floorplanId(mesh); if (id) byFloorplan.set(id, [...(byFloorplan.get(id) ?? []), mesh]); }
+  // Device types from the board's own configuration: TVs, PCs, NAS, appliances, coffee machine.
+  const objectKinds = (o: FloorplanObject) => {
+    const kinds = deviceKinds(o.label);
+    if (o.appliance) kinds.add(o.appliance.kind);
+    if (o.coffee) kinds.add('coffee');
+    if (o.it) { if (o.it.kind === 'pc') kinds.add('pc'); for (const device of o.it.devices) kinds.add(device.kind); }
+    return kinds;
+  };
   const objects = [
-    ...(config.model?.floorplan?.objects ?? []).map(o => ({ label: o.label, area: o.haAreaId, center: centerOf(byFloorplan.get(o.id) ?? []) })),
-    ...displays.map(d => ({ label: d.config.label, area: undefined as string | undefined, center: d.plane.getAbsolutePosition().clone() })),
-  ].filter((o): o is { label: string; area: string | undefined; center: Vector3 } => !!o.center);
+    ...(config.model?.floorplan?.objects ?? []).map(o => ({ label: o.label, area: o.haAreaId, kinds: objectKinds(o), center: centerOf(byFloorplan.get(o.id) ?? []) })),
+    ...displays.map(d => ({ label: d.config.label, area: undefined as string | undefined, kinds: new Set([...deviceKinds(d.config.label), ...(d.config.kind === 'tv' ? ['tv'] : d.config.kind === 'pc' ? ['pc'] : [])]), center: d.plane.getAbsolutePosition().clone() })),
+  ].filter((o): o is { label: string; area: string | undefined; kinds: Set<string>; center: Vector3 } => !!o.center);
   // Model parts by name (one entry per base name, e.g. "Toaster_Gehaeuse.001" → "Toaster Gehaeuse").
   const parts = new Map<string, AbstractMesh[]>();
   for (const mesh of meshes) {
@@ -94,9 +102,17 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
       if (panel) { position = centerOf([panel]); source = 'blind'; }
     }
     if (!position) {
-      // Best label fit; among equals the one in (or nearest to) the consumer's room.
-      const scored = objects.map(o => ({ o, score: matchScore(consumer.name, o.label) + (o.area && o.area === consumer.areaId ? 2 : 0) })).filter(s => s.score >= 5);
-      scored.sort((a, b) => b.score - a.score || near(a.o.center) - near(b.o.center));
+      // Same device type (a TV plug at the TV, the PC plug at the PC), else the best label fit;
+      // the object in (or nearest to) the consumer's area wins.
+      const kinds = deviceKinds(consumer.name);
+      const scored = objects.map(o => {
+        const kind = [...kinds].some(k => o.kinds.has(k)) ? 10 : 0;
+        const label = matchScore(consumer.name, o.label);
+        // Only objects in (or close to) the consumer's area: a "kids' room PC desk" plug is not the PC in the bedroom.
+        const close = !anchor || (o.area && o.area === consumer.areaId) || near(o.center) < 5 * scale;
+        return { o, score: kind + (label >= 5 ? label : 0) + (o.area && o.area === consumer.areaId ? 3 : 0) - (anchor ? near(o.center) / scale * .4 : 0), fits: (kind > 0 || label >= 5) && close };
+      }).filter(s => s.fits);
+      scored.sort((a, b) => b.score - a.score);
       if (scored[0]) { position = scored[0].o.center.clone(); source = 'object'; }
     }
     if (!position) {
@@ -119,10 +135,23 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
     return { id: consumer.id, name: consumer.name, roomName, color: colorFor(roomName), position, source };
   });
 
-  // Supply: the front door (meter and fuse box usually sit near it), else the middle of the home.
+  // Two consumers at one device (e.g. two TV plugs): side by side instead of on top of each other.
+  nodes.forEach((node, i) => {
+    let k = 0;
+    while (nodes.slice(0, i).some(other => Vector3.Distance(other.position, node.position) < .25 * scale) && k < 8) {
+      k++;
+      node.position = node.position.add(new Vector3(Math.cos(k * 2.4) * .3 * scale, 0, Math.sin(k * 2.4) * .3 * scale));
+    }
+  });
+
+  // Supply: a hand-placed point, the main switch / meter consumer, else the front door, else the middle of the home.
   const entrance = (config.model?.floorplan?.objects ?? []).find(o => o.door?.kind === 'entrance');
   const door = entrance ? centerOf(byFloorplan.get(entrance.id) ?? []) : null;
-  const hub = door ? new Vector3(door.x, floor + .25 * scale, door.z) : new Vector3(all.x, floor + .25 * scale, all.z);
+  const supply = nodes.find(n => isSupplyName(n.name));
+  const placed = config.energyPlacement?.hub;
+  const hub = placed ? new Vector3(placed.x, placed.y, placed.z)
+    : supply ? new Vector3(supply.position.x, Math.max(floor + .25 * scale, supply.position.y - .35 * scale), supply.position.z)
+      : door ? new Vector3(door.x, floor + .25 * scale, door.z) : new Vector3(all.x, floor + .25 * scale, all.z);
   return { nodes, hub };
 }
 

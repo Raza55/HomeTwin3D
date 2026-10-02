@@ -126,10 +126,19 @@ export function energyShares(consumers: EnergyConsumer[], watts: (consumer: Ener
   return { total, items: items.sort((a, b) => b.watts - a.watts) };
 }
 
-/** Today's energy per statistic (kWh) from the recorder's daily statistics. */
-export async function energyToday(ha: Requester, ids: string[], now = new Date()): Promise<Record<string, number>> {
+export type EnergyPeriod = 'day' | 'week' | 'month';
+
+/** Start of the current day, week (Monday) or month in local time. */
+export function periodStart(period: EnergyPeriod, now = new Date()): Date {
+  const start = new Date(now.getFullYear(), now.getMonth(), period === 'month' ? 1 : now.getDate());
+  if (period === 'week') start.setDate(start.getDate() - (start.getDay() + 6) % 7);
+  return start;
+}
+
+/** Energy per statistic (kWh) since the start of the day, week or month, from the recorder's daily statistics. */
+export async function energyInPeriod(ha: Requester, ids: string[], period: EnergyPeriod = 'day', now = new Date()): Promise<Record<string, number>> {
   if (!ids.length) return {};
-  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const midnight = periodStart(period, now);
   const result = await ha.request({
     type: 'recorder/statistics_during_period', start_time: midnight.toISOString(), statistic_ids: ids,
     period: 'day', types: ['change'], units: { energy: 'kWh' },
@@ -162,4 +171,24 @@ export function matchScore(name: string, label: string): number {
     else if (y.length >= 4 && x.includes(y)) best = Math.max(best, y.length);
   }
   return best;
+}
+
+/** Device types a name or label stands for (spelling variants included): placement by type. */
+const KINDS: [string, RegExp][] = [
+  ['tv', /(^|[^a-z])(tv|fernseh\w*|fernsehr\w*|television|beamer)/i],
+  ['pc', /(^|[^a-z])(pc|computer|rechner|desktop|gaming)/i],
+  ['washer', /wasch\w*masch|waschmachine|washer|washing/i],
+  ['dryer', /trockner|dryer/i],
+  ['coffee', /kaffee|coffee|espresso/i],
+  ['fridge', /k(ü|ue|u)hl(schrank|box)|fridge|freezer|gefrier/i],
+  ['nas', /(^|[^a-z])(nas|qnap|synology|server)/i],
+];
+
+export function deviceKinds(text: string): Set<string> {
+  return new Set(KINDS.filter(([, pattern]) => pattern.test(text)).map(([kind]) => kind));
+}
+
+/** The supply point: a consumer named like the main switch or meter (fuse box). */
+export function isSupplyName(name: string): boolean {
+  return /main\s*switch|haupt(schalter|verteil\w*|z(ä|ae)hler)|z(ä|ae)hler|stromz|meter|sicherungskasten|verteilerkasten/i.test(name);
 }

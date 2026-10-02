@@ -77,16 +77,29 @@ export function placeConsumers(scene: Scene, config: AppConfig, consumers: Energ
     const base = mesh.name.replace(/[._:]\d+$/, '').replace(/_primitive\d+$/, '');
     if (base.length >= 4) parts.set(base, [...(parts.get(base) ?? []), mesh]);
   }
-  // Without rooms in the board: an area's centre from the floorplan objects assigned to it.
-  const areaAnchor = (areaId: string | undefined): Vector3 | null => {
-    if (!areaId) return null;
-    const objectsThere = (config.model?.floorplan?.objects ?? []).filter(o => o.haAreaId === areaId);
-    const center = centerOf(objectsThere.flatMap(o => byFloorplan.get(o.id) ?? []));
-    return center ? new Vector3(center.x, floor + .9 * scale, center.z) : null;
-  };
   const blindPanel = (entityId: string) => {
     const blind = config.blinds?.find(b => b.entityId === entityId);
     return blind ? scene.getMeshByName(`blind_panel_${blind.id}`) ?? scene.getMeshByName(`blind_frame_${blind.id}`) : null;
+  };
+  // Without rooms in the board: an area's centre from the floorplan objects assigned to it, else
+  // from objects, room labels or blinds named like the area ("Kaffeezone" → coffee machine, "Balkon" → balcony door).
+  const areaAnchor = (areaId: string | undefined): Vector3 | null => {
+    if (!areaId) return null;
+    const all = config.model?.floorplan?.objects ?? [];
+    const name = areaName.get(areaId) ?? areaId.replace(/_/g, ' ');
+    const named = (text: string | undefined) => !!text && (text.trim().toLowerCase() === name.trim().toLowerCase() || matchScore(name, text) >= 5);
+    const groups = [
+      all.filter(o => o.haAreaId === areaId),
+      all.filter(o => named(o.room)),
+      all.filter(o => named(o.label)),
+    ];
+    for (const group of groups) {
+      const center = centerOf(group.flatMap(o => byFloorplan.get(o.id) ?? []));
+      if (center) return new Vector3(center.x, floor + .9 * scale, center.z);
+    }
+    const panels = (config.blinds ?? []).filter(b => named(b.label)).map(b => blindPanel(b.entityId)).filter((m): m is AbstractMesh => !!m);
+    const center = centerOf(panels);
+    return center ? new Vector3(center.x, floor + .9 * scale, center.z) : null;
   };
 
   const used = new Map<string, number>();

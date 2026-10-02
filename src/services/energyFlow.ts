@@ -126,11 +126,14 @@ export function energyShares(consumers: EnergyConsumer[], watts: (consumer: Ener
   return { total, items: items.sort((a, b) => b.watts - a.watts) };
 }
 
-export type EnergyPeriod = 'day' | 'week' | 'month';
+export type EnergyPeriod = 'day' | 'week' | 'month' | 'quarter' | 'half' | 'year';
 
-/** Start of the current day, week (Monday) or month in local time. */
+/** Start of the current day, week (Monday), month, quarter, half-year or year in local time. */
 export function periodStart(period: EnergyPeriod, now = new Date()): Date {
-  const start = new Date(now.getFullYear(), now.getMonth(), period === 'month' ? 1 : now.getDate());
+  const month = now.getMonth();
+  const firstMonth = { quarter: month - month % 3, half: month - month % 6, year: 0 } as Record<string, number>;
+  if (period in firstMonth) return new Date(now.getFullYear(), firstMonth[period], 1);
+  const start = new Date(now.getFullYear(), month, period === 'month' ? 1 : now.getDate());
   if (period === 'week') start.setDate(start.getDate() - (start.getDay() + 6) % 7);
   return start;
 }
@@ -140,8 +143,9 @@ export async function energyInPeriod(ha: Requester, ids: string[], period: Energ
   if (!ids.length) return {};
   const midnight = periodStart(period, now);
   const result = await ha.request({
+    // Daily rows up to a month, monthly rows for quarters and years (fewer rows, same sum).
     type: 'recorder/statistics_during_period', start_time: midnight.toISOString(), statistic_ids: ids,
-    period: 'day', types: ['change'], units: { energy: 'kWh' },
+    period: ['day', 'week', 'month'].includes(period) ? 'day' : 'month', types: ['change'], units: { energy: 'kWh' },
   }).catch(() => ({})) as Record<string, { change?: number | null }[]>;
   const today: Record<string, number> = {};
   for (const id of ids) today[id] = (result?.[id] ?? []).reduce((sum, row) => sum + (Number(row.change) || 0), 0);

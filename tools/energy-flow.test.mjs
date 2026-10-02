@@ -65,6 +65,11 @@ test("today's energy sums the day's statistics per consumer", async () => {
   assert.deepEqual(today, { 'sensor.plug_tv_energy': .65, 'sensor.plug_coffee_energy': 0 });
   assert.equal(message.type, 'recorder/statistics_during_period');
   assert.equal(new Date(message.start_time).getHours(), 0);
+  assert.equal(message.period, 'day');
+  // A year needs only monthly rows.
+  await energyInPeriod(ha, ['sensor.plug_tv_energy'], 'year', new Date(2026, 9, 2, 15));
+  assert.equal(message.period, 'month');
+  assert.deepEqual(new Date(message.start_time), new Date(2026, 0, 1));
 });
 
 test('periods start at midnight, on Monday and on the first of the month', () => {
@@ -73,6 +78,11 @@ test('periods start at midnight, on Monday and on the first of the month', () =>
   assert.deepEqual(periodStart('week', friday), new Date(2026, 8, 28));
   assert.deepEqual(periodStart('month', friday), new Date(2026, 9, 1));
   assert.deepEqual(periodStart('week', new Date(2026, 9, 4, 9)), new Date(2026, 8, 28));
+  assert.deepEqual(periodStart('quarter', friday), new Date(2026, 9, 1));
+  assert.deepEqual(periodStart('quarter', new Date(2026, 7, 20)), new Date(2026, 6, 1));
+  assert.deepEqual(periodStart('half', friday), new Date(2026, 6, 1));
+  assert.deepEqual(periodStart('half', new Date(2026, 2, 5)), new Date(2026, 0, 1));
+  assert.deepEqual(periodStart('year', friday), new Date(2026, 0, 1));
 });
 
 test('device types and the supply are recognised by name', () => {

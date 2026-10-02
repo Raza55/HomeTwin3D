@@ -56,7 +56,7 @@
 .energy-totals span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .energy-totals strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 
-.energy-periods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; border-radius: 9px; border: 1px solid var(--border2); }
+.energy-periods { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 28px; gap: 2px; padding: 2px; border-radius: 9px; border: 1px solid var(--border2); }
 .energy-periods button { height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; }
 .energy-periods button:hover { color: var(--text); }
 .energy-periods button.active { background: var(--accent); color: var(--surface); font-weight: 650; }

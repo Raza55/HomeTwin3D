@@ -25,7 +25,7 @@ const POLL_MS = 2000;
 const TODAY_MS = 5 * 60 * 1000;
 /** "now": shares of the current power; the periods: shares of the energy used since the start of the day, week or month. */
 type EnergyMode = 'now' | EnergyPeriod;
-const MODES: EnergyMode[] = ['now', 'day', 'week', 'month'];
+const MODES: EnergyMode[] = ['now', 'day', 'week', 'month', 'quarter', 'half', 'year'];
 
 const formatEnergy = (kwh: number, language: string) => `${kwh.toLocaleString(language, { maximumFractionDigits: kwh >= 100 ? 0 : kwh >= 10 ? 1 : 2 })} kWh`;
 

@@ -77,6 +77,8 @@ import type { DayDemoController } from '../../services/dayDemo/controller';
 import { miredToKelvin, kelvinToRGB } from '../../utils/color';
 import { updateSunPosition, minutesToLabel } from '../../babylon/SunController';
 import { createWeatherEffects, type WeatherEffectsContext } from '../../babylon/WeatherEffects';
+import { createWildlife, type Wildlife } from '../../babylon/Wildlife';
+import { reducedEffects } from '../../babylon/DeviceClass';
 import { fetchWeather, type WeatherData } from '../../services/weatherApi';
 import { showGroundGrid, hideGroundGrid, syncGridColors, disposeGroundGrid, createModelShadow } from '../../babylon/GroundGrid';
 import { createTubeMeshes, updateTubeEntryValue, disposeAllTubes, setTubeTheme, type TubeMap } from '../../babylon/TubeMeshFactory';
@@ -425,6 +427,19 @@ export default function Dashboard() {
     ctx.scene.metadata = { ...ctx.scene.metadata, parkMinBrightness: percent / 100 };
     ctx.requestRender();
   }, []);
+  const [wildlifeEnabled, setWildlifeEnabled] = useState(() => !!getSetting('environment').wildlifeEnabled);
+  const wildlifeEnabledRef = useRef(wildlifeEnabled);
+  const wildlifeRef = useRef<Wildlife | null>(null);
+  const handleWildlifeEnabledChange = useCallback((enabled: boolean) => {
+    setWildlifeEnabled(enabled);
+    wildlifeEnabledRef.current = enabled;
+    updateSettings('environment', { wildlifeEnabled: enabled });
+    wildlifeRef.current?.dispose();
+    wildlifeRef.current = null;
+    const ctx = sceneCtxRef.current;
+    if (enabled && ctx) wildlifeRef.current = createWildlife(ctx.scene, { reduced: reducedEffects() });
+    ctx?.requestRender();
+  }, []);
   const weatherEnabledRef = useRef(weatherEnabled);
   weatherEnabledRef.current = weatherEnabled;
   const [perspective, setPerspective] = useState(() => getSetting('render').perspective);
@@ -432,8 +447,12 @@ export default function Dashboard() {
   const [pointShadowRes, setPointShadowRes] = useState(() => getSetting('render').pointShadowRes);
   const [showTextures, setShowTextures] = useState(() => getSetting('render').showTextures);
   // Energy flow over the sketch model (textures off).
-  const [energyView, setEnergyView] = useState(() => getSetting('render').energyView ?? true);
+  // Older settings could store "no textures, no energy view": that bare state no longer exists.
+  const [energyView, setEnergyView] = useState(() => !getSetting('render').showTextures || (getSetting('render').energyView ?? true));
   const changeEnergyView = useCallback((on: boolean) => { setEnergyView(on); updateSettings('render', { energyView: on }); }, []);
+  // Once connected, the energy view stays open through short reconnects instead of dropping to the bare sketch.
+  const [haSeen, setHaSeen] = useState(false);
+  useEffect(() => { if (haStatus === 'connected') setHaSeen(true); }, [haStatus]);
   const energyStates = useCallback(() => lastStatesRef.current, []);
   const energyLampPoint = useCallback((entityId: string) => meshMapRef.current[entityId]?.bulb?.getAbsolutePosition().clone() ?? null, []);
   const energyDisplays = useCallback(() => Object.values(displayMeshMapRef.current).map(entry => ({ config: entry.config, plane: entry.plane })), []);
@@ -1213,6 +1232,7 @@ export default function Dashboard() {
 
         // Weather effects (rain/snow particles + cloud cover)
         weatherRef.current = createWeatherEffects(ctx.scene, sunShadowGen ?? undefined);
+        if (wildlifeEnabledRef.current) wildlifeRef.current = createWildlife(ctx.scene, { reduced: reducedEffects() });
         const pollWeather = async () => {
           if (!weatherEnabledRef.current || dayDemoRef.current) return;
           try {
@@ -1501,6 +1521,8 @@ export default function Dashboard() {
       if (prewarmTimerRef) clearInterval(prewarmTimerRef);
       weatherRef.current?.dispose();
       weatherRef.current = null;
+      wildlifeRef.current?.dispose();
+      wildlifeRef.current = null;
       disposeGroundGrid();
       // A re-run of this effect (model reload, StrictMode) creates the next engine
       // on the same canvas, i.e. the same WebGL context, right after this cleanup.
@@ -2466,7 +2488,8 @@ export default function Dashboard() {
           {/* Always the same four buttons: textures, energy view, navigation mode, recentre. */}
           <button
             className={`dashboard-icon-btn dashboard-texture-btn${showTextures ? ' active' : ''}`}
-            onClick={() => handleShowTexturesChange(!showTextures)}
+            // Without textures the plan always shows the energy view (no bare sketch state).
+            onClick={() => { if (showTextures) changeEnergyView(true); handleShowTexturesChange(!showTextures); }}
             aria-label={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
             aria-pressed={showTextures}
             title={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
@@ -2477,8 +2500,8 @@ export default function Dashboard() {
             className={`dashboard-icon-btn${!showTextures && energyView ? ' active' : ''}`}
             disabled={!!dayDemoController}
             onClick={() => {
-              // The energy view lives on the sketch model: from the textured view it switches over.
-              if (showTextures) { handleShowTexturesChange(false); changeEnergyView(true); } else changeEnergyView(!energyView);
+              // The energy view lives on the sketch model: it switches over, and closing it returns to the textures.
+              if (showTextures || !energyView) { changeEnergyView(true); if (showTextures) handleShowTexturesChange(false); } else handleShowTexturesChange(true);
             }}
             aria-pressed={!showTextures && energyView}
             aria-label={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
@@ -2587,7 +2610,7 @@ export default function Dashboard() {
         />
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
-        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haStatus === 'connected' && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} onClose={() => changeEnergyView(false)} /></Suspense>}
+        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haSeen && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} onClose={() => handleShowTexturesChange(true)} /></Suspense>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} />}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && <TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
@@ -2656,6 +2679,8 @@ export default function Dashboard() {
               cameraSensitivity={cameraSensitivity}
               onCameraSensitivityChange={handleCameraSensitivityChange}
               onParkMinBrightnessChange={handleParkMinBrightnessChange}
+              wildlifeEnabled={wildlifeEnabled}
+              onWildlifeEnabledChange={handleWildlifeEnabledChange}
               onWeatherEnabledChange={handleWeatherEnabledChange}
               perspective={perspective}
               onPerspectiveChange={handlePerspectiveChange}

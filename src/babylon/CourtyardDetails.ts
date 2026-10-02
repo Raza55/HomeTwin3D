@@ -1,5 +1,11 @@
 import {Mesh,MeshBuilder,StandardMaterial,Vector3,DynamicTexture,VertexData,type Scene} from '@babylonjs/core';
 
+/** On top of the leaf clusters that reach furthest out (and up) from the trunk. */
+function outerPerches(leaves:{m:Mesh;r:number}[],x:number,z:number,count:number):Vector3[]{
+ const reach=(l:{m:Mesh})=>Math.hypot(l.m.position.x-x,l.m.position.z-z)+l.m.position.y*.35;
+ return [...leaves].sort((a,b)=>reach(b)-reach(a)).slice(0,count).map(({m,r})=>m.position.add(new Vector3(0,r*m.scaling.y*.92,0)));
+}
+
 /** Photo-based courtyard details in metres. Static parts are batched by material. */
 export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,groundY:number,
  treeCenter:{x:number;z:number},pathX:number,material:(name:string,color:string)=>StandardMaterial,
@@ -32,11 +38,15 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
   const m=new Mesh(name,scene);data.applyToMesh(m);return add(m,mat,p(x,y,z));
  };
  const {x:tx,z:tz}=treeCenter,bz=benchAnchorZ;
+ // Trunks and crown perches for the optional wildlife (world positions; hostRoot is unscaled).
+ const trees:{x:number;z:number;trunk:number;perches:Vector3[]}[]=[];
  groundPatch('plane-grove-earth',tx,tz,11,11,soil);
  // Five separate trees around the clearing: open lower trunks and forked crowns.
  for(let i=0;i<5;i++){
   const angle=-Math.PI/2+i*Math.PI*2/5,x=tx+7*Math.cos(angle),z=tz+7*Math.sin(angle),h=[16,18,17,16.5,17.5][i];
   branch('plane-trunk',p(x,0,z),p(x+.2,h*.57,z-.15),.43);
+  const leaves:{m:Mesh;r:number}[]=[];
+  trees.push({x:center.x+x,z:center.z+z,trunk:.43,perches:[]});
   for(let j=0;j<17;j++){
    const a=j*2.4+i,at=p(x+Math.cos(a)*.33,.35+j*.43,z+Math.sin(a)*.33);
    const m=tuft(at,.15,patch);m.scaling.set(.7,2.1,.4);m.rotation.y=-a;
@@ -49,9 +59,11 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
    for(let k=0;k<5;k++){
     const b=a+k*1.7,tip=end.add(new Vector3(Math.cos(b)*(1+random()),random()*2,Math.sin(b)*(1+random())));
     branch('plane-twig',end,tip,.045);
-    for(let n=0;n<12;n++)tuft(tip.add(new Vector3((random()-.5)*2.6,(random()-.5)*2.4,(random()-.5)*2.6)),.30+random()*.44,foliage[(i+j+k+n)%4]);
+    for(let n=0;n<12;n++){const at=tip.add(new Vector3((random()-.5)*2.6,(random()-.5)*2.4,(random()-.5)*2.6)),r=.30+random()*.44;leaves.push({m:tuft(at,r,foliage[(i+j+k+n)%4]),r});}
    }
   }
+  // Birds land on the outermost leaf clusters, where they stay visible (inside the crown they would vanish).
+  trees[trees.length-1].perches=outerPerches(leaves,center.x+x,center.z+z,8);
  }
  // Scattered dry patches, rather than an even lawn below the mature trees.
  for(let i=0;i<240;i++){const a=random()*Math.PI*2,r=Math.sqrt(random())*10;groundPatch('grove-ground-cover',tx+Math.cos(a)*r,tz+Math.sin(a)*r,.06+random()*.2,.07+random()*.2,i%3?dry:foliage[0],.025);}
@@ -116,10 +128,16 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  }
  for(const [dx,dz] of [[2,12],[-5,25],[6,34]]){
   const [x,z]=aroundPlay(dx,dz);branch('young-tree-trunk',p(x,0,z),p(x,4.7,z),.09);
+  trees.push({x:center.x+x,z:center.z+z,trunk:.09,perches:[]});
   groundPatch('young-tree-mulch',x,z,.9,.9,soil,.035);
-  for(let i=0;i<22;i++){const a=i*2.4,y=2.6+random()*2.8,r=(5.9-y)*.38;const tip=p(x+Math.cos(a)*r,y,z+Math.sin(a)*r);branch('young-tree-branch',p(x,y-.7,z),tip,.025);tuft(tip,.5,foliage[i%4]);}
+  const leaves:{m:Mesh;r:number}[]=[];
+  for(let i=0;i<22;i++){const a=i*2.4,y=2.6+random()*2.8,r=(5.9-y)*.38;const tip=p(x+Math.cos(a)*r,y,z+Math.sin(a)*r);branch('young-tree-branch',p(x,y-.7,z),tip,.025);leaves.push({m:tuft(tip,.5,foliage[i%4]),r:.5});}
+  trees[trees.length-1].perches=outerPerches(leaves,center.x+x,center.z+z,3);
  }
  // Geometry is static: reduce thousands of individual details to one draw per material.
  for(const [mat,parts] of batches){const merged=Mesh.MergeMeshes(parts,true,true,undefined,false,false);if(merged){merged.name=mat.name+'-batch';merged.material=mat;merged.parent=parent;merged.isPickable=false;merged.receiveShadows=true;}}
- return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,dispose:()=>textures.forEach(t=>t.dispose())};
+ return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,trees,
+  // Solid vent benches (centre, half extents) and seats an animal could jump onto (top heights).
+  obstacles:[0,1].map(i=>({x:center.x+benchX,z:center.z+bz+benchShift-3.1+i*5.2,halfX:.78,halfZ:2.25})),
+  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ)],dispose:()=>textures.forEach(t=>t.dispose())};
 }

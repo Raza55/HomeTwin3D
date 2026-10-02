@@ -48,6 +48,8 @@ export interface EnvironmentSettings {
   weatherEnabled: boolean;
   /** Minimum brightness of the park/outdoor area in percent (0 = natural night). */
   parkMinBrightness: number;
+  /** Optional cat and birds outside (costs some performance, off by default). */
+  wildlifeEnabled?: boolean;
 }
 
 export interface HomeViewPose {
@@ -146,6 +148,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     sunLiveMode: true,
     weatherEnabled: true,
     parkMinBrightness: 0,
+    wildlifeEnabled: false,
   },
   controls: {
     cameraControls: {

@@ -56,6 +56,8 @@ interface Props {
   /** Minimum outdoor (park) brightness in percent. */
   parkMinBrightness: number;
   onParkMinBrightnessChange: (percent: number) => void;
+  wildlifeEnabled: boolean;
+  onWildlifeEnabledChange: (enabled: boolean) => void;
   cameraSensitivity: CameraSensitivity;
   onCameraSensitivityChange: (patch: Partial<CameraSensitivity>) => void;
   perspective: boolean;
@@ -184,7 +186,7 @@ export default function SettingsModal({
   northOffset, onNorthOffsetChange,
   edgeWidth, onEdgeWidthChange, edgeMode, onEdgeModeChange,
   groundGrid, onGroundGridChange, weatherEnabled, onWeatherEnabledChange, perspective, onPerspectiveChange,
-  parkMinBrightness, onParkMinBrightnessChange, cameraSensitivity, onCameraSensitivityChange,
+  parkMinBrightness, onParkMinBrightnessChange, wildlifeEnabled, onWildlifeEnabledChange, cameraSensitivity, onCameraSensitivityChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
   onEditGrid, onChangeHomeView, onStartTour, onStartDayDemo,
@@ -636,6 +638,9 @@ export default function SettingsModal({
                 </Row>
                 <Row label={t('settings.weatherEffects')} hint={t('settings.weatherEffectsHint')}>
                   <Switch label={t('settings.weatherEffects')} checked={weatherEnabled} onChange={onWeatherEnabledChange} />
+                </Row>
+                <Row label={t('settings.wildlife')} hint={t('settings.wildlifeHint')}>
+                  <Switch label={t('settings.wildlife')} checked={wildlifeEnabled} onChange={onWildlifeEnabledChange} />
                 </Row>
                 <Row label={t('settings.parkMinBrightness')} hint={t('settings.parkMinBrightnessHint')} stacked htmlFor="settings-park-brightness">
                   <div className="settings-slider">

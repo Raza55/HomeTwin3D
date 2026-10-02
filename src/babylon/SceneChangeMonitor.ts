@@ -111,6 +111,8 @@ export class SceneChangeMonitor {
     if (scene.metadata?.weatherAnimating) note('weather');
     // Energy view: flow lines move while power flows.
     if (scene.metadata?.energyAnimating) note('energy');
+    // Optional wildlife: only while a visible cat or bird moves.
+    if (scene.metadata?.wildlifeAnimating) note('wildlife');
     const animating = scene.animationGroups.some(group => group.isPlaying) || scene.animatables.length > 0;
     if (animating) note('animation');
 
@@ -131,7 +133,8 @@ export class SceneChangeMonitor {
       }
       if (state.visible !== visible || state.material !== material) { state.visible = visible; state.material = material; note(`visibility ${mesh.name}`); }
       for (let k = 0; k < 16; k++) if (matrix[k] !== state.matrix[k]) { state.matrix.set(matrix); note(`moved ${mesh.name}`); break; }
-      if ((mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances) note(`instances ${mesh.name}`);
+      // Thin instances can move without a matrix change; meshes that report their own motion are exempt.
+      if ((mesh as AbstractMesh & { hasThinInstances?: boolean }).hasThinInstances && !mesh.metadata?.reportsOwnMotion) note(`instances ${mesh.name}`);
     }
     this.lastActive.length = active.length;
     if (this.meshes.size > active.length * 4 + 256) {

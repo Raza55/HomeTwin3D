@@ -117,8 +117,11 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  const neighborHeight=4*2.7+setbackHeight;
  for(const block of referenceBuildings)building('context-house-'+block.id,block.points.map(fromReference),neighborHeight*SITE_SCALE);
  // Trees stand on the map's tree symbols; root is scaled, so convert model space into its local space.
+ const parkTrees:{x:number;z:number;trunk:number;perches:Vector3[]}[]=[];
  referenceTrees.forEach((point,i)=>{
   const [x,z]=fromReference(point),h=2.2+(i%4)*.4;
+  // Crown top for perching birds, in world space (root is scaled about its position).
+  parkTrees.push({x:center.x+x,z:center.z+z,trunk:.12*SITE_SCALE,perches:[new Vector3(center.x+x,root.position.y+(groundY+h+1.2+(2.7+(i%3)*.3)*.5)*SITE_SCALE,center.z+z)]});
   const p=new Vector3((center.x+x-root.position.x)/SITE_SCALE,groundY,(center.z+z-root.position.z)/SITE_SCALE);
   place(pool.create(`trunk:${h}`,'park-trunk',()=>MeshBuilder.CreateCylinder('park-trunk',{height:h,diameter:.24,tessellation:7},scene)),wood,p.x,groundY+h/2,p.z);
   for(let k=0;k<3;k++){
@@ -129,7 +132,7 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
  // Photo references: open plane-tree grove, ventilation benches and balcony play area.
  const courtyard=createCourtyardDetails(scene,hostRoot,center,groundY,
   {x:grove[0],z:grove[1]},pathX,material,{x:playground[0],z:playground[1]},entryZ+1);
- scene.metadata={...scene.metadata,courtyard,siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
+ scene.metadata={...scene.metadata,courtyard,parkTrees,siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
  // Everything above is static: one draw per material instead of ~100 meshes and instances.
  const merge=mergeStaticExterior([root,hostRoot],hostRoot,m=>m.name.endsWith('-batch'));
  hostRoot.getChildMeshes(false).forEach(m=>{if(m.name.endsWith('-batch'))m.freezeWorldMatrix();});

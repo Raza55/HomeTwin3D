@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.39 – Tiere draußen, Energieansicht ohne leeren Skizzenmodus (02.10.2026)
+
+- Neu (optional, Einstellungen → Qualität → „Tiere draußen“): Eine Katze besucht ab und zu den Hof – läuft, rennt, springt auf Bänke, versteckt sich hinter Bäumen und sucht bei Regen oder Schnee Schutz unter einem großen Baum. Vögel fliegen über Hof und Wohnung und landen in den Baumkronen; nachts und bei schlechtem Wetter bleiben sie sitzen. Alles im Code erzeugt (keine Assets), drei Draw-Calls, Bewegung im Shader; der Render-Loop ruht, solange nichts Sichtbares sich bewegt. `?wildlife` lässt die Katze sofort erscheinen.
+- Energieansicht: Ohne Texturen ist immer die Energieansicht offen; Blitz und Schließen kehren zu den Texturen zurück. Kurze Verbindungsabbrüche zu Home Assistant schließen die Ansicht nicht mehr.
+
 ## 0.5.38 – Energiefluss: 3D-Ansicht folgt dem Zeitraum (02.10.2026)
 
 - Bei Heute, Woche, Monat usw. zeigen auch Kugeln, Stromlinien und Beschriftungen im 3D-Modell den Verbrauch des Zeitraums (kWh und Anteil) statt der aktuellen Leistung; die Zuleitung zeigt die Summe des Zeitraums. „Jetzt“ zeigt weiterhin die Live-Leistung.

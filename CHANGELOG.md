@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.45 – Demo: Küche zum Schluss aus etwas Abstand (02.10.2026)
+
+- Kochen: Nach dem Blick zu den Spots geht die Kamera langsam Richtung Esstisch zurück – Spots, ihr rötliches Licht und die ganze Küchenzeile in einem Bild.
+
 ## 0.5.44 – Demo: Kamera nie in Nachbarhäusern, ganzer PC beim Gaming, Lichtfarbe beim Kochen (02.10.2026)
 
 - Die Rundflug-Kamera der Demo steigt über Nachbarhäuser, statt hineinzufahren oder hinter einer Fassade zu landen (Umrisse und Dachhöhen, 2 m Abstand); greift bei jeder Startansicht, z. B. beim Schneeschauer am Ende.

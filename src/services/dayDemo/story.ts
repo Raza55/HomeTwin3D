@@ -539,6 +539,7 @@ const LIVING_WINDOW: ShotAnchor = { kind: 'window', room: 'living' };
 const ENTRANCE: ShotAnchor = { kind: 'entrance' };
 const BEDROOM_WINDOW: ShotAnchor = { kind: 'window', room: 'bedroom', near: 'pc' };
 const TOWARDS_TABLE: ShotAnchor = { kind: 'between', a: ENTRANCE, b: { kind: 'room', room: 'dining' }, share: .55 };
+const BACK_FROM_KITCHEN: ShotAnchor = { kind: 'between', a: ENTRANCE, b: { kind: 'room', room: 'dining' }, share: .95 };
 
 export const SHOTS: Shot[] = [
   shot('opening', '05:30', '06:45', [
@@ -572,8 +573,10 @@ export const SHOTS: Shot[] = [
   shot('cooking', '18:46', '19:25', [
     { t: 0, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 8 },
     { t: .55, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
-    // Then up to the kitchen lamps while their light turns from warm white to a reddish glow.
-    { t: 1, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 14, drop: -1.1 },
+    // Then up to the kitchen lamps while their light turns from warm white to a reddish glow …
+    { t: .75, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 14, drop: -1.1 },
+    // … and slowly back towards the table: lamps, counter and their light in one picture.
+    { t: 1, eye: { at: BACK_FROM_KITCHEN, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 6, drop: -.55 },
   ]),
   // The blinds are down for the night: the shot stays inside and turns to the glowing colour lamps.
   shot('cinema', '20:22', '21:02', [

@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.33 – Energiefluss: Zeiträume, durchsichtiges Modell (02.10.2026)
+
+- Panel mit „Jetzt | Heute | Woche | Monat“: Bei einem Zeitraum sortiert die Liste nach dessen kWh, Anteile und Raumbalken folgen dem Zeitraumverbrauch; die aktuelle Leistung steht als Hinweis daneben.
+- Schreibtisch-Steckdosen erscheinen am PC ihres Bereichs.
+- In der Energieansicht ist das Skizzenmodell halbtransparent, Kugeln und Stromlinien sind durch Wände sichtbar.
+- Oben rechts immer dieselben vier Knöpfe: Texturen, Energiefluss, Navigationsmodus, Zentrieren. Der Blitz wechselt aus der Texturansicht direkt in die Energieansicht.
+
 ## 0.5.32 – Energiefluss: Gerätetypen, Hauptschalter, Zeitraum (02.10.2026)
 
 - Verbraucher werden nach Gerätetyp platziert (Fernseher, PC, Waschmaschine, Trockner, Kaffeemaschine, Kühlschrank, NAS) – auch bei abweichender Schreibweise und nur innerhalb ihres Bereichs; mehrere Steckdosen an einem Gerät liegen nebeneinander.

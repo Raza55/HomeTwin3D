@@ -95,7 +95,9 @@ export class BoardTouch {
     const r = element.getBoundingClientRect();
     await this.moveTo(r.left + r.width / 2, r.top + r.height / 2, 520, signal);
     await this.tap(signal);
-    if (element.isConnected && !(element as HTMLButtonElement).disabled) element.click();
+    if (!element.isConnected) return;
+    if ((element as HTMLButtonElement).disabled) { console.warn('[DayDemo] Board button is disabled:', element.getAttribute('aria-label')); return; }
+    element.click();
   }
 
   /** Pulls a range slider to `value` as a finger would; the popup commits on release. */

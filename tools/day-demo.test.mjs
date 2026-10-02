@@ -269,7 +269,20 @@ test('at dusk the board is operated by hand: all living-room blinds, then a lamp
   assert.equal(requests[0].position, 0);
   assert.ok(['light.wohnzimmer_hue_play', 'light.wohnzimmer_stehlampe'].includes(requests[1].entityId));
   assert.equal(requests[1].swatch, 'Violett');
-  assert.notEqual(live.states.get('cover.wohnzimmer').attributes.current_position, 0);
+  // Blinds the popup did not reach (another HA area) follow a moment later.
+  assert.equal(live.states.get('cover.wohnzimmer').attributes.current_position, 0);
   // The other rooms still close on their own.
   assert.equal(live.states.get('cover.schlafzimmer').attributes.current_position, 0);
+});
+
+test('blinds report their commands, and stay down from sunset until the morning', () => {
+  const h = harness(buildCast(config));
+  h.engine.seek(at('19:50'));
+  // The board's blind popup only enables buttons the blind says it supports.
+  assert.equal(h.states.get('cover.wohnzimmer').attributes.supported_features & 15, 15);
+  // No beat and no camera shot opens a blind between the evening close and sunrise.
+  const evening = at('19:45'), sunrise = at('06:36') + DAY_LENGTH;
+  const opens = STORY.filter(b => (b.at > evening || b.at + DAY_LENGTH < sunrise) && b.actions.some(a => (a.type === 'blind' || (a.type === 'control' && a.kind === 'blinds')) && a.position > 0));
+  assert.deepEqual(opens, []);
+  assert.deepEqual(SHOTS.filter(s => s.from > evening && s.blind !== undefined).map(s => s.id), []);
 });

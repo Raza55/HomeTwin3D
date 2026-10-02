@@ -99,7 +99,7 @@ export const STORY: StoryBeat[] = [
   beat('05:30', [], {
     id: 'night', icon: 'moon',
     title: { de: 'Dämmerung', en: 'Dawn' },
-    text: { de: 'Vom Eingang fällt der Blick durchs Wohnzimmer: Draußen wird es langsam hell, der Morgenwind biegt Bäume und Büsche. Ein Bewegungsmelder lässt zwei Lichter sanft aufglimmen.', en: 'From the entrance the view runs through the living room: outside it slowly gets light, the morning wind bends trees and bushes. A motion sensor lets two lights glow up softly.' },
+    text: { de: 'Läuft auf aktuellen Apple- und Android-Tablets. Blick vom Eingang ins Wohnzimmer: Es dämmert, der Wind biegt die Bäume, ein Bewegungsmelder öffnet das Rollo und weckt zwei Lichter.', en: 'Runs on recent Apple and Android tablets. View from the entrance into the living room: dawn breaks, the wind bends the trees, a motion sensor raises the blind and wakes two lights.' },
   }),
   beat('05:41', [
     { type: 'light', target: { rooms: ['living'], fallback: 1 }, on: true, brightness: 14, kelvin: 2200, ramp: 2.5 },
@@ -145,7 +145,7 @@ export const STORY: StoryBeat[] = [
   ], {
     id: 'bath', icon: 'droplets',
     title: { de: 'Bad & Lüftung', en: 'Bathroom & ventilation' },
-    text: { de: 'Tageslichtweiß im Bad, der Lüfter läuft an. Das Schlafzimmer schaltet sich selbst aus.', en: 'Daylight white in the bathroom, the fan starts. The bedroom switches itself off.' },
+    text: { de: 'Tageslichtweiß im Bad, der Lüfter läuft an, das Schlafzimmer schaltet sich aus. Die Rollos sind oben: Im Wohnzimmer öffnen die Fenstertüren zum Stoßlüften.', en: 'Daylight white in the bathroom, the fan starts, the bedroom switches itself off. The blinds are up: the French windows in the living room open for a quick airing.' },
   }),
   beat('07:04', [{ type: 'door', kind: 'window', open: true }]),
   beat('07:24', [{ type: 'door', kind: 'window', open: false }]),
@@ -268,7 +268,7 @@ export const STORY: StoryBeat[] = [
   ], {
     id: 'board', icon: 'palette',
     title: { de: 'Das Board als Fernbedienung', en: 'The board as a remote' },
-    text: { de: 'Lampe antippen, Farbe wählen, dimmen – direkt im 3D-Plan. Läuft auch flüssig auf einem aktuellen iPad als Wandpanel.', en: 'Tap a lamp, pick a colour, dim it – right in the 3D plan. Runs smoothly on a current iPad as a wall panel, too.' },
+    text: { de: 'Lampe antippen, Farbe wählen, dimmen – direkt im 3D-Plan, wie an einem Wandpanel. Die Rollos bleiben jetzt bis zum Morgen unten.', en: 'Tap a lamp, pick a colour, dim it – right in the 3D plan, like on a wall panel. The blinds now stay down until morning.' },
   }),
   beat('20:15', [
     { type: 'echo', playing: false },
@@ -538,11 +538,12 @@ export const SHOTS: Shot[] = [
     { t: 0, eye: { at: BEDROOM_WINDOW, metres: 3.2, over: true }, look: BEDROOM_WINDOW },
     { t: 1, eye: { at: BEDROOM_WINDOW, metres: 2.7, over: true }, look: BEDROOM_WINDOW },
   ]),
+  // The blinds are down for the night: the shot stays inside and turns to the glowing colour lamps.
   shot('cinema', '20:22', '21:02', [
     { t: 0, eye: { at: { kind: 'tv' }, metres: 4.2 }, look: { kind: 'tv' } },
     { t: .5, eye: { at: { kind: 'tv' }, metres: 3.4 }, look: { kind: 'tv' } },
-    { t: 1, eye: { at: { kind: 'window', near: 'tv' }, metres: 1.4 }, look: { kind: 'window', near: 'tv' } },
-  ], 70),
+    { t: 1, eye: { at: { kind: 'tv' }, metres: 4.4 }, look: { kind: 'tv' }, turn: 38 },
+  ]),
   shot('gaming', '22:24', '22:58', [
     { t: 0, eye: { at: { kind: 'pc' }, metres: 1.6 }, look: { kind: 'pc' } },
     { t: .4, eye: { at: { kind: 'pc' }, metres: 1.4 }, look: { kind: 'pc' } },

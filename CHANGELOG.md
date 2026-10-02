@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.29 – Tagesdemo: stimmige Rollo-Abfolge (02.10.2026)
+
+- Board-Szene: „Alle Rollos im Raum schließen“ im Rollo-Popup schließt jetzt wirklich (die Demo-Rollos melden ihre unterstützten Befehle); Rollos derselben Story-Räume, die in Home Assistant einem anderen Bereich zugeordnet sind, folgen kurz danach.
+- Morgens fährt das Wohnzimmer-Rollo nach der Eingangsszene nicht mehr herunter, wenn der Sonnenaufgang es bereits geöffnet hat.
+- Kinoabend: Die Kamera bleibt drinnen, die Rollos bleiben vom Sonnenuntergang bis zum Morgen unten.
+- Texte: Das Intro nennt aktuelle Apple- und Android-Tablets, das Bad-Kapitel das morgendliche Stoßlüften.
+
 ## 0.5.28 – Fenster, die nur gekippt werden können (02.10.2026)
 
 - Türen und Fenster können als „nur kippbar“ markiert werden (`door.tiltOnly`, z. B. wenn Möbel davor stehen): Ein offener Kontakt zeigt sie sofort gekippt, der Status lautet „Gekippt“, ein Klick kippt statt zu öffnen.

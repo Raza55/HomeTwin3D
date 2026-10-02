@@ -3,7 +3,7 @@
  * entity states through `hooks.setState` (the demo HA adapter). Nothing here
  * talks to Home Assistant or touches the DOM, so it runs under node --test.
  */
-import type { CastLight, DayDemoCast, RoomRole } from './cast.ts';
+import type { CastEntity, CastLight, DayDemoCast, RoomRole } from './cast.ts';
 import {
   STORY, CHAPTERS, DAY_LENGTH, paceAt, weatherAt, virtualToClock, clockLabel, pick,
   type Chapter, type DemoWeather, type LightTarget, type ScreenKind, type StoryAction, type Text, type TVMode,
@@ -249,7 +249,7 @@ export class DayDemoEngine {
     this.hooks.popup?.('coffee', false);
     const c = this.cast, set = this.hooks.setState.bind(this.hooks);
     for (const light of c.lights) if (this.hooks.getState(light.entityId)?.state !== 'off') set(light.entityId, 'off', { ...this.attrs(light.entityId), friendly_name: light.label, brightness: 0 });
-    for (const blind of c.blinds) set(blind.entityId, 'closed', { friendly_name: blind.label, current_position: 0, current_cover_position: 0 });
+    for (const blind of c.blinds) set(blind.entityId, 'closed', this.blindAttrs(blind, 0));
     this.tv('off');
     for (const pc of c.pcs) this.pc(pc.device.statusEntityId, false);
     for (const coffee of c.coffee) {
@@ -502,6 +502,11 @@ export class DayDemoEngine {
 
   // --- Blinds --------------------------------------------------------------------
 
+  /** Blind attributes as HA reports them; the board's popup enables its buttons from supported_features. */
+  private blindAttrs(blind: CastEntity, position: number): Record<string, unknown> {
+    return { friendly_name: blind.label, current_position: position, current_cover_position: position, supported_features: 15 };
+  }
+
   private blindAction(action: Extract<StoryAction, { type: 'blind' }>, at: number): void {
     const blinds = (action.rooms ? this.cast.blinds.filter(b => action.rooms!.includes(b.room)) : this.cast.blinds)
       .filter(b => !action.exclude?.includes(b.room));
@@ -519,7 +524,7 @@ export class DayDemoEngine {
       this.schedule(key, start, start + (action.ramp ?? 0), (t, final) => {
         const position = Math.round(lerp(from, action.position, ease(t)));
         const moving = !final ? (action.position > from ? 'opening' : 'closing') : position > 0 ? 'open' : 'closed';
-        this.hooks.setState(blind.entityId, moving, { friendly_name: blind.label, current_position: position, current_cover_position: position });
+        this.hooks.setState(blind.entityId, moving, this.blindAttrs(blind, position));
         // Every blind step re-renders the shadow maps of nearby lamps: fewer, larger steps.
       }, BLIND_INTERVAL_MS);
     });
@@ -551,8 +556,15 @@ export class DayDemoEngine {
     }
     const blinds = this.cast.blinds.filter(b => action.rooms.includes(b.room));
     if (!blinds.length) return;
-    if (!this.seeking && this.hooks.control) this.hooks.control({ kind: 'blinds', entityId: blinds[0].entityId, position: action.position });
-    else this.blindAction({ type: 'blind', rooms: action.rooms, position: action.position, ramp: 4, stagger: .5 }, at);
+    if (!this.seeking && this.hooks.control) {
+      this.hooks.control({ kind: 'blinds', entityId: blinds[0].entityId, position: action.position });
+      // The popup moves the blinds of its HA area; others of the story's rooms follow a moment later.
+      this.schedule(`blinds:control:${at}`, at + 5, at + 5, () => {
+        for (const blind of blinds) {
+          if (this.blindPosition(blind.entityId) !== action.position && !this.transitions.has(`blind:${blind.entityId}`)) this.moveBlind(blind.entityId, action.position, 4, false);
+        }
+      });
+    } else this.blindAction({ type: 'blind', rooms: action.rooms, position: action.position, ramp: 4, stagger: .5 }, at);
     const rooms = this.roomsText(blinds);
     this.addLog('blinds', action.position === 0
       ? { de: `Board: Alle Rollos im ${rooms.de} schließen`, en: `Board: close all blinds in the ${rooms.en}` }
@@ -566,6 +578,11 @@ export class DayDemoEngine {
     if (entityId.startsWith('light.') && (before === 'on') !== (after === 'on')) this.stats.lightSwitches++;
   }
 
+  /** Current position of a blind (0 closed … 100 open). */
+  blindPosition(entityId: string): number {
+    return Number(this.hooks.getState(entityId)?.attributes.current_position ?? 0);
+  }
+
   /** Moves one blind (camera shots: the blind at the window the viewer steps up to; board commands). */
   moveBlind(entityId: string, position: number, ramp = 2, log = true): number | undefined {
     const blind = this.cast.blinds.find(b => b.entityId === entityId);
@@ -575,7 +592,7 @@ export class DayDemoEngine {
     this.schedule(`blind:${entityId}`, this.virtual, this.virtual + ramp, (t, final) => {
       const current = Math.round(lerp(from, position, ease(t)));
       const state = !final ? (position > from ? 'opening' : 'closing') : current > 0 ? 'open' : 'closed';
-      this.hooks.setState(entityId, state, { friendly_name: blind.label, current_position: current, current_cover_position: current });
+      this.hooks.setState(entityId, state, this.blindAttrs(blind, current));
     }, BLIND_INTERVAL_MS);
     if (log) this.addLog('blinds', position > from
       ? { de: `${ROOM_NAMES[blind.room].de}: Rollo am Fenster fährt hoch (Bewegung erkannt)`, en: `${ROOM_NAMES[blind.room].en}: window blind opens (motion detected)` }

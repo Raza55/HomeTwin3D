@@ -105,7 +105,8 @@ export class DayDemoController {
   private shotSegment = -1;
   private cuts = 0;
   private parkFloor: number | undefined;
-  private shotBlind: { entityId: string; previous: number } | null = null;
+  /** The blind a shot raised: back to `previous` afterwards, unless something else moved it meanwhile (sunrise). */
+  private shotBlind: { entityId: string; previous: number; raised: number } | null = null;
 
   constructor(cast: DayDemoCast, hooks: Omit<DayDemoHooks, 'screen'>, deps: DayDemoSceneDeps, language: string) {
     this.deps = deps;
@@ -348,7 +349,7 @@ export class DayDemoController {
       // The blind at this window rises while the viewer stands there, and closes again afterwards.
       const blind = playable.blind !== undefined ? this.director.blindFor(playable) : undefined;
       const previous = blind ? this.engine.moveBlind(blind, playable.blind!, 2.5) : undefined;
-      this.shotBlind = blind && previous !== undefined && previous < playable.blind! ? { entityId: blind, previous } : null;
+      this.shotBlind = blind && previous !== undefined && previous < playable.blind! ? { entityId: blind, previous, raised: playable.blind! } : null;
     }
     const pose = this.director.pose(playable, this.engine.time);
     if (!pose) { this.endShot(); return; }
@@ -360,7 +361,9 @@ export class DayDemoController {
     if (!this.shot) return;
     this.shot = null; this.shotSegment = -1;
     this.deps.scene.metadata = { ...this.deps.scene.metadata, hideMarkers: false };
-    if (this.shotBlind && !this.disposed) this.engine.moveBlind(this.shotBlind.entityId, this.shotBlind.previous, 2);
+    if (this.shotBlind && !this.disposed) {
+      if (this.engine.blindPosition(this.shotBlind.entityId) === this.shotBlind.raised) this.engine.moveBlind(this.shotBlind.entityId, this.shotBlind.previous, 2);
+    }
     this.shotBlind = null;
     if (this.deps.walk?.active()) this.deps.walk.exit();
     if (!this.disposed) this.lockCamera();

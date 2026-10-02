@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.38 – Energiefluss: 3D-Ansicht folgt dem Zeitraum (02.10.2026)
+
+- Bei Heute, Woche, Monat usw. zeigen auch Kugeln, Stromlinien und Beschriftungen im 3D-Modell den Verbrauch des Zeitraums (kWh und Anteil) statt der aktuellen Leistung; die Zuleitung zeigt die Summe des Zeitraums. „Jetzt“ zeigt weiterhin die Live-Leistung.
+
 ## 0.5.37 – Energiefluss: rollierende Zeiträume, Leistung sofort (02.10.2026)
 
 - Quartal, Halbjahr und Jahr zählen jetzt die letzten 3, 6 bzw. 12 Monate bis heute statt des Kalenderzeitraums; der angebrochene erste Monat wird tageweise gezählt.

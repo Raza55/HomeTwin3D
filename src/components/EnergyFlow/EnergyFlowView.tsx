@@ -132,7 +132,6 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
         if (again.some((c, i) => c.powerEntityId !== consumers[i]?.powerEntityId)) { setConsumers(again); return; }
       }
       const { total: sum, items } = energyShares(visible, c => c.powerEntityId ? powerWatts(current[c.powerEntityId]) : 0);
-      layer.current?.update(new Map(items.map(i => [i.consumer.id, { watts: i.watts, share: i.share }])));
       // Rounded for the labels: their raster only redraws when the text changes.
       setReadings(items.map(i => ({ id: i.consumer.id, watts: i.watts < 10 ? Math.round(i.watts * 10) / 10 : Math.round(i.watts), share: Math.round(i.share * 100) })));
       setTotal(Math.round(sum));
@@ -153,16 +152,14 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
     return () => { cancelled = true; clearInterval(timer); };
   }, [connection, visible, period]);
 
-  const byId = useMemo(() => new Map(readings.map(r => [r.id, r])), [readings]);
-  const latest = useRef(byId); latest.current = byId;
   const nodeById = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
 
   useMapMarkers(scene, () => [
     { id: 'energy:hub', element: () => labels.current.hub, anchor: (out: Vector3) => out.copyFrom(positions.current.get('hub') ?? Vector3.Zero()), display: 'flex', interactive: false, energy: true, offset: { x: 0, y: -22 }, stack: { group: 'energy', width: 140, height: 26 } },
     ...nodes.map(node => ({
       id: `energy:${node.id}`, element: () => labels.current[node.id], interactive: false, energy: true, display: 'flex',
-      // Single lamps only get a label while they are on (31 labels of idle lamps would bury the plan).
-      anchor: (out: Vector3) => node.lamp && (latest.current.get(node.id)?.watts ?? 0) < 1 ? null : out.copyFrom(positions.current.get(node.id) ?? node.position),
+      // Single lamps only get a label while active (on, or used in the period): 31 idle labels would bury the plan.
+      anchor: (out: Vector3) => node.lamp && !latest.current.get(node.id)?.active ? null : out.copyFrom(positions.current.get(node.id) ?? node.position),
       offset: { x: 0, y: -24 }, stack: { group: 'energy', width: 150, height: 26 },
     })),
   ], [nodes]);
@@ -185,17 +182,25 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
   const roomTotal = rooms.reduce((sum, r) => sum + r.value, 0);
   const format = (value: number) => live ? formatWatts(value, language) : formatEnergy(value, language);
 
+  // The 3D view shows the chosen mode too: orbs, lines and labels follow the current power or the period's energy.
+  const byId = useMemo(() => new Map(rows.map(r => [r.id, { ...r, active: live ? r.watts >= 1 : r.energy >= .005 }])), [rows, live]);
+  const latest = useRef(byId); latest.current = byId;
+  useEffect(() => {
+    // The layer animates consumers with at least 1 "W"; in a period that means energy was used.
+    layer.current?.update(new Map(rows.map(r => [r.id, { watts: byId.get(r.id)?.active ? Math.max(1, r.value) : 0, share: r.share / 100 }])));
+  }, [rows, byId, nodes]);
+
   return (
     <>
       {/* Label sources for the marker layer (rasterised, parked off screen). */}
       <div className="energy-labels" aria-hidden>
-        <div ref={el => { labels.current.hub = el; }} className="energy-label hub"><Zap size={12} />{t('energy.supply')} · {formatWatts(total, language)}</div>
+        <div ref={el => { labels.current.hub = el; }} className="energy-label hub"><Zap size={12} />{t('energy.supply')} · {live ? formatWatts(total, language) : formatEnergy(todayTotal, language)}</div>
         {nodes.map(node => {
           const r = byId.get(node.id);
-          const active = !!r && r.watts >= 1;
+          const active = !!r && r.active;
           return (
             <div key={node.id} ref={el => { labels.current[node.id] = el; }} className={`energy-label${active ? '' : ' idle'}`} style={{ ['--energy-color' as string]: node.color }}>
-              <span className="energy-dot" />{node.name}<b>{r ? formatWatts(r.watts, language) : '–'}</b>{active && r!.share > 0 && <small>{r!.share} %</small>}
+              <span className="energy-dot" />{node.name}<b>{r ? format(r.value) : '–'}</b>{active && r!.share > 0 && <small>{r!.share} %</small>}
             </div>
           );
         })}

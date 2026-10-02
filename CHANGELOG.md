@@ -1,5 +1,15 @@
 # Änderungsverlauf
 
+## 0.5.43 – Performance-Pass, freundliches Kochlicht (02.10.2026)
+
+- Demo: Beim Kochen geht freundliches warmweißes Licht in der Küche an (3000 K, sanft eingeblendet).
+- Energieansicht: Das durchsichtige Skizzenmodell schreibt die Tiefe im selben Durchgang statt mit eigenem Tiefen-Vorlauf – gleiche Optik, aber Babylon prüft nicht mehr jedes Teilnetz zweimal pro Bild (Woche: 9 → 60 FPS im Demo-Benchmark).
+- Schattenkarten der Lampen werden nach Tür-, Fenster- und Rollobewegungen verteilt neu berechnet (höchstens 4 pro Bild, Tablet 2); dunkle Lampen warten, bis sie leuchten. Größtes Einzelbild im Demo: 45 000 → 9 000 Draw-Calls (Tablet).
+- Spiegel nehmen ihre Umgebung über sechs Bilder auf (eine Würfelseite pro Bild); auf Tablets ohne Kleinteile.
+- Verdeckungsbäume der Marker hängen am Geometrie-Inhalt: Umschalten der Texturen baut sie nicht neu (vorher ~0,5 s).
+- Demo: Skizzen-Shader der Energiekapitel werden vorab vorbereitet; der Wechsel Textur ↔ Skizze passiert hinter einem kurzen Schleier, „Jetzt“ → „Woche“ ohne erneuten Wechsel.
+- Demo-Benchmark (Desktop): Score 2187 → 3514, 1 %-Lows 5,8 → 15,8 FPS, CPU je Bild 13,7 → 9,1 ms.
+
 ## 0.5.42 – Vögel mit Gestalt, nichts mehr durch Gebäude und Bänke (02.10.2026)
 
 - Vögel: richtiger kleiner Singvogel mit Kopf, Schnabel, Augen, Schwanzfächer und zweiteiligen Flügeln, die beim Schlagen abknicken; brauner Rücken, heller Bauch.

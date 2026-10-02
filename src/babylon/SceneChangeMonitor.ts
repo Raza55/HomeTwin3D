@@ -113,6 +113,8 @@ export class SceneChangeMonitor {
     if (scene.metadata?.energyAnimating) note('energy');
     // Optional wildlife: only while a visible cat or bird moves.
     if (scene.metadata?.wildlifeAnimating) note('wildlife');
+    // Shadow maps still waiting for their turn (a few per frame).
+    if (scene.metadata?.shadowRefreshPending) note('shadows');
     const animating = scene.animationGroups.some(group => group.isPlaying) || scene.animatables.length > 0;
     if (animating) note('animation');
 

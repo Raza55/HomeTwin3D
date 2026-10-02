@@ -136,16 +136,43 @@ const inverse = Matrix.Identity();
 const from = Vector3.Zero(), to = Vector3.Zero();
 
 /** BVH cache per geometry; meshes sharing geometry (instances, clones) share one tree. */
+/** Fingerprint of a geometry: sizes plus a few hundred sampled values (positions to 0.1 mm). */
+export function contentKey(positions: ArrayLike<number>, indices: ArrayLike<number>): string {
+  let hash = 2166136261;
+  const mix = (value: number) => { hash = Math.imul(hash ^ value, 16777619) >>> 0; };
+  const sample = (values: ArrayLike<number>, scale: number) => {
+    const step = Math.max(1, Math.floor(values.length / 256));
+    for (let i = 0; i < values.length; i += step) mix(Math.round(values[i] * scale) | 0);
+    if (values.length) mix(Math.round(values[values.length - 1] * scale) | 0);
+  };
+  sample(positions, 1e4); sample(indices, 1);
+  return `${positions.length}:${indices.length}:${hash.toString(36)}`;
+}
+
 export class OcclusionBVHCache {
   private trees = new Map<string, TriangleBVH | null>();
 
   /** Minimum triangle count at which a tree beats Babylon's linear test. */
   constructor(private minTriangles = 256) {}
 
+  private contentKeys = new WeakMap<object, string>();
+
+  /**
+   * Trees are keyed by geometry content, not identity: switching textures rebuilds the
+   * render batches with new but identical geometry, and rebuilding their trees took ~0.5 s.
+   */
   private key(mesh: AbstractMesh): string | null {
     const source = (mesh as AbstractMesh & { sourceMesh?: AbstractMesh }).sourceMesh ?? mesh;
-    const geometry = (source as AbstractMesh & { geometry?: { uniqueId: number } | null }).geometry;
-    return geometry ? String(geometry.uniqueId) : null;
+    type Geo = { uniqueId: number; getVerticesData(kind: string): ArrayLike<number> | null; getIndices(): ArrayLike<number> | null };
+    const geometry = (source as AbstractMesh & { geometry?: Geo | null }).geometry;
+    if (!geometry) return null;
+    let key = this.contentKeys.get(geometry);
+    if (!key) {
+      const positions = geometry.getVerticesData('position'), indices = geometry.getIndices();
+      key = positions && indices ? contentKey(positions, indices) : `id:${geometry.uniqueId}`;
+      this.contentKeys.set(geometry, key);
+    }
+    return key;
   }
 
   /** Tree for the mesh, built on demand; null when the linear test should be used instead. */

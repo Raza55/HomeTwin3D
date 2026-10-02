@@ -31,7 +31,7 @@ import { isDisabledForDebug } from '../../babylon/DebugFlags';
 import { setupGlowOccluders } from '../../babylon/GlowOccluder';
 import { invalidateShadowsNear } from '../../babylon/ShadowRange';
 import { batchStaticSunShadows } from '../../babylon/ShadowCasterBatch';
-import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance } from '../../babylon/ModelLoader';
+import { loadModel, createShadowWalls, setTexturesEnabled, setSketchAppearance, setSketchTransparency } from '../../babylon/ModelLoader';
 import { disposeImportedObject, loadImportedObject, type ImportedObjectLoadResult } from '../../babylon/ImportedObjectLoader';
 import { createEdgeOutline, type EdgeOutlineControls } from '../../babylon/EdgeOutline';
 import {
@@ -732,6 +732,9 @@ export default function Dashboard() {
   applyTexturesRef.current = applyTextures;
   // Day demo: its energy chapters show the energy view ('now', then the week).
   const [demoEnergyMode, setDemoEnergyMode] = useState<'now' | 'week' | null>(null);
+  // Day demo: a dark veil while the plan switches between textures and the sketch model
+  // (every material prepares its shader again: frames of up to ~1 s for a few seconds).
+  const [demoVeil, setDemoVeil] = useState(false);
 
   const handleSketchColorChange = useCallback((color: string) => {
     setSketchColor(color);
@@ -1841,6 +1844,10 @@ export default function Dashboard() {
         },
         tvPlanes: () => Object.values(displayMeshMapRef.current).filter(entry => entry.config.kind === 'tv').map(entry => entry.plane),
         cancelControl: () => touch?.cancel(),
+        sketchView: on => {
+          applyTexturesRef.current(on ? false : getSetting('render').showTextures, false);
+          setSketchTransparency(ctx.scene, on ? .45 : 1);
+        },
         onClock: (minutes, weather) => {
           // Coarse steps keep the (large) dashboard from re-rendering every frame.
           const step = Math.floor(minutes / 5) * 5;
@@ -1881,13 +1888,35 @@ export default function Dashboard() {
       // The courtyard cat and the birds take part even when they are off in the settings.
       if (!wildlifeRef.current) { wildlifeRef.current = createWildlife(ctx.scene, { reduced: reducedEffects() }); demoWildlife = true; }
       let lastChapter = '';
+      let energyShown = false;
+      let veilSwitch = 0;
       unsubscribeChapters = controller.subscribe(() => {
         const id = controller!.getView().chapter?.id ?? '';
         if (id === lastChapter) return;
         lastChapter = id;
         const mode = id === 'energy' ? 'now' : id === 'energy-week' ? 'week' : null;
-        setDemoEnergyMode(mode);
-        applyTexturesRef.current(mode ? false : getSetting('render').showTextures, false);
+        // Only when the view actually changes ('now' → 'week' keeps it): a switch rebuilds the render batches.
+        if (!!mode === energyShown) { setDemoEnergyMode(mode); }
+        else {
+          energyShown = !!mode;
+          const switchId = ++veilSwitch;
+          setDemoVeil(true);
+          // Two frames so the veil is on screen before the main thread is busy.
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (disposed || switchId !== veilSwitch) return;
+            applyTexturesRef.current(mode ? false : getSetting('render').showTextures, false);
+            setDemoEnergyMode(mode);
+            // Lift the veil once three frames in a row are quick again (at most 3 s).
+            let quick = 0, last = performance.now();
+            const until = last + 3000;
+            const observer = ctx.scene.onAfterRenderObservable.add(() => {
+              const now = performance.now();
+              quick = now - last < 40 ? quick + 1 : 0;
+              last = now;
+              if (quick >= 3 || now > until) { ctx.scene.onAfterRenderObservable.remove(observer); if (switchId === veilSwitch) setDemoVeil(false); }
+            });
+          }));
+        }
         if (id === 'visitor') wildlifeRef.current?.visit();
       });
       setDayDemoController(controller);
@@ -1901,6 +1930,7 @@ export default function Dashboard() {
       if (powerTimer) clearInterval(powerTimer);
       ha.requestHandler = null;
       setDemoEnergyMode(null);
+      setDemoVeil(false);
       applyTexturesRef.current(getSetting('render').showTextures, false);
       if (demoWildlife && !wildlifeEnabledRef.current) { wildlifeRef.current?.dispose(); wildlifeRef.current = null; }
       controller?.dispose();
@@ -2514,6 +2544,7 @@ export default function Dashboard() {
           currentWeather={currentWeather}
         />
 
+        {dayDemoController && <div className={`day-demo-veil${demoVeil ? ' on' : ''}`} aria-hidden />}
         {dayDemoController && (
           <DayDemoOverlay
             controller={dayDemoController}

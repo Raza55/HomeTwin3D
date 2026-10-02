@@ -236,13 +236,14 @@ export const STORY: StoryBeat[] = [
   }),
   beat('17:33', [{ type: 'door', kind: 'entrance', open: false }]),
   beat('18:45', [
-    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 100, kelvin: 4000 },
+    // Friendly warm white in the kitchen (bright enough to cook), fading in visibly.
+    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 90, kelvin: 3000, ramp: 1.5 },
     { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 70, kelvin: 2700, ramp: 2 },
     { type: 'fan', rooms: ['kitchen'], on: true, percentage: 60 },
   ], {
     id: 'cooking', icon: 'utensils',
     title: { de: 'Kochen', en: 'Cooking' },
-    text: { de: 'Arbeitslicht in der Küche, gedimmtes Licht am Esstisch, die Lüftung läuft mit.', en: 'Task lighting in the kitchen, dimmed light at the dining table, ventilation on.' },
+    text: { de: 'Freundliches, warmes Licht in der Küche, gedimmtes Licht am Esstisch, die Lüftung läuft mit.', en: 'Friendly warm light in the kitchen, dimmed light at the dining table, ventilation on.' },
   }),
   beat('19:35', [{ type: 'fan', on: false }, { type: 'light', target: { rooms: ['kitchen'] }, on: true, brightness: 30, kelvin: WARM, ramp: 2 }]),
   beat('19:36', [

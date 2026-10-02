@@ -1,4 +1,5 @@
 import { Quaternion, Vector3, type AbstractMesh, type Node } from '@babylonjs/core';
+import { requestShadowRefresh } from './ShadowRange';
 
 interface RoomDoorSpec { id: string; hinge: number[]; closedDegrees: number; openDegrees: number }
 interface Part { mesh: AbstractMesh; position: Vector3; rotation: Quaternion }
@@ -61,7 +62,7 @@ export class RoomDoors {
     const scene = movedMeshes.values().next().value?.getScene();
     for (const light of scene?.lights ?? []) {
       const map = light.getShadowGenerator()?.getShadowMap();
-      if (map?.renderList?.some(mesh => movedMeshes.has(mesh))) map.resetRefreshCounter();
+      if (map?.renderList?.some(mesh => movedMeshes.has(mesh))) requestShadowRefresh(light);
     }
   }
 }

@@ -252,6 +252,18 @@ p.day-demo-chapter {
 }
 
 /* Camera cut between orbit and first person: a short dip to black. */
+/* Veil while the plan switches between textures and the sketch model (energy chapters). */
+.day-demo-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: #05080d;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .6s ease-out;
+}
+.day-demo-veil.on { opacity: .94; transition-duration: .18s; }
+
 .day-demo-cut {
   position: fixed;
   inset: 0;

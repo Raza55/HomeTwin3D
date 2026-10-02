@@ -2,7 +2,7 @@ import { ClusteredLightContainer, Color3, Light, PointLight, SpotLight, ShadowGe
 import type { FloorplanEmitter, HAState, LightConfig } from '../types';
 import { kelvinToRGB } from '../utils/color';
 import { getRenderBatchSet } from './RenderBatch';
-import { limitShadowCastersToRange } from './ShadowRange';
+import { limitShadowCastersToRange, requestShadowRefresh } from './ShadowRange';
 import { isTabletClass } from './DeviceClass';
 
 export interface FloorplanLightRig {
@@ -57,7 +57,7 @@ export function configureFloorplanShadows(rig: FloorplanLightRig, casters: Abstr
 }
 
 export function invalidateFloorplanShadows(rig?: FloorplanLightRig): void {
-  rig?.shadows.forEach(s => s.getShadowMap()?.resetRefreshCounter());
+  rig?.shadows.forEach(s => { const light = s.getLight(); if (light) requestShadowRefresh(light); });
 }
 
 /** Keep every contributing emitter shadowed. Limit sources per surface rather than

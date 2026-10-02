@@ -364,7 +364,10 @@ export function setSketchTransparency(scene: Scene, alpha: number): void {
   const mat = getOrCreateCartoonMaterial(scene);
   const value = Math.max(.05, Math.min(1, alpha));
   mat.alpha = value;
-  mat.needDepthPrePass = value < 1;
+  // Depth is written in the same pass: a depth pre-pass made Babylon re-check every sub-mesh
+  // of the shared material twice per frame (about 15 ms on a desktop) for the same look.
+  mat.needDepthPrePass = false;
+  mat.forceDepthWrite = value < 1;
 }
 
 interface RenderStyleOptions {

@@ -30,6 +30,8 @@ export interface DayDemoSceneDeps {
   walk?: WalkControl;
   /** TV screen planes (for the cinema shot). */
   tvPlanes?(): AbstractMesh[];
+  /** Switches the plan to the energy chapters' look (sketch, see-through) and back, for preparing its shaders. */
+  sketchView?(on: boolean): void;
   /** Stops a running board interaction (finger + popup) on jumps and at the end. */
   cancelControl?(): void;
 }
@@ -203,6 +205,12 @@ export class DayDemoController {
     for (const clock of [3 * 60, 13 * 60]) {
       updateSunPosition(sun, hemi, latitude, longitude, clock, northOffset, 1);
       prepareCurrentLightVariants(scene);
+      // The energy chapters (at night) show the see-through sketch model: its variants too.
+      if (clock < 12 * 60 && this.deps.sketchView) {
+        this.deps.sketchView(true);
+        prepareCurrentLightVariants(scene);
+        this.deps.sketchView(false);
+      }
       this.preparing = this.preparing! + .3;
       this.emit();
       await new Promise(resolve => setTimeout(resolve, 0));

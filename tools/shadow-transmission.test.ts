@@ -160,6 +160,29 @@ test('point-light shadows skip casters outside the light range and only nearby l
     map.resetRefreshCounter = () => { nearResets++; };
     farShadow.getShadowMap()!.resetRefreshCounter = () => { farResets++; };
     invalidateShadowsNear(scene, [inside]);
+    // Released with the next frame (a few maps per frame).
+    scene.onBeforeRenderObservable.notifyObservers(scene);
     assert.equal(nearResets, 1); assert.equal(farResets, 0, 'a distant light keeps its cached shadow');
+  } finally { scene.dispose(); engine.dispose(); }
+});
+
+test('shadow refreshes spread over frames and wait for dark lamps', () => {
+  const engine = new NullEngine(); const scene = new Scene(engine);
+  try {
+    new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
+    const lamps = Array.from({ length: 9 }, (_, i) => { const l = new PointLight('lamp' + i, new Vector3(i * .1, 2, 0), scene); l.range = 5; return l; });
+    const resets = lamps.map(() => 0);
+    lamps.forEach((lamp, i) => { const map = new ShadowGenerator(64, lamp).getShadowMap()!; map.resetRefreshCounter = () => { resets[i]++; }; });
+    lamps[8].intensity = 0;
+    const box = MeshBuilder.CreateBox('door', {}, scene);
+    invalidateShadowsNear(scene, [box]);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.equal(resets.reduce((a, b) => a + b, 0), 4, 'at most four maps in one frame (desktop)');
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.deepEqual(resets, [1, 1, 1, 1, 1, 1, 1, 1, 0], 'the dark lamp waits');
+    lamps[8].intensity = 1;
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.equal(resets[8], 1, 'refreshed once it lights up');
   } finally { scene.dispose(); engine.dispose(); }
 });

@@ -3,6 +3,7 @@ import {
   type AbstractMesh, type BaseTexture, type Observer, type PBRMaterial, type Scene,
 } from '@babylonjs/core';
 import { isReplacedByRenderBatch } from './RenderBatch';
+import { reducedEffects } from './DeviceClass';
 
 /**
  * Static reflections for mirrors.
@@ -10,9 +11,10 @@ import { isReplacedByRenderBatch } from './RenderBatch';
  * Each mirror gets a small cube map of its real surroundings, rendered once
  * (one probe per frame, after the scene has settled) instead of every frame.
  * Box projection maps the cube onto the room's walls, so the reflection lines
- * up with the room rather than looking like a distant sphere. A capture costs
- * one six-face pass of the surroundings (~0.1 s), so probes refresh only after
- * daylight changes; mirrors show the procedural environment until captured.
+ * up with the room rather than looking like a distant sphere. A capture renders
+ * one cube face per frame (six frames; all six at once were up to 45 000 draw
+ * calls in one frame on tablets), so probes refresh only after daylight changes;
+ * mirrors show the procedural environment until captured.
  */
 
 const PROBE_SIZE = 256;
@@ -27,6 +29,8 @@ interface Mirror {
   position: Vector3;
   probe: ReflectionProbe | null;
   captured: boolean;
+  /** Cube face drawn in the current frame (0-5) while a capture runs. */
+  face: number;
 }
 
 /** Room-facing normal of a flat mirror (thinnest direction among its face normals); null if not flat. */
@@ -78,10 +82,13 @@ export function setupMirrorProbes(scene: Scene, groups: Map<PBRMaterial, Abstrac
     const center = min.add(max).scale(.5);
     // Flat mirrors: capture just in front of the glass. Grouped panels (cabinet): from their centre.
     const normal = facing(scene, meshes, center);
-    mirrors.push({ material, meshes, position: normal ? center.add(normal.scale(.08)) : center, probe: null, captured: false });
+    mirrors.push({ material, meshes, position: normal ? center.add(normal.scale(.08)) : center, probe: null, captured: false, face: 0 });
   }
 
   const queue: Mirror[] = [];
+  let active: Mirror | null = null;
+  // Tablets: small things (cups, cables, decoration) are invisible at this size anyway.
+  const minRadius = reducedEffects() ? .15 : 0;
   const start = performance.now();
   const refresh = () => { for (const mirror of mirrors) if (!queue.includes(mirror)) queue.push(mirror); };
 
@@ -95,21 +102,32 @@ export function setupMirrorProbes(scene: Scene, groups: Map<PBRMaterial, Abstrac
       probe.cubeTexture.boundingBoxSize = box.size;
       // Same drawn set as the camera (batches stand in for sources), limited to the surroundings.
       probe.cubeTexture.renderListPredicate = m => !mirror.meshes.includes(m) && m.isEnabled() && m.isVisible
-        && m.getTotalVertices() > 0 && !isReplacedByRenderBatch(scene, m)
+        && m.getTotalVertices() > 0 && !isReplacedByRenderBatch(scene, m) && m.getBoundingInfo().boundingSphere.radiusWorld >= minRadius
         && Vector3.Distance(m.getBoundingInfo().boundingSphere.centerWorld, mirror.position) < CAPTURE_RADIUS + m.getBoundingInfo().boundingSphere.radiusWorld;
-      probe.cubeTexture.onAfterRenderObservable.add(face => {
+      // One face per frame: the others draw nothing and keep their content (no clear).
+      const cube = probe.cubeTexture;
+      let current = -1;
+      cube.getCustomRenderList = face => face === mirror.face ? null : [];
+      cube.onBeforeRenderObservable.add(face => { current = face; });
+      cube.onClearObservable.add(engine => { if (current === mirror.face) engine.clear(cube.clearColor ?? scene.clearColor, true, true, true); });
+      cube.onAfterRenderObservable.add(face => {
         if (face !== 5) return;
+        if (mirror.face < 5) { mirror.face++; cube.resetRefreshCounter(); return; }
         // Babylon renders probes only for materials that already use them: the capture
         // is requested explicitly and released once all six faces exist.
-        const targets = scene.customRenderTargets, index = targets.indexOf(probe.cubeTexture);
+        mirror.face = 0;
+        if (active === mirror) active = null;
+        const targets = scene.customRenderTargets, index = targets.indexOf(cube);
         if (index >= 0) targets.splice(index, 1);
         // Swap only once real content exists, so mirrors never flash black.
-        if (!mirror.captured) { mirror.captured = true; mirror.material.reflectionTexture = probe.cubeTexture; mirror.material.environmentIntensity = 1; }
+        if (!mirror.captured) { mirror.captured = true; mirror.material.reflectionTexture = cube; mirror.material.environmentIntensity = 1; }
       });
       mirror.probe = probe;
     } else {
+      mirror.face = 0;
       mirror.probe.cubeTexture.resetRefreshCounter();
     }
+    active = mirror;
     if (!scene.customRenderTargets.includes(mirror.probe.cubeTexture)) scene.customRenderTargets.push(mirror.probe.cubeTexture);
   };
 
@@ -117,6 +135,8 @@ export function setupMirrorProbes(scene: Scene, groups: Map<PBRMaterial, Abstrac
     const now = performance.now();
     if (now - start < FIRST_CAPTURE_DELAY) return;
     if (!mirrors.some(m => m.probe)) refresh();
+    // One capture at a time (it takes six frames).
+    if (active) return;
     const next = queue.shift();
     if (next) capture(next);
   });

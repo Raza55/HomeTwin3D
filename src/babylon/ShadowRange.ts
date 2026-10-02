@@ -1,4 +1,5 @@
-import { DirectionalLight, Light, Vector3, type AbstractMesh, type Scene, type ShadowGenerator } from '@babylonjs/core';
+import { DirectionalLight, Light, Vector3, type AbstractMesh, type Observer, type RenderTargetTexture, type Scene, type ShadowGenerator } from '@babylonjs/core';
+import { reducedEffects } from './DeviceClass';
 
 /**
  * A point or spot light only lights points inside its range sphere. The segment
@@ -61,8 +62,43 @@ export function limitShadowCastersToRange(generator: ShadowGenerator): void {
 export function invalidateShadowsNear(scene: Scene, meshes: AbstractMesh[], margin = 0): void {
   if (!meshes.length) return;
   for (const light of scene.lights) {
-    const map = light.getShadowGenerator()?.getShadowMap();
-    if (!map) continue;
-    if (meshes.some(mesh => meshWithinLightRange(light, mesh, margin))) map.resetRefreshCounter();
+    if (!light.getShadowGenerator()?.getShadowMap()) continue;
+    if (meshes.some(mesh => meshWithinLightRange(light, mesh, margin))) requestShadowRefresh(light);
   }
+}
+
+/**
+ * Shadow maps to re-render, a few per frame. A door or a row of blinds reaches
+ * dozens of lamps; re-rendering all their cube maps at once drew up to 45 000
+ * calls in one frame (a visible freeze on tablets). Maps of lamps that are dark
+ * at the moment (the day demo keeps lamps enabled at intensity 0) wait until
+ * the lamp lights up: nobody sees their shadows meanwhile.
+ */
+interface RefreshQueue { lights: Set<Light>; observer: Observer<Scene> | null }
+const queues = new WeakMap<Scene, RefreshQueue>();
+
+export function requestShadowRefresh(light: Light): void {
+  const scene = light.getScene();
+  let queue = queues.get(scene);
+  if (!queue) { queue = { lights: new Set(), observer: null }; queues.set(scene, queue); }
+  queue.lights.add(light);
+  if (queue.observer) return;
+  const perFrame = reducedEffects() ? 2 : 4;
+  const q = queue;
+  q.observer = scene.onBeforeRenderObservable.add(() => {
+    let released = 0;
+    for (const lamp of q.lights) {
+      const map = lamp.getShadowGenerator()?.getShadowMap() as RenderTargetTexture | null | undefined;
+      if (!map || lamp.isDisposed()) { q.lights.delete(lamp); continue; }
+      // Dark or switched off: nothing to see yet (switching on asks again).
+      if (!lamp.isEnabled() || lamp.intensity <= 0) continue;
+      map.resetRefreshCounter();
+      q.lights.delete(lamp);
+      if (++released >= perFrame) break;
+    }
+    let waiting = false;
+    for (const lamp of q.lights) if (lamp.isEnabled() && lamp.intensity > 0) { waiting = true; break; }
+    if (!!scene.metadata?.shadowRefreshPending !== waiting) scene.metadata = { ...scene.metadata, shadowRefreshPending: waiting };
+    if (!q.lights.size) { scene.onBeforeRenderObservable.remove(q.observer); q.observer = null; }
+  });
 }

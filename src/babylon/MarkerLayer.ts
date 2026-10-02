@@ -37,6 +37,8 @@ export interface MapMarkerSpec {
   display: string;
   /** False for status displays that let pointer input through to the model. */
   interactive?: boolean;
+  /** Stays visible in the energy view, which hides the other plan markers. */
+  energy?: boolean;
   /**
    * Long press runs this instead of the element's click (e.g. light on/off).
    * Returning false (nothing to do: unassigned, unavailable, offline) lets the
@@ -168,7 +170,8 @@ export class MarkerLayer {
         placement.visible = false;
         if (!element || !projection) continue;
         // Scripted first-person shots (day demo) show the room without plan markers.
-        if (this.scene.metadata?.hideMarkers) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
+        // The energy view shows only its own labels.
+        if (this.scene.metadata?.hideMarkers || (!!this.scene.metadata?.energyView !== !!spec.energy)) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         const point = spec.anchor(this.point);
         if (!point) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         marker.point.copyFrom(point);

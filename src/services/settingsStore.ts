@@ -39,6 +39,8 @@ export interface RenderSettings {
   showTextures: boolean;
   sketchColor: string;
   sketchSpecular: number;
+  /** Energy flow over the sketch model (textures off). */
+  energyView: boolean;
 }
 
 export interface EnvironmentSettings {
@@ -138,6 +140,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     showTextures: true,
     sketchColor: '#ffffff',
     sketchSpecular: 0.1,
+    energyView: true,
   },
   environment: {
     sunLiveMode: true,

@@ -20,7 +20,7 @@ import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, ImageOff } from 'lucide-react';
+import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, ImageOff, Zap } from 'lucide-react';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
 import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, Matrix, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
@@ -105,6 +105,7 @@ import { indexByEntity, selectEntityStates } from '../../utils/entityIndex';
 const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGuide'));
 const SettingsModal = lazy(() => import('../../components/SettingsModal'));
 const DebugPanel = lazy(() => import('../../components/DebugPanel'));
+const EnergyFlowView = lazy(() => import('../../components/EnergyFlow/EnergyFlowView'));
 const GuidedTour = lazy(() => import('../../components/GuidedTour/GuidedTour'));
 const CardPropertiesPanel = lazy(() => import('../../components/SidePanel/CardPropertiesPanel'));
 
@@ -430,6 +431,11 @@ export default function Dashboard() {
   const [sunShadowRes, setSunShadowRes] = useState(() => getSetting('render').sunShadowRes);
   const [pointShadowRes, setPointShadowRes] = useState(() => getSetting('render').pointShadowRes);
   const [showTextures, setShowTextures] = useState(() => getSetting('render').showTextures);
+  // Energy flow over the sketch model (textures off).
+  const [energyView, setEnergyView] = useState(() => getSetting('render').energyView ?? true);
+  const changeEnergyView = useCallback((on: boolean) => { setEnergyView(on); updateSettings('render', { energyView: on }); }, []);
+  const energyStates = useCallback(() => lastStatesRef.current, []);
+  const energyDisplays = useCallback(() => Object.values(displayMeshMapRef.current).map(entry => ({ config: entry.config, plane: entry.plane })), []);
   const [sketchColor, setSketchColor] = useState(() => getSetting('render').sketchColor);
   const [sketchSpecular, setSketchSpecular] = useState(() => getSetting('render').sketchSpecular);
 
@@ -2467,6 +2473,15 @@ export default function Dashboard() {
               ? <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
               : <ImageOff size={18} strokeWidth={1.7} aria-hidden="true" />}
           </button>
+          {!showTextures && !dayDemoController && <button
+            className={`dashboard-icon-btn${energyView ? ' active' : ''}`}
+            onClick={() => changeEnergyView(!energyView)}
+            aria-pressed={energyView}
+            aria-label={energyView ? t('energy.hide') : t('energy.show')}
+            title={energyView ? t('energy.hide') : t('energy.show')}
+          >
+            <Zap size={18} strokeWidth={1.7} aria-hidden="true" />
+          </button>}
           <button
             className="dashboard-icon-btn"
             onClick={resetView}
@@ -2568,6 +2583,7 @@ export default function Dashboard() {
         />
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
+        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haStatus === 'connected' && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} onClose={() => changeEnergyView(false)} /></Suspense>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} />}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && <TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/>}

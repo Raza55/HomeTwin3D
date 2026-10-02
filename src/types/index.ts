@@ -382,6 +382,8 @@ export interface OnboardingState {
 
 export interface AppConfig {
   floorplanBindings?: FloorplanBinding[];
+  /** Energy view: hand-placed consumers (energy statistic id → scene position). */
+  energyPlacement?: Record<string, { x: number; y: number; z: number }>;
   location: {
     latitude: number;
     longitude: number;

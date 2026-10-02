@@ -109,6 +109,8 @@ export class SceneChangeMonitor {
     if (scene.particleSystems.some(system => system.isStarted() && system.getActiveCount() > 0)) note('particles');
     // Wind-swayed trees and lightning animate in shaders and light intensity only.
     if (scene.metadata?.weatherAnimating) note('weather');
+    // Energy view: flow lines move while power flows.
+    if (scene.metadata?.energyAnimating) note('energy');
     const animating = scene.animationGroups.some(group => group.isPlaying) || scene.animatables.length > 0;
     if (animating) note('animation');
 

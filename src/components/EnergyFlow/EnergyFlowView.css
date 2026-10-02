@@ -1,0 +1,77 @@
+/* Energy view: labels (rasterised by the marker layer) and the side panel. */
+/* Label sources: the marker layer parks and rasterises them; they need their natural width. */
+.energy-labels { position: fixed; left: -10000px; top: 0; pointer-events: none; }
+.energy-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font: 600 11.5px/1.2 system-ui, sans-serif;
+  color: #0f172a;
+  background: rgba(255, 255, 255, .92);
+  border: 1.5px solid var(--energy-color, #0ea5e9);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .18);
+}
+.energy-label b { font-weight: 750; font-variant-numeric: tabular-nums; }
+.energy-label small { font-weight: 600; color: #475569; font-variant-numeric: tabular-nums; }
+.energy-label.idle { opacity: .6; border-style: dashed; }
+.energy-label.hub { background: #0f172a; color: #fff; border-color: #fbbf24; }
+.energy-label.hub svg { color: #fbbf24; }
+.energy-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--energy-color, #0ea5e9); }
+
+.energy-panel {
+  position: absolute;
+  right: 16px;
+  top: 150px;
+  bottom: 16px;
+  z-index: 30;
+  width: min(340px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: var(--panel-border-width, 1px) solid color-mix(in srgb, var(--border2) 80%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .25);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  overflow: hidden;
+}
+.energy-panel header { display: flex; align-items: center; gap: 10px; }
+.energy-panel header > svg { color: #f59e0b; flex: none; }
+.energy-panel header div { display: grid; flex: 1; min-width: 0; }
+.energy-panel header strong { font-size: 15px; }
+.energy-panel header small { font-size: 11.5px; color: var(--muted); }
+.energy-close { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; }
+.energy-close:hover { color: var(--text); border-color: var(--accent); }
+.energy-empty { margin: 4px 0; font-size: 13px; color: var(--muted); }
+
+.energy-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.energy-totals div { display: grid; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent-dim) 55%, transparent); }
+.energy-totals span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.energy-totals strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+
+.energy-rooms { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--border); gap: 2px; }
+.energy-rooms span { min-width: 3px; transition: flex-grow .6s ease; }
+.energy-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
+.energy-legend li { display: inline-flex; align-items: center; gap: 5px; }
+.energy-legend b { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
+
+.energy-list { list-style: none; margin: 0; padding: 0 2px 0 0; display: grid; gap: 8px; overflow-y: auto; min-height: 0; flex: 1; }
+.energy-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-rows: auto 4px; gap: 3px 8px; align-items: center; font-size: 12.5px; }
+.energy-list li.idle { opacity: .55; }
+.energy-name { display: grid; min-width: 0; }
+.energy-name, .energy-name small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.energy-name small, .energy-value small { font-size: 11px; color: var(--muted); }
+.energy-value { display: grid; justify-items: end; font-weight: 650; font-variant-numeric: tabular-nums; }
+.energy-bar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.energy-bar span { display: block; height: 100%; border-radius: 2px; transition: width .6s ease; }
+
+@media (max-width: 720px) {
+  .energy-panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 45vh; }
+}

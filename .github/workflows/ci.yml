@@ -35,6 +35,8 @@ jobs:
       - run: npm run test:performance
       - run: npm run test:walkthrough
       - run: npm run test:shared
+      - run: npm run test:daydemo
+      - run: npm run test:energy
       - run: npm run build
       - run: npm run build -- --mode addon
 

@@ -330,6 +330,7 @@ export const SIMULATION_SETTINGS: AppSettings = {
     showTextures: false,
     sketchColor: '#ffffff',
     sketchSpecular: 0.1,
+    energyView: true,
   },
   environment: {
     sunLiveMode: true,

@@ -18,6 +18,8 @@ interface Props {
   displays: () => { config: DisplayConfig; plane: AbstractMesh }[];
   /** Where a lamp of the board sits (its bulb), for the single-lamp layer. */
   lampPoint: (entityId: string) => Vector3 | null;
+  /** Set from outside (day demo): the period shown. */
+  mode?: EnergyMode;
   onClose: () => void;
 }
 
@@ -48,7 +50,7 @@ const formatWatts = (watts: number, language: string) => watts >= 1000
  * come from Home Assistant's energy dashboard; each gets a glowing orb and a flow
  * line from the supply, a label, and a row in the panel with its share.
  */
-export default function EnergyFlowView({ scene, config, connection, states, displays, lampPoint, onClose }: Props) {
+export default function EnergyFlowView({ scene, config, connection, states, displays, lampPoint, mode: forcedMode, onClose }: Props) {
   const { t, language } = useLanguage();
   const [consumers, setConsumers] = useState<EnergyConsumer[] | null>(null);
   const [lamps, setLamps] = useState<EnergyConsumer[]>([]);
@@ -63,7 +65,8 @@ export default function EnergyFlowView({ scene, config, connection, states, disp
   const [readings, setReadings] = useState<Reading[]>([]);
   const [total, setTotal] = useState(0);
   const [today, setToday] = useState<Record<string, number>>({});
-  const [mode, setMode] = useState<EnergyMode>('now');
+  const [mode, setMode] = useState<EnergyMode>(forcedMode ?? 'now');
+  useEffect(() => { if (forcedMode) setMode(forcedMode); }, [forcedMode]);
   const period: EnergyPeriod = mode === 'now' ? 'day' : mode;
   const live = mode === 'now';
   const [error, setError] = useState(false);

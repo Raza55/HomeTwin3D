@@ -78,6 +78,7 @@ import { miredToKelvin, kelvinToRGB } from '../../utils/color';
 import { updateSunPosition, minutesToLabel } from '../../babylon/SunController';
 import { createWeatherEffects, type WeatherEffectsContext } from '../../babylon/WeatherEffects';
 import { createWildlife, type Wildlife } from '../../babylon/Wildlife';
+import { buildDemoEnergy } from '../../services/dayDemo/energyDemo';
 import { reducedEffects } from '../../babylon/DeviceClass';
 import { fetchWeather, type WeatherData } from '../../services/weatherApi';
 import { showGroundGrid, hideGroundGrid, syncGridColors, disposeGroundGrid, createModelShadow } from '../../babylon/GroundGrid';
@@ -716,15 +717,21 @@ export default function Dashboard() {
     }
   }, []);
 
-  const handleShowTexturesChange = useCallback((enabled: boolean) => {
+  const applyTextures = useCallback((enabled: boolean, persist = true) => {
     setShowTextures(enabled);
-    updateSettings('render', { showTextures: enabled });
+    // The day demo switches textures for its energy chapters without touching the saved choice.
+    if (persist) updateSettings('render', { showTextures: enabled });
     const scene = sceneCtxRef.current?.scene;
     if (!scene) return;
     setTexturesEnabled(scene, modelMeshesRef.current, enabled, edgeWidth, edgeMode === 'classic');
     edgeOutlineRef.current?.setEnabled(!enabled && edgeMode === 'enhanced');
     rebuildRenderBatches();
   }, [edgeWidth, edgeMode, rebuildRenderBatches]);
+  const handleShowTexturesChange = useCallback((enabled: boolean) => applyTextures(enabled), [applyTextures]);
+  const applyTexturesRef = useRef(applyTextures);
+  applyTexturesRef.current = applyTextures;
+  // Day demo: its energy chapters show the energy view ('now', then the week).
+  const [demoEnergyMode, setDemoEnergyMode] = useState<'now' | 'week' | null>(null);
 
   const handleSketchColorChange = useCallback((color: string) => {
     setSketchColor(color);
@@ -1768,6 +1775,9 @@ export default function Dashboard() {
     const panelBefore = panelCollapsedRef.current;
     setPanelCollapsed(true);
     let touch: import('../../components/DayDemo/boardTouch').BoardTouch | null = null;
+    let powerTimer: ReturnType<typeof setInterval> | null = null;
+    let unsubscribeChapters: (() => void) | null = null;
+    let demoWildlife = false;
     void Promise.all([import('../../services/dayDemo/controller'), import('../../components/DayDemo/boardTouch')]).then(([{ DayDemoController }, { BoardTouch }]) => {
       if (disposed) return;
       const cast = buildCast(config, Object.values(displayMeshMapRef.current).map(entry => entry.config));
@@ -1857,6 +1867,29 @@ export default function Dashboard() {
       weatherRef.current?.setParticleScale(1.5);
       void controller.start(Number(params.get('speed')) || 1, from && /^\d{2}:\d{2}$/.test(from) ? from : undefined);
       (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo = controller;
+      // Energy chapters: the demo answers the energy view's requests with typical values of a flat;
+      // lamp groups follow the demo's lights.
+      const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de');
+      ha.requestHandler = message => energyDemo.request(message);
+      const updatePower = () => {
+        for (const { entityId, watts } of energyDemo.powerStates(id => ha.getState(id))) {
+          if (ha.getState(entityId)?.state !== String(watts)) ha.setState(entityId, String(watts), { unit_of_measurement: 'W', device_class: 'power' });
+        }
+      };
+      updatePower();
+      powerTimer = setInterval(updatePower, 2000);
+      // The courtyard cat and the birds take part even when they are off in the settings.
+      if (!wildlifeRef.current) { wildlifeRef.current = createWildlife(ctx.scene, { reduced: reducedEffects() }); demoWildlife = true; }
+      let lastChapter = '';
+      unsubscribeChapters = controller.subscribe(() => {
+        const id = controller!.getView().chapter?.id ?? '';
+        if (id === lastChapter) return;
+        lastChapter = id;
+        const mode = id === 'energy' ? 'now' : id === 'energy-week' ? 'week' : null;
+        setDemoEnergyMode(mode);
+        applyTexturesRef.current(mode ? false : getSetting('render').showTextures, false);
+        if (id === 'visitor') wildlifeRef.current?.visit();
+      });
       setDayDemoController(controller);
     }).catch(error => {
       console.error('[DayDemo] Failed to start:', error);
@@ -1864,6 +1897,12 @@ export default function Dashboard() {
     });
     return () => {
       disposed = true;
+      unsubscribeChapters?.();
+      if (powerTimer) clearInterval(powerTimer);
+      ha.requestHandler = null;
+      setDemoEnergyMode(null);
+      applyTexturesRef.current(getSetting('render').showTextures, false);
+      if (demoWildlife && !wildlifeEnabledRef.current) { wildlifeRef.current?.dispose(); wildlifeRef.current = null; }
       controller?.dispose();
       touch?.dispose();
       ha.serviceHook = null;
@@ -2610,7 +2649,7 @@ export default function Dashboard() {
         />
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
-        {!showTextures && energyView && !dayDemoController && sceneReady && sceneCtxRef.current && configRef.current && haSeen && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} onClose={() => handleShowTexturesChange(true)} /></Suspense>}
+        {(dayDemoController ? !!demoEnergyMode : !showTextures && energyView && haSeen) && sceneReady && sceneCtxRef.current && configRef.current && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} mode={dayDemoController ? demoEnergyMode ?? undefined : undefined} onClose={() => { if (!dayDemoController) handleShowTexturesChange(true); }} /></Suspense>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} />}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && <TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/>}

@@ -1,10 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import {
-  AlarmClock, BedDouble, Blinds, Bot, CloudLightning, CloudSun, Coffee, DoorOpen, Droplets, Fan, Film, Footprints,
-  Gamepad2, Gauge, House, Lightbulb, LightbulbOff, Lock, Monitor, Moon, Palette, Pause, Play, RotateCcw, Snowflake,
-  Speaker, Sun, Sunrise, Sunset, Thermometer, TriangleAlert, Tv, Utensils, Video, VideoOff, WashingMachine, Wind, X,
-  Cloud, CloudFog, CloudRain, CloudDrizzle, CloudSnow, type LucideIcon,
-} from 'lucide-react';
+import { AlarmClock, BedDouble, Blinds, Bot, CloudLightning, CloudSun, Coffee, DoorOpen, Droplets, Fan, Film, Footprints, Gamepad2, Gauge, House, Lightbulb, LightbulbOff, Lock, Monitor, Moon, Palette, Pause, Play, RotateCcw, Snowflake, Speaker, Sun, Sunrise, Sunset, Thermometer, TriangleAlert, Tv, Utensils, Video, VideoOff, WashingMachine, Wind, X, Cloud, CloudFog, CloudRain, CloudDrizzle, CloudSnow, type LucideIcon, Cat, Zap } from 'lucide-react';
 import type { DayDemoController } from '../../services/dayDemo/controller';
 import { CHAPTERS, DAY_LENGTH, clockLabel, pick, realSecondsUntil, virtualToClock } from '../../services/dayDemo/story';
 import { getSunPosition } from '../../babylon/SunController';
@@ -19,7 +14,7 @@ const ICONS: Record<string, Icon> = {
   robot: Bot, sun: Sun, thermometer: Thermometer, monitor: Monitor, alert: TriangleAlert, storm: CloudLightning,
   'sun-cloud': CloudSun, home: House, utensils: Utensils, film: Film, gamepad: Gamepad2, bed: BedDouble, footprints: Footprints,
   snow: Snowflake, lamp: Lightbulb, 'lamp-off': LightbulbOff, blinds: Blinds, lock: Lock, fan: Fan, washer: WashingMachine,
-  speaker: Speaker, palette: Palette, wind: Wind,
+  speaker: Speaker, palette: Palette, wind: Wind, cat: Cat, zap: Zap,
 };
 
 

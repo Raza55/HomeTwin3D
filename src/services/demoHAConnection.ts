@@ -433,9 +433,12 @@ export class DemoHAConnection {
     return this.states.get(entityId);
   }
 
-  async request(_msg: Record<string, unknown>): Promise<unknown> {
-    // Demo mode doesn't support arbitrary WS requests (e.g. history)
-    return {};
+  /** Answers WebSocket requests in a scripted demo (e.g. the day demo's energy data). */
+  requestHandler: ((msg: Record<string, unknown>) => unknown) | null = null;
+
+  async request(msg: Record<string, unknown>): Promise<unknown> {
+    // Demo mode doesn't support arbitrary WS requests (e.g. history) unless a demo answers them.
+    return this.requestHandler?.(msg) ?? {};
   }
 
   get isConnected(): boolean {

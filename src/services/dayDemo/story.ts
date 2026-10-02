@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 153;
+export const DAY_REAL_SECONDS = 175;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -188,6 +188,11 @@ export const STORY: StoryBeat[] = [
     { type: 'appliance', kind: 'washer', running: false },
     { type: 'appliance', kind: 'dryer', running: true },
   ]),
+  beat('11:40', [], {
+    id: 'visitor', icon: 'cat',
+    title: { de: 'Besuch im Hof', en: 'A visitor in the courtyard' },
+    text: { de: 'Während alle unterwegs sind, schaut die Nachbarskatze vorbei und macht es sich auf der Bank bequem. Vögel picken im Gras.', en: 'While everyone is out, the neighbours’ cat drops by and makes itself comfortable on the bench. Birds peck in the grass.' },
+  }),
   beat('12:30', [
     { type: 'blind', position: 30, ramp: 4, stagger: 1 },
     { type: 'fan', rooms: ['bedroom', 'living', 'office'], on: true, percentage: 40 },
@@ -280,6 +285,16 @@ export const STORY: StoryBeat[] = [
     id: 'cinema', icon: 'film',
     title: { de: 'Kinoabend', en: 'Movie night' },
     text: { de: 'Licht gedimmt, die Farblampen tauchen den Raum in ruhiges, langsam atmendes Nachtblau wie ein Ambilight, der Fernseher zeigt den Film.', en: 'Lights dimmed, the colour lamps bathe the room in calm, slowly breathing night blue like an ambilight, the TV plays the film.' },
+  }),
+  beat('21:10', [], {
+    id: 'energy', icon: 'zap',
+    title: { de: 'Energiefluss', en: 'Energy flow' },
+    text: { de: 'Wohin der Strom gerade fließt: jedes Gerät an seinem Platz, mit Anteilen pro Raum – Lampen gemessen oder geschätzt.', en: 'Where the power goes right now: every device in its place, with shares per room – lamps measured or estimated.' },
+  }),
+  beat('21:28', [], {
+    id: 'energy-week', icon: 'zap',
+    title: { de: 'Verbrauch der Woche', en: 'This week’s consumption' },
+    text: { de: 'Umgeschaltet auf die Woche: Die Liste sortiert sich neu – der PC liegt klar vorne, dahinter die Haushaltsgeräte.', en: 'Switched to the week: the list re-sorts – the PC is clearly ahead, followed by the household appliances.' },
   }),
   beat('22:20', [
     { type: 'tv', mode: 'off' },
@@ -406,6 +421,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '09:19', speed: 2 },
   { clock: '11:07', speed: 0.27 },
   { clock: '11:25', speed: 2 },
+  // The cat's visit: time to watch it settle on the bench.
+  { clock: '11:38', speed: 0.3 },
+  { clock: '12:14', speed: 2 },
   { clock: '13:25', speed: 1.2 },
   { clock: '15:00', speed: .55 },
   { clock: '16:05', speed: 1.1 },
@@ -419,7 +437,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '19:44', speed: 0.12 },
   { clock: '20:03', speed: 1.1 },
   { clock: '20:15', speed: 0.6 },
-  { clock: '21:10', speed: 1.2 },
+  // Energy view: first the current power, then the week.
+  { clock: '21:08', speed: 0.2 },
+  { clock: '21:44', speed: 1.2 },
   { clock: '22:20', speed: 0.5 },
   { clock: '23:10', speed: 1.2 },
   { clock: '23:45', speed: 3 },
@@ -478,6 +498,10 @@ export type ShotAnchor =
   | { kind: 'pcCase' }
   /** The dining table (found by its mesh name). */
   | { kind: 'table' }
+  /** Outside: where the courtyard cat visits (the vent bench). */
+  | { kind: 'courtyard' }
+  /** The middle of the flat (energy view). */
+  | { kind: 'home' }
   /** A point on the way from `a` to `b` (share 0 = a, 1 = b). */
   | { kind: 'between'; a: ShotAnchor; b: ShotAnchor; share: number };
 
@@ -584,6 +608,7 @@ export const CHAPTER_FRAMING: Record<string, Framing> = {
   bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'between', a: { kind: 'washer' }, b: { kind: 'room', room: 'living' }, share: .45 }, .55),
   sunny: overview(1.35, .16), shade: room('living', .6), warning: overview(1.3, .16), storm: overview(1.55, .2),
   clearing: overview(1.3, .14), home: anchor(ENTRANCE, .42), cooking: room('kitchen', .38), sunset: room('living', .6),
+  visitor: anchor({ kind: 'courtyard' }, .42), energy: anchor({ kind: 'home' }, 1.05), 'energy-week': anchor({ kind: 'home' }, 1.05),
   airing: anchor(LIVING_WINDOW, .5), board: room('living', .5), cinema: anchor({ kind: 'tv' }, .42), gaming: anchor({ kind: 'pc' }, .4), goodnight: room('bedroom', .45),
   nightlight: room('hall', .4), snow: overview(1.55, .2), dawn: overview(1.2, .12),
 };

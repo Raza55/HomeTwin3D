@@ -139,5 +139,5 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,trees,
   // Solid vent benches (centre, half extents) and seats an animal could jump onto (top heights).
   obstacles:[0,1].map(i=>({x:center.x+benchX,z:center.z+bz+benchShift-3.1+i*5.2,halfX:.78,halfZ:2.25})),
-  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ)],dispose:()=>textures.forEach(t=>t.dispose())};
+  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ),p(seatX-.15,.5,seatZ),p(playX-1,1.1,playZ+1.6)],dispose:()=>textures.forEach(t=>t.dispose())};
 }

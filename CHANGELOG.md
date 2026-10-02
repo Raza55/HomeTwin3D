@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.41 – Katze mit Augen, mehr Vögel, Demo mit Hofbesuch und Energiefluss (02.10.2026)
+
+- Katze: Augen mit Pupillen, Nase, Innenohren, Pfoten, Tigerstreifen; springt öfter auf Lüftungsbänke, Bänke und Spielplatzpfosten und liegt dort zum Chillen. Wege führen jetzt über Umwegpunkte um Bänke und Stämme (kein Hängenbleiben mehr); Ein- und Ausgänge liegen auf der Hofachse, weg vom Gebäude.
+- Vögel: zwölf statt sieben (Tablet sechs), größer, öfter über der Wohnung, manche picken auf dem Rasen vor den Fenstern.
+- Tagesdemo: neues Kapitel „Besuch im Hof“ (die Katze legt sich auf die Bank, Vögel im Gras) und „Energiefluss“ – erst „Jetzt“, dann die Woche, mit typischen Verbrauchswerten einer Wohnung und Lampengruppen, die dem Licht der Demo folgen. Der Demotag dauert dafür 175 s.
+
 ## 0.5.40 – Demo: Kochen an der Küchenzeile (02.10.2026)
 
 - Tagesdemo: Beim Kochen steht die Kamera am Esstisch und schwenkt langsam an der beleuchteten Küchenzeile entlang (Spüle, Kochfeld, Messer); die Szene läuft dafür etwas langsamer (Tag 153 s statt 145 s).

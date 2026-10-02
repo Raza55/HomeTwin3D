@@ -181,7 +181,10 @@ export class ShotDirector {
   focus(framing: Framing): Vector3 | null {
     if (framing.at === 'overview') return null;
     const anchor = this.anchor(framing.at);
-    return anchor ? new Vector3(anchor.center.x, this.walk.floorY() + .9 * this.walk.unit(), anchor.center.z) : null;
+    if (!anchor) return null;
+    // Outside the flat (courtyard) the anchor's own height; inside, eye level above the floor.
+    const y = framing.at.kind === 'courtyard' ? anchor.center.y + .2 * this.walk.unit() : this.walk.floorY() + .9 * this.walk.unit();
+    return new Vector3(anchor.center.x, y, anchor.center.z);
   }
 
   /** Blind entity at the shot's (first) window, found by its panel mesh next to the glass. */
@@ -305,6 +308,16 @@ export class ShotDirector {
       return meshes.length ? { center: bounds(meshes).center, inward: Vector3.Zero(), out: false, meshes } : null;
     }
     if (spec.kind === 'entrance') return this.entranceAnchor();
+    if (spec.kind === 'courtyard') {
+      // The vent bench where the courtyard cat lies (exterior metadata; absent without the park).
+      const yard = this.scene.metadata?.courtyard as { seats?: Vector3[]; benchCenter?: Vector3 } | undefined;
+      const at = yard?.seats?.[0] ?? yard?.benchCenter;
+      return at ? { center: at.clone(), inward: Vector3.Zero(), out: false, meshes: [] } : null;
+    }
+    if (spec.kind === 'home') {
+      const b = this.scene.metadata?.weatherBounds as { x: number; z: number } | undefined;
+      return b ? { center: new Vector3(b.x, this.walk.floorY() + 1 * this.walk.unit(), b.z), inward: Vector3.Zero(), out: false, meshes: [] } : null;
+    }
     if (spec.kind === 'table') {
       // The table top: the largest flat mesh named like a dining table.
       const tops = this.scene.meshes.filter(m => !m.isDisposed() && m.getTotalVertices() > 0 && /esstisch|dining.?table/i.test(m.name));

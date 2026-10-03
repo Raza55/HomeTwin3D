@@ -10,6 +10,8 @@ Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3
 
 > **Hinweis:** HomeTwin3D ist aus einer konkreten Wohnung heraus entstanden. Einige Funktionen (Hue-Sync-Anzeige, Wasserleck, TV-Medien, TV Dial) verwenden Beispiel-Entities, die man auf die eigenen umlenkt, und die Außenumgebung ist eine Beispielumgebung. Was das bedeutet, steht unter [Funktionen, Grenzen und Technik](PROJECT_STATUS.md). Die aktuelle Version zeigt der [Änderungsverlauf](CHANGELOG.md).
 
+> **Wichtig für Tablets: HomeTwin3D über HTTPS öffnen.** Das Add-on liefert die Oberfläche zunächst über unverschlüsseltes HTTP (Port 8099). Auf Tablets, zum Beispiel einem iPad mit Safari, läuft die 3D-Ansicht so deutlich langsamer und ruckelt, denn Safari rendert unsichere Seiten erheblich langsamer. Für ein flüssiges Wand-Dashboard deshalb einen Reverse Proxy mit Zertifikat vorschalten (etwa Nginx Proxy Manager), der auf `http://<ha-ip>:8099` zeigt und **WebSockets weiterleitet**, und das Board immer über die `https://` Adresse öffnen. Die App verbindet sich dann automatisch sicher mit Home Assistant. Anleitung: [HTTPS einrichten](3dash-addon/DOCS.md#https-verbindung-und-bilder). Die Bildrate lässt sich mit `?perf` an der Adresse prüfen.
+
 ## Was HomeTwin3D kann
 
 - **Dein eigener Grundriss:** GLB-Modelle importieren und zur Laufzeit austauschen, Räume bearbeiten, zusätzliche Objekte platzieren und Modellteile verschieben, drehen oder skalieren.
@@ -71,6 +73,8 @@ Stelle `dist/` mit einem statischen Webserver bereit. Beide Build-Varianten schr
 Füge `https://github.com/Raza55/HomeTwin3D` unter **Einstellungen → Add-ons → Add-on Store → Repositories** hinzu. Das Repository liefert ein eigenes Add-on **HomeTwin3D** mit der Kennung `hometwin3d`. Der Dockerfile baut den `main`-Branch dieses Projekts.
 
 Die Oberfläche verwendet standardmäßig Port **8099**. Falls das bisherige 3Dash-Add-on parallel läuft, benötigt eines der Add-ons einen anderen Host-Port. Ein bestehendes 3Dash-Add-on wird nicht automatisch ersetzt. Anleitung: [Add-on-Dokumentation](3dash-addon/DOCS.md).
+
+**Für Tablets HTTPS einrichten:** Ohne HTTPS ist die Darstellung auf iPads und anderen Tablets spürbar langsamer. Reverse Proxy mit Zertifikat und WebSocket-Unterstützung auf Port 8099 richten und das Board über `https://` öffnen, siehe [HTTPS einrichten](3dash-addon/DOCS.md#https-verbindung-und-bilder).
 
 Ein Repository-Push installiert kein Add-on-Update. Der Docker-/Supervisor-Betrieb muss auf der Zielinstallation separat geprüft werden.
 

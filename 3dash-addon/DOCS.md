@@ -64,9 +64,17 @@ die Version innerhalb einer Minute.
 
 ## HTTPS, Verbindung und Bilder
 
-Standardmäßig liefert Nginx HTTP auf Port 8099. Für Tablets wird HTTPS dringend empfohlen: Safari rendert auf unsicheren
-Seiten deutlich langsamer. Dazu einen Reverse Proxy (z. B. Nginx Proxy Manager) mit Zertifikat auf `http://<ha-ip>:8099`
-einrichten und **WebSocket-Unterstützung** aktivieren. Auf einer HTTPS-Seite verbindet sich die App über `/ha-ws` des
+Standardmäßig liefert Nginx unverschlüsseltes HTTP auf Port 8099. **Für Tablets ist HTTPS praktisch Pflicht:** Auf einem iPad
+mit Safari läuft die 3D-Ansicht über HTTP deutlich langsamer und ruckelt, weil Safari unsichere Seiten erheblich langsamer
+rendert. So geht es:
+
+1. Einen Reverse Proxy mit Zertifikat einrichten, zum Beispiel Nginx Proxy Manager oder ein vorhandener Proxy im Heimnetz.
+2. Als Ziel `http://<ha-ip>:8099` eintragen (bzw. den geänderten Host-Port).
+3. **WebSocket-Unterstützung** einschalten.
+4. Das Board auf allen Tablets nur noch über die `https://` Adresse öffnen und dort als Lesezeichen oder Home-Bildschirm-App
+   speichern. Mit `?perf` an der Adresse lässt sich die Bildrate prüfen.
+
+Den Proxy nicht ungeschützt ins Internet stellen (siehe gemeinsame Version oben). Auf einer HTTPS-Seite verbindet sich die App über `/ha-ws` des
 Add-ons mit Home Assistant (fester Upstream `homeassistant:8123`, Anmeldung weiterhin per Token); in der App wird die
 HA-Adresse wie gewohnt eingetragen.
 

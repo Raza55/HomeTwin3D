@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.55 · Dritte Lüftungsbank näher an den Bänken (03.10.2026)
+
+- Außenanlage: Die dritte Lüftungsbank am Südweg steht 2 m weiter vorn entlang des Wegs, also näher an den beiden ausgerichteten Bänken (Mitte zu Mitte jetzt 10,4 m statt 12,4 m zur zweiten Bank). Wegseite, Abstand zur Wegmitte und Drehung entlang der Kurve bleiben gleich.
+
 ## 0.5.54 · Neuer Rundgang, kein Seitenpanel mehr (03.10.2026)
 
 - Der Rundgang erklärt in sechs kurzen Schritten die aktuelle Bedienung: Bewegen, Markierungen (Tippen öffnet die Steuerung, Halten bis der Ring sich schließt schaltet direkt, ? heißt noch nicht zugeordnet), Filterleiste, Ansichtsleiste oben rechts und das Zahnrad mit Einstellungen und Editor. Er hebt dabei jeweils das passende Bedienelement hervor und startet erst, wenn die 3D Ansicht geladen ist. In der Energieansicht ohne Filterleiste entfällt der Filterschritt.

@@ -132,7 +132,7 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
    const crown=place(pool.create(`crown:${i%3}:${(i+k)%3}`,'park-tree',()=>MeshBuilder.CreateSphere('park-tree',{diameter:2.7+(i%3)*.3,segments:7},scene)),leaves[(i+k)%3],p.x+Math.cos(a)*offset,groundY+h+.5+(k===0?.7:0),p.z+Math.sin(a)*offset);crown.scaling.y=1.1;
   }
  });
- // A third vent bench stands beside the south path where it curves away, 12.4 m (centre to
+ // A third vent bench stands beside the south path where it curves away, 10.4 m (centre to
  // centre) beyond the second bench and on the same side of the path, turned with it.
  const extraVentBenches:{x:number;z:number;angle:number}[]=[];
  const southRoute=referencePaths.find(route=>route.bench==='start');
@@ -140,7 +140,7 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
   const line=Curve3.CreateCatmullRomSpline([[pathX,entryZ+11],benchSouth,...southRoute.points.map(fromReference)]
    .map(([x,z])=>new Vector3(x,0,z)),12).getPoints();
   // The spline starts at entryZ + 11; the second bench of the straight row is centred at entryZ + 9.6.
-  let remaining=12.4-1.4;
+  let remaining=10.4-1.4;
   for(let i=1;i<line.length;i++){
    const step=Vector3.Distance(line[i-1],line[i]);
    if(step<remaining){remaining-=step;continue;}

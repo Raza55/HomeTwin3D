@@ -736,6 +736,13 @@ export default function Dashboard() {
   // Marker filter (right edge): hidden main categories, remembered; the day demo sets its own per chapter.
   const [hiddenCategories, setHiddenCategories] = useState<MarkerCategory[]>(() => (getSetting('render').hiddenMarkerCategories ?? []).filter((c): c is MarkerCategory => (MARKER_CATEGORIES as string[]).includes(c)));
   const [demoCategories, setDemoCategories] = useState<MarkerCategory[] | null>(null);
+  const demoCategoriesRef = useRef(demoCategories);
+  demoCategoriesRef.current = demoCategories;
+  // During the demo the bar operates the demo's own selection (the finger taps it).
+  const toggleDemoCategory = useCallback((category: MarkerCategory) => setDemoCategories(current => {
+    const list = current ?? MARKER_CATEGORIES;
+    return list.includes(category) ? list.filter(c => c !== category) : [...list, category];
+  }), []);
   const toggleCategory = useCallback((category: MarkerCategory) => setHiddenCategories(current => {
     const next = current.includes(category) ? current.filter(c => c !== category) : [...current, category];
     updateSettings('render', { hiddenMarkerCategories: next });
@@ -1836,7 +1843,7 @@ export default function Dashboard() {
           const lights = configRef.current?.lights ?? [];
           const single = request.candidates.filter(id => quickLightCluster(lights, id).length <= 1);
           const entityId = single.find(id => { const bulb = meshMapRef.current[id]?.bulb; return !!bulb && !!toScreen(bulb.getAbsolutePosition()); }) ?? single[0] ?? request.entityId;
-          void touch?.run({ kind: 'light', entityId, swatch: request.swatch, brightness: request.brightness });
+          void touch?.run({ kind: 'light', entityId, swatch: request.swatch, kelvin: request.kelvin, brightness: request.brightness });
         },
       }, {
         scene: ctx.scene, engine: ctx.engine, sun: ctx.sunLight, hemi: ctx.hemiLight, requestRender: ctx.requestRender,
@@ -1890,7 +1897,7 @@ export default function Dashboard() {
       (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo = controller;
       // Energy chapters: the demo answers the energy view's requests with typical values of a flat;
       // lamp groups follow the demo's lights.
-      const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de');
+      const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de', kind => controller!.engine.deviceActivity(kind));
       ha.requestHandler = message => energyDemo.request(message);
       const updatePower = () => {
         for (const { entityId, watts } of energyDemo.powerStates(id => ha.getState(id))) {
@@ -1935,7 +1942,13 @@ export default function Dashboard() {
         }
         if (id === 'visitor') wildlifeRef.current?.visit();
         // Only the markers the chapter is about (the plan is calmer, e.g. none at all outside).
-        setDemoCategories(CHAPTER_MARKERS[id] ?? null);
+        // While the day plays, the finger switches them in the filter bar; otherwise they change at once.
+        const target = CHAPTER_MARKERS[id] ?? [];
+        const current = demoCategoriesRef.current ?? MARKER_CATEGORIES;
+        const flip = MARKER_CATEGORIES.filter(c => current.includes(c) !== target.includes(c));
+        const view = controller!.getView();
+        if (flip.length && touch && view.playing && !view.intro && !view.inShot) void touch.run({ kind: 'filter', categories: flip }).finally(() => { if (!disposed) setDemoCategories(target); });
+        else setDemoCategories(target);
       });
       setDayDemoController(controller);
     }).catch(error => {
@@ -2621,8 +2634,8 @@ export default function Dashboard() {
             {([['light', Lightbulb], ['blind', Blinds], ['climate', Fan], ['door', DoorOpen], ['device', WashingMachine], ['media', Tv]] as const).map(([category, Icon]) => {
               const shown = dayDemoController ? (demoCategories ?? MARKER_CATEGORIES).includes(category) : !hiddenCategories.includes(category);
               return (
-                <button key={category} type="button" className={`dashboard-icon-btn${shown ? ' active' : ''}`} disabled={!!dayDemoController}
-                  aria-pressed={shown} aria-label={t(`markers.category.${category}`)} title={t(`markers.category.${category}`)} onClick={() => toggleCategory(category)}>
+                <button key={category} type="button" data-category={category} className={`dashboard-icon-btn${shown ? ' active' : ''}`}
+                  aria-pressed={shown} aria-label={t(`markers.category.${category}`)} title={t(`markers.category.${category}`)} onClick={() => dayDemoController ? toggleDemoCategory(category) : toggleCategory(category)}>
                   <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
                 </button>
               );

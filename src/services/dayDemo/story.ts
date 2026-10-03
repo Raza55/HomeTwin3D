@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 175;
+export const DAY_REAL_SECONDS = 183;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -65,7 +65,8 @@ export type StoryAction =
    * Someone uses the board itself: taps a lamp (colour swatch + brightness slider in its
    * popup) or a blind (the popup's "all blinds in the room" buttons).
    */
-  | { type: 'control'; kind: 'light'; rooms: RoomRole[]; swatch: string; hue: number; brightness: number }
+  /** `swatch` + `hue`: a colour button; `kelvin`: the white temperature slider. */
+  | { type: 'control'; kind: 'light'; rooms: RoomRole[]; swatch?: string; hue?: number; kelvin?: number; brightness: number }
   | { type: 'control'; kind: 'blinds'; rooms: RoomRole[]; position: number }
   | { type: 'tv'; mode: TVMode; title?: Text }
   | { type: 'pc'; on: boolean; screen?: ScreenKind }
@@ -235,16 +236,20 @@ export const STORY: StoryBeat[] = [
     text: { de: 'Die Haustür öffnet sich: Begrüßung, Musik und warmes Licht im Wohnbereich.', en: 'The front door opens: a greeting, music and warm light in the living area.' },
   }),
   beat('17:33', [{ type: 'door', kind: 'entrance', open: false }]),
-  beat('18:45', [
-    // Cold white to start cooking; the colour then turns warm white and finally a cosy reddish glow (below).
-    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 100, kelvin: 5500, ramp: 1 },
-    { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 70, kelvin: 2700, ramp: 2 },
+  beat('18:41', [
+    // On the board: the kitchen lamp to cold white at full brightness (finger in its popup).
+    { type: 'control', kind: 'light', rooms: ['kitchen'], kelvin: 5500, brightness: 100 },
     { type: 'fan', rooms: ['kitchen'], on: true, percentage: 60 },
   ], {
     id: 'cooking', icon: 'utensils',
     title: { de: 'Kochen', en: 'Cooking' },
     text: { de: 'Kaltweißes Arbeitslicht zum Schnippeln, dann wird es warmweiß und zum Essen rötlich gemütlich; die Lüftung läuft mit.', en: 'Cool white task light for chopping, then warm white and a cosy reddish glow for dinner; ventilation on.' },
   }),
+  // The other kitchen lamps follow; the colour then turns warm white and finally a cosy reddish glow.
+  beat('18:45', [
+    { type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 100, kelvin: 5500, ramp: 1 },
+    { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 70, kelvin: 2700, ramp: 2 },
+  ]),
   beat('18:56', [{ type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 90, kelvin: 3000, ramp: 4 }]),
   beat('19:08', [{ type: 'light', target: { rooms: ['kitchen'], fallback: 1 }, on: true, brightness: 80, hue: 12, saturation: 62, ramp: 4 }]),
   beat('19:35', [{ type: 'fan', on: false }, { type: 'light', target: { rooms: ['kitchen'] }, on: true, brightness: 30, kelvin: WARM, ramp: 2 }]),
@@ -432,8 +437,9 @@ const PACE: { clock: string; speed: number }[] = [
   { clock: '16:05', speed: 1.1 },
   { clock: '17:27', speed: 0.3 },
   { clock: '17:36', speed: 1.1 },
-  // Cooking: long enough to look along the lit kitchen counter.
-  { clock: '18:44', speed: 0.3 },
+  // Cooking: the board interaction runs in real time, then long enough to look along the lit counter.
+  { clock: '18:40', speed: 0.05 },
+  { clock: '18:48', speed: 0.3 },
   { clock: '19:26', speed: 1.1 },
   { clock: '19:34', speed: 0.35 },
   // Board interactions run in real time: the clock nearly stands still meanwhile.
@@ -570,7 +576,7 @@ export const SHOTS: Shot[] = [
     { t: 1, eye: { at: BEDROOM_WINDOW, metres: 2.7, over: true }, look: BEDROOM_WINDOW },
   ]),
   // Cooking: from the dining table along the lit kitchen counter (as in the opening, without the coffee machine).
-  shot('cooking', '18:46', '19:25', [
+  shot('cooking', '18:49', '19:25', [
     { t: 0, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 8 },
     { t: .55, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 40 },
     // Then up to the kitchen lamps while their light turns from warm white to a reddish glow …

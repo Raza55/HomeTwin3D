@@ -31,6 +31,25 @@ const LIGHT_ROOMS: { role: RoomRole; de: string; en: string; week: number }[] = 
   { role: 'hall', de: 'Licht Flur', en: 'Lights hall', week: .5 },
   { role: 'bath', de: 'Licht Bad', en: 'Lights bathroom', week: .4 },
 ];
+/**
+ * Power in watts of a device in the demo, from what it does (off = standby). A slow wobble and the
+ * fridge's compressor cycle keep the live values moving like real meters.
+ */
+function deviceWatts(kind: string, activity: 'off' | 'on' | 'busy', seconds: number): number {
+  const wobble = (amount: number, period: number, phase = 0) => 1 + amount * Math.sin(seconds * 2 * Math.PI / period + phase);
+  switch (kind) {
+    case 'pc': return activity === 'busy' ? 285 * wobble(.12, 7) : activity === 'on' ? 68 * wobble(.08, 11) : 1.2;
+    case 'desk': return activity === 'on' ? 26 * wobble(.05, 13) : 4.5;          // monitor, speakers, lamp
+    case 'tv': return activity === 'on' ? 96 * wobble(.1, 5) : .5;
+    case 'washer': return activity === 'busy' ? 160 + 1850 * Math.max(0, Math.sin(seconds * 2 * Math.PI / 40)) ** 6 : .4;  // heating bursts
+    case 'dryer': return activity === 'busy' ? 820 * wobble(.06, 9) : .3;
+    case 'coffee': return activity === 'busy' ? 1420 * wobble(.04, 3) : activity === 'on' ? 3.5 : 1.1;
+    case 'fridge': return seconds % 45 < 17 ? 82 * wobble(.05, 6) : .9;             // compressor cycle
+    case 'nas': return 19 * wobble(.12, 23, 1);
+    default: return 5;
+  }
+}
+
 /** Synthetic sensor ids of the demo (assembled: not real entities of any installation). */
 const sensor = (name: string) => ['sensor', `demo_${name}`].join('.');
 /** Watts of a lamp at full brightness (estimated, like PowerCalc) and while off (standby). */
@@ -43,7 +62,8 @@ export interface DemoEnergy {
   powerStates(states: (entityId: string) => HAState | undefined): { entityId: string; watts: number }[];
 }
 
-export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; room: RoomRole }[], lang: Lang): DemoEnergy {
+export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; room: RoomRole }[], lang: Lang,
+  activity: (kind: string) => 'off' | 'on' | 'busy' = () => 'on'): DemoEnergy {
   const objects = config.model?.floorplan?.objects ?? [];
   // HA areas of the floorplan objects; objects without one get an area named after their room.
   const areaOf = (o: { haAreaId?: string; room?: string }) => o.haAreaId || (o.room ? `demo_${o.room.toLowerCase().replace(/[^a-z0-9äöüß]+/g, '_')}` : undefined);
@@ -51,12 +71,12 @@ export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; r
   for (const o of objects) { const id = areaOf(o); if (id && !areas.has(id)) areas.set(id, o.room || id); }
   const areaOfRole = (role: RoomRole) => [...areas].find(([, name]) => roomRole(name) === role)?.[0];
 
-  const items: { id: string; power: string; device: string; name: string; area?: string; week: number; watts: number; lamps?: string[] }[] = [];
+  const items: { id: string; power: string; device: string; name: string; area?: string; week: number; watts: number; kind?: string; lamps?: string[] }[] = [];
   for (const d of DEVICES) {
     // Only what the model contains (found by its label, as the energy view places it).
     const object = objects.find(o => deviceKinds(`${o.label} ${o.id}`).has(d.kind));
     if (!object) continue;
-    items.push({ id: sensor(`${d.kind}_energy`), power: sensor(`${d.kind}_power`), device: `demo-${d.kind}`, name: d[lang], area: areaOf(object), week: d.week, watts: d.watts });
+    items.push({ id: sensor(`${d.kind}_energy`), power: sensor(`${d.kind}_power`), device: `demo-${d.kind}`, name: d[lang], area: areaOf(object), week: d.week, watts: d.watts, kind: d.kind });
   }
   for (const room of LIGHT_ROOMS) {
     const lamps = lights.filter(l => l.room === room.role).map(l => l.entityId);
@@ -88,8 +108,9 @@ export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; r
       }
     },
     powerStates(state) {
+      const seconds = Date.now() / 1000;
       return items.map(i => {
-        if (!i.lamps) return { entityId: i.power, watts: i.watts };
+        if (!i.lamps) return { entityId: i.power, watts: Math.round(deviceWatts(i.kind ?? '', activity(i.kind ?? ''), seconds) * 10) / 10 };
         const watts = i.lamps.reduce((sum, id) => {
           const s = state(id);
           if (s?.state !== 'on') return sum + LAMP_STANDBY;

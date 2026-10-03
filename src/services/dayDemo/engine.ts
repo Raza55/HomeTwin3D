@@ -11,7 +11,7 @@ import {
 
 export type BoardControlRequest =
   /** `candidates`: lamps that fit, best first (the dashboard taps the first single lamp in view). */
-  | { kind: 'light'; entityId: string; candidates: string[]; swatch: string; brightness: number }
+  | { kind: 'light'; entityId: string; candidates: string[]; swatch?: string; kelvin?: number; brightness: number }
   | { kind: 'blinds'; entityId: string; position: number };
 
 export interface DayDemoHooks {
@@ -545,14 +545,15 @@ export class DayDemoEngine {
       // A lamp whose colour shows: pendants and ceiling lights first, strips behind furniture last.
       const score = (l: CastLight) => (this.hooks.getState(l.entityId)?.state === 'on' ? 0 : 4) + (/strip|leiste|band/i.test(l.label) ? 2 : 0)
         + (/decke|ceiling|pendel|h[aä]nge/i.test(l.label) ? 0 : 1) + action.rooms.indexOf(l.room) * .5;
-      const lamps = this.cast.lights.filter(l => action.rooms.includes(l.room) && l.color).sort((a, b) => score(a) - score(b));
+      const lamps = this.cast.lights.filter(l => action.rooms.includes(l.room) && (action.kelvin !== undefined ? l.temp : l.color)).sort((a, b) => score(a) - score(b));
       const lamp = lamps[0];
       if (!lamp) return;
       // A fade still running on this lamp would overwrite the hand-picked colour.
       this.transitions.delete(`light:${lamp.entityId}`);
-      if (!this.seeking && this.hooks.control) this.hooks.control({ kind: 'light', entityId: lamp.entityId, candidates: lamps.map(l => l.entityId), swatch: action.swatch, brightness: action.brightness });
-      else this.hooks.setState(lamp.entityId, 'on', this.lightAttrs(lamp, action.brightness, undefined, action.hue, 70));
-      return this.addLog('palette', { de: `Board: Lampe → ${action.swatch}, ${action.brightness} %`, en: `Board: lamp → ${action.swatch}, ${action.brightness} %` });
+      if (!this.seeking && this.hooks.control) this.hooks.control({ kind: 'light', entityId: lamp.entityId, candidates: lamps.map(l => l.entityId), swatch: action.swatch, kelvin: action.kelvin, brightness: action.brightness });
+      else this.hooks.setState(lamp.entityId, 'on', this.lightAttrs(lamp, action.brightness, action.kelvin, action.hue, action.hue !== undefined ? 70 : undefined));
+      const what = action.swatch ?? `${action.kelvin} K`;
+      return this.addLog('palette', { de: `Board: Lampe → ${what}, ${action.brightness} %`, en: `Board: lamp → ${what}, ${action.brightness} %` });
     }
     const blinds = this.cast.blinds.filter(b => action.rooms.includes(b.room));
     if (!blinds.length) return;
@@ -784,6 +785,23 @@ export class DayDemoEngine {
     }
     if (playing && title) this.addLog('speaker', { de: `Echo: „${title.de}“`, en: `Echo: “${title.en}”` });
     else if (!playing && changed) this.addLog('speaker', { de: 'Echo pausiert', en: 'Echo paused' });
+  }
+
+  /** What a device of the demo is doing right now (realistic power in the energy view). */
+  deviceActivity(kind: string): 'off' | 'on' | 'busy' {
+    const get = (id?: string) => id ? this.hooks.getState(id)?.state : undefined;
+    switch (kind) {
+      case 'pc': { const screens = [...this.pcOn.values()]; return !screens.length ? 'off' : screens.includes('game') ? 'busy' : 'on'; }
+      case 'desk': return this.pcOn.size ? 'on' : 'off';
+      case 'tv': return this.cast.tvRoutes.some(r => get(r.television) === 'on')
+        || this.cast.tvPlayers.some(p => { const s = get(p); return !!s && !['off', 'standby', 'unavailable'].includes(s); }) ? 'on' : 'off';
+      case 'washer': case 'dryer': return this.cast.appliances.filter(a => a.kind === kind).some(a => {
+        const s = get(a.entityId); return a.power ? Number(s) > 5 : !!s && !['off', 'idle', '0'].includes(s);
+      }) ? 'busy' : 'off';
+      case 'coffee': return this.cast.coffee.some(c => get(c.ids.statusEntityId) === 'run') ? 'busy'
+        : this.cast.coffee.some(c => get(c.entityId) === 'on') ? 'on' : 'off';
+      default: return 'on';
+    }
   }
 
   private appliance(entityId: string, running: boolean): void {

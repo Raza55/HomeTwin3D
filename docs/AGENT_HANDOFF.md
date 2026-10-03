@@ -1,3 +1,41 @@
+# Übergabe: HomeTwin3D (aktuell 0.5.48)
+
+## Nachtrag 0.5.10–0.5.48 (02.–03.10.2026)
+
+Vor Arbeiten weiterhin `git status`, `origin/main` und `3dash-addon/config.yaml` prüfen (andere Agenten veröffentlichen parallel).
+Release-Ablauf unverändert: Version und CHANGELOG erhöhen, `npm run privacy:check`, nach `main` pushen, die Workflows
+„Add-on images“ und „Validate HomeTwin3D“ abwarten, dann in HA `check_updates` und `update`.
+
+**Tagesdemo** (`src/services/dayDemo/`): `story.ts` (Beats, Kapitel, Tempo `PACE`, `DAY_REAL_SECONDS` = 183, Shots, `CHAPTER_FRAMING`,
+`CHAPTER_MARKERS`), `engine.ts` (Aktionen auf eine `DemoHAConnection`), `controller.ts` (Uhr, Kamera-Rundflug mit Gebäudeschutz
+`clearBeta`, Vorbereitung der Shader, Benchmark), `shots.ts` (Ich-Perspektive), `cast.ts` (Rollen aus dem Modell), `energyDemo.ts`
+(synthetisches Energie-Dashboard). Fingerbedienung: `src/components/DayDemo/boardTouch.ts`. Tests: `npm run test:daydemo`.
+Jedes Kapitel braucht ≥ 5 s Echtzeit (Test); neue Kapitel verschieben die normierte Tagesdauer.
+
+**Energiefluss**: `src/services/energyFlow.ts` (Verbraucher, Leistungssensoren, Zeiträume, Lampen), `src/babylon/EnergyFlowLayer.ts`
+(Platzierung, Röhren, Kugeln), `src/components/EnergyFlow/EnergyFlowView.tsx`. Tests: `npm run test:energy`.
+
+**Tiere draußen**: `src/babylon/Wildlife.ts`; Bäume, Bänke, Hindernisse und Gebäudeumrisse kommen als Metadaten aus
+`ParkEnvironment.ts`/`CourtyardDetails.ts`. Thin Instances melden ihre Bewegung selbst (`reportsOwnMotion`, `wildlifeAnimating`).
+
+**Markierungsfilter**: `MarkerCategory` in `src/babylon/MarkerLayer.ts`, Kategorie per `MarkerCategoryScope` (useMapMarkers.ts),
+sichtbare Kategorien in `scene.metadata.markerCategories`.
+
+**Performance-Pass 0.5.43** (Messung: Demo-Benchmark, Seitenpanel eingeklappt):
+- `setSketchTransparency`: `forceDepthWrite` statt `needDepthPrePass` (der Vorlauf ließ Babylon jedes Teilnetz zweimal pro Bild prüfen).
+- `ShadowRange.requestShadowRefresh`: Schattenkarten höchstens 4 (Tablet 2) pro Bild; dunkle Lampen warten.
+- `MirrorProbes`: eine Würfelseite pro Bild über `getCustomRenderList`; Tablet ohne Kleinteile.
+- `OcclusionBVHCache`: Schlüssel aus dem Geometrie-Inhalt.
+- Lehre aus 0.5.46: Texturen vor dem Demostart nicht zur Shader-Vorbereitung umschalten – bei dunklen Lampen beleuchteten diese
+  danach weniger Flächen (Hue-Sync-Stimmung fehlte). Der Wechsel im laufenden Demo (Energiekapitel) ist unkritisch und liegt hinter einem Schleier.
+
+**Modell**: v111 (Schreibtisch) per `tools/desk-v111.*` (Eckpunkt-Zuordnung, weil Objekte Material und Boxen teilen); direkt im
+Add-on-Stand (Revision 260 via `npm run addon:sync`).
+
+**Dokumentation für Nutzer**: [Erste Schritte](GETTING_STARTED.md), [Energie, Demo, Tiere und Filter](ENERGY_DEMO_WILDLIFE.md).
+
+---
+
 # Übergabe: HomeTwin3D 0.5.9
 
 Stand: **01.10.2026**. Diese Datei dokumentiert die Optimierung und Veröffentlichung dieses Stands. Für spätere Arbeiten zuerst `git status`, den aktuellen Branch, `origin/main`, `package.json` und `3dash-addon/config.yaml` prüfen; Versionsangaben und Messungen hier sind ein Snapshot.

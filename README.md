@@ -2,11 +2,13 @@
 
 **Dein Zuhause als interaktives 3D-Dashboard für Home Assistant.**
 
-HomeTwin3D verbindet einen eigenen 3D-Grundriss mit den Geräten und Zuständen deines Smart Homes. Du kannst durch die Wohnung gehen, Leuchten und Rollos direkt am Modell bedienen und Türkontakte, Haushaltsgeräte sowie Medieninformationen an ihrem räumlichen Platz sehen.
+HomeTwin3D verbindet einen eigenen 3D-Grundriss mit den Geräten und Zuständen deines Smart Homes. Du kannst durch die Wohnung gehen, Leuchten und Rollos direkt am Modell bedienen und Türkontakte, Haushaltsgeräte sowie Medieninformationen an ihrem räumlichen Platz sehen. Es läuft als **Home-Assistant-Add-on**; das 3D-Board selbst läuft im Browser – auf aktuellen iPads und Samsung-Tablets ebenso wie auf Windows-PCs – und eignet sich als Wand-Dashboard.
+
+**Ausprobieren ohne Einrichtung:** `…/?daydemo` spielt einen simulierten Tag im Zeitraffer – vom Lichtwecker über Kaffee, Gewitter und Kochen bis zum Videoabend mit Hue-Sync-Licht und dem Energiefluss der Woche. **Eigenes Zuhause:** Wohnung in Blender modellieren, mit der mitgelieferten Erweiterung exportieren, im Assistenten verbinden und zuordnen – Schritt für Schritt in [Erste Schritte](docs/GETTING_STARTED.md).
 
 Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3Dash von Kdcius und seinen Mitwirkenden](https://github.com/Kdcius/3Dash_webapp). Die Apache-2.0-Lizenz und die ursprünglichen Autorenhinweise bleiben erhalten. Dieses Repository beginnt aus Datenschutzgründen mit einem bereinigten Quelltext-Snapshot ohne die frühere Git-Historie. Einzelheiten: [Herkunft und Danksagung](ORIGIN.md).
 
-> **Entwicklungsstand:** Add-on 0.5.9 · Webapp-Paket 0.2.1 · Stand 01.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
+> **Entwicklungsstand:** Add-on 0.5.48 · Webapp-Paket 0.2.1 · Stand 03.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
 
 ## Was HomeTwin3D kann
 
@@ -18,8 +20,11 @@ Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3
 - **Neue Gerätebedienung:** Lüfter mit Prozentsteuerung, Echo-Mediengeräte, Kaffeeprogramm mit explizitem Start/Stopp sowie PC-/Serverstatus mit konfigurierbaren Aktionen.
 - **Warnungen am richtigen Ort:** Wasserleckmarker und gerätebezogene Batteriewarnungen.
 - **Geräte und Medien:** Waschmaschinen-/Trockneranimationen, Programm-/Restzeitsensoren und TV-Anzeigen mit Quellenwahl, SHIELD-Metadaten, Fortschritt sowie optionalen ADB-Screenshots.
-- **Lebendige Umgebung:** Sonnenstand, Tag/Nacht, Wettereffekte und eine prozedurale Außenumgebung.
-- **Anpassbares Dashboard:** Status-, Skript- und Diagrammkarten, animierte Energieflüsse, deutsche/englische Oberfläche, Themes, Demo-Modus und installierbare PWA.
+- **Lebendige Umgebung:** Sonnenstand, Tag/Nacht, Wettereffekte, Spiegel und eine prozedurale Außenumgebung – optional mit einer Hofkatze und Vögeln, die auf Wetter und Tageszeit reagieren.
+- **Energiefluss:** Die Verbraucher aus dem HA-Energie-Dashboard als leuchtende Linien und Kugeln am Modell, mit Anteilen pro Raum, Live-Leistung und Verbrauch von heute bis zum Jahr; Lampen ohne Messung über PowerCalc.
+- **Übersichtlich bleiben:** Markierungsfilter nach Licht, Rollos, Lüftung, Türen & Fenster, Geräten und Medien.
+- **Tagesdemo und Benchmark:** Ein vollständiger Tag mit Kamerafahrten, Bedienung per Fingertipp auf die eigenen Popups und einer Leistungsmessung am Ende – auch mit dem eigenen Modell.
+- **Anpassbares Dashboard:** Status-, Skript- und Diagrammkarten, deutsche/englische Oberfläche, Themes, Demo-Modus, gemeinsame Version für alle Geräte und installierbare PWA.
 
 Die Darstellung verwendet Echtzeit-Näherungen. TV-Screenshots sind kein HDMI-Livestream; Tür-Kippstellungen können als Annahme dargestellt werden. Details und Grenzen stehen in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -103,11 +108,13 @@ npm run test:lighting
 npm run test:performance
 npm run test:walkthrough
 npm run test:shared
+npm run test:daydemo
+npm run test:energy
 npm run build
 npm run build -- --mode addon
 ```
 
-Der Stand 0.5.9 besteht 145 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
+Der Stand 0.5.48 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
 
 Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant WebSocket API**.
 
@@ -122,7 +129,9 @@ Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant
 
 ## Dokumentation
 
-- [Agentenübergabe: Release 0.5.9, Änderungen, Prüfungen und Folgearbeiten](docs/AGENT_HANDOFF.md)
+- [Erste Schritte: Installation, Demo, eigenes Blender-Modell, Zuordnen und Anpassen](docs/GETTING_STARTED.md)
+- [Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter](docs/ENERGY_DEMO_WILDLIFE.md)
+- [Agentenübergabe: aktueller Stand, Änderungen, Prüfungen und Folgearbeiten](docs/AGENT_HANDOFF.md)
 - [Projektstand, wichtige Funktionen und Performance-Optimierungen](PROJECT_STATUS.md)
 - [Neue Geräte, Warnungen, TV Dial und PC-Screenshots](docs/DEVICES_AND_ALERTS.md)
 - [Optionaler Windows-/MQTT-Screenshot-Helfer](tools/pc-screen/README.md)

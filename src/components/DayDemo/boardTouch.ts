@@ -6,14 +6,20 @@
 import './boardTouch.css';
 
 export type BoardControl =
-  | { kind: 'light'; entityId: string; swatch: string; brightness: number }
-  | { kind: 'blinds'; entityId: string; position: number };
+  /** A colour button (`swatch`) or a white temperature (`kelvin`, slider), then the brightness. */
+  | { kind: 'light'; entityId: string; swatch?: string; kelvin?: number; brightness: number }
+  | { kind: 'blinds'; entityId: string; position: number }
+  /** Taps these buttons of the marker filter on the plan's right edge. */
+  | { kind: 'filter'; categories: string[] };
+
+/** Controls that open a device popup (lamp or blind). */
+export type PopupControl = Exclude<BoardControl, { kind: 'filter' }>;
 
 export interface BoardTouchDeps {
   /** Screen position of a lamp or blind (null: not in view). */
-  point(control: BoardControl): { x: number; y: number } | null;
+  point(control: PopupControl): { x: number; y: number } | null;
   /** Opens the popup as a tap there would. */
-  open(control: BoardControl, x: number, y: number): void;
+  open(control: PopupControl, x: number, y: number): void;
 }
 
 class Cancelled extends Error {}
@@ -21,6 +27,9 @@ class Cancelled extends Error {}
 export class BoardTouch {
   private finger = document.createElement('div');
   private abort: AbortController | null = null;
+  /** Interactions run one after another (a filter change and a lamp at the same moment). */
+  private queue: Promise<void> = Promise.resolve();
+  private generation = 0;
 
   constructor(private deps: BoardTouchDeps) {
     this.finger.className = 'board-finger';
@@ -28,13 +37,20 @@ export class BoardTouch {
     document.body.appendChild(this.finger);
   }
 
-  /** Runs one interaction; a new one (or cancel) stops the previous one. */
-  async run(control: BoardControl): Promise<void> {
-    this.cancel();
+  /** Queues one interaction behind the running one; cancel() drops all of them. */
+  run(control: BoardControl): Promise<void> {
+    const generation = this.generation;
+    const job = this.queue.then(() => generation === this.generation ? this.exec(control) : undefined);
+    this.queue = job.catch(() => {});
+    return job;
+  }
+
+  private async exec(control: BoardControl): Promise<void> {
     const abort = new AbortController();
     this.abort = abort;
     try {
       if (control.kind === 'light') await this.light(control, abort.signal);
+      else if (control.kind === 'filter') await this.filter(control, abort.signal);
       else await this.blinds(control, abort.signal);
     } catch (error) {
       if (!(error instanceof Cancelled)) console.warn('[DayDemo] Board interaction failed:', error);
@@ -45,6 +61,7 @@ export class BoardTouch {
 
   /** Stops a running interaction and closes its popup (jumps, restart, end of the demo). */
   cancel(): void {
+    this.generation++;
     if (!this.abort) return;
     this.abort.abort();
     this.abort = null;
@@ -56,9 +73,16 @@ export class BoardTouch {
 
   private async light(control: Extract<BoardControl, { kind: 'light' }>, signal: AbortSignal): Promise<void> {
     const popup = await this.openPopup(control, '.light-quick:not(.blind-quick)', signal);
-    const swatch = popup.querySelector<HTMLButtonElement>(`button[aria-label="Farbe ${control.swatch}"]`)
-      ?? popup.querySelector<HTMLButtonElement>('.light-quick-colors button');
-    if (swatch) { await this.press(swatch, signal); await this.wait(800, signal); }
+    // A lamp group's popup shows the colour wheel first: switch to its white tab.
+    const whiteTab = control.kelvin !== undefined ? [...popup.querySelectorAll<HTMLButtonElement>('.cluster-tabs button')].find(b => b.textContent?.trim() === 'Weiß' && !b.classList.contains('active')) : undefined;
+    if (whiteTab) { await this.press(whiteTab, signal); await this.wait(450, signal); }
+    const temperature = control.kelvin !== undefined ? popup.querySelector<HTMLInputElement>('input[aria-label="Weißtemperatur"]') : null;
+    if (temperature) { await this.drag(temperature, control.kelvin!, signal); await this.wait(800, signal); }
+    else {
+      const swatch = popup.querySelector<HTMLButtonElement>(`button[aria-label="Farbe ${control.swatch}"]`)
+        ?? popup.querySelector<HTMLButtonElement>('.light-quick-colors button');
+      if (swatch) { await this.press(swatch, signal); await this.wait(800, signal); }
+    }
     const slider = popup.querySelector<HTMLInputElement>('input[aria-label="Helligkeit"]');
     if (slider) { await this.drag(slider, control.brightness, signal); await this.wait(900, signal); }
     const close = popup.querySelector<HTMLButtonElement>('button[aria-label="Lichtsteuerung schließen"]');
@@ -76,8 +100,20 @@ export class BoardTouch {
     if (close) await this.press(close, signal);
   }
 
+  /** The marker filter: the finger taps each category button that changes. */
+  private async filter(control: Extract<BoardControl, { kind: 'filter' }>, signal: AbortSignal): Promise<void> {
+    const buttons = control.categories.map(c => document.querySelector<HTMLButtonElement>(`.dashboard-marker-filter button[data-category="${c}"]`)).filter((b): b is HTMLButtonElement => !!b);
+    if (!buttons.length) return;
+    const first = buttons[0].getBoundingClientRect();
+    this.place(first.left - 120, first.top + 90, 0);
+    await this.wait(30, signal);
+    this.finger.classList.add('visible');
+    for (const button of buttons) { await this.press(button, signal); await this.wait(180, signal); }
+    await this.wait(250, signal);
+  }
+
   /** Finger glides in, taps the device, the popup opens. */
-  private async openPopup(control: BoardControl, selector: string, signal: AbortSignal): Promise<HTMLElement> {
+  private async openPopup(control: PopupControl, selector: string, signal: AbortSignal): Promise<HTMLElement> {
     const p = this.deps.point(control) ?? { x: innerWidth / 2, y: innerHeight * .4 };
     this.place(p.x + 140, p.y + 170, 0);
     await this.wait(30, signal);
@@ -93,6 +129,8 @@ export class BoardTouch {
   /** Taps a button of the popup (a real click). */
   private async press(element: HTMLElement, signal: AbortSignal): Promise<void> {
     const r = element.getBoundingClientRect();
+    // Not on screen (closed popup, hidden bar): nothing to tap.
+    if (!r.width || !r.height) return;
     await this.moveTo(r.left + r.width / 2, r.top + r.height / 2, 520, signal);
     await this.tap(signal);
     if (!element.isConnected) return;

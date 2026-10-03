@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.48 – Demo: Finger an Filter und Küchenlicht, reale Leistung; Dokumentation (03.10.2026)
+
+- Tagesdemo: Der Finger schaltet die Markierungskategorien je Kapitel sichtbar in der Filterleiste um. Vor dem Kochen stellt er im Popup der Küchenspots kaltweißes Licht bei voller Helligkeit ein (Reiter „Weiß“, Temperaturregler); die Kamera fährt erst danach an die Küchenzeile. Interaktionen laufen nacheinander. Demotag 183 s.
+- Energiefluss in der Demo: Leistungswerte folgen dem Geschehen (Waschmaschine mit Heizphasen bis ~2 kW, Trockner ~800 W, Kaffeemaschine beim Brühen ~1,4 kW, Fernseher ~100 W, PC beim Spielen ~280 W, Kühlschrank im Kompressortakt) und Standby (0,3–1,5 W) sonst.
+- Dokumentation: neue Einstiegsanleitung [Erste Schritte](docs/GETTING_STARTED.md) (Installation, Demo, eigenes Blender-Modell, Zuordnen, Anpassen) und [Energie, Demo, Tiere und Filter](docs/ENERGY_DEMO_WILDLIFE.md); README, Add-on-Dokumentation, Projektstand und Agentenübergabe auf 0.5.48.
+
 ## 0.5.47 – Markierungsfilter (03.10.2026)
 
 - Neue schmale Leiste rechts unter der Werkzeugleiste: Licht, Rollos, Lüftung, Türen & Fenster, Geräte und Medien lassen sich einzeln aus- und einblenden; die Auswahl bleibt gespeichert. Warnungen (Wasser, Batterie) bleiben immer sichtbar.

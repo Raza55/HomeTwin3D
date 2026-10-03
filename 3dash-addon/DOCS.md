@@ -13,7 +13,7 @@ Das Add-on hat den eigenen Slug `hometwin3d`; der Dockerfile baut den `main`-Bra
 
 ## Einrichtung und Datenübernahme
 
-Im Assistenten die HA-Adresse und einen langlebigen Zugriffstoken hinterlegen, ein eigenes GLB importieren und Entities zuordnen. Alternativ zuerst den Demo-Modus verwenden. Modell und Einstellungen werden im Browser gespeichert.
+Im Assistenten die HA-Adresse und einen langlebigen Zugriffstoken hinterlegen, ein eigenes GLB importieren und Entities zuordnen. Alternativ zuerst den Demo-Modus oder die Tagesdemo (`…/?daydemo`) verwenden. Modell und Einstellungen werden im Browser gespeichert. Den ganzen Weg vom Blender-Modell bis zum angepassten Dashboard beschreibt [Erste Schritte](../docs/GETTING_STARTED.md).
 
 Für den Umzug zuerst in der bisherigen App eine ZIP-Sicherung exportieren. Die neue App öffnen und die Sicherung importieren; bei Bedarf auch die separat gesicherten Gerätezuordnungen wiederherstellen. Eine andere Origin (Host, Port oder Protokoll) besitzt getrennte Browserdaten. Ein geänderter URL-Unterpfad allein erzeugt keine getrennte Origin. Bestehende Speicherkennungen wurden absichtlich beibehalten.
 
@@ -57,8 +57,18 @@ Ab 0.4.1 lädt Home Assistant vorgebaute Images (`ghcr.io/raza55/{arch}-addon-ho
 
 Ein Push auf GitHub ersetzt keine laufende Installation. Der Build verwendet den jeweiligen Stand von `main`; für veröffentlichte Updates die Add-on-Version erhöhen und den Supervisor-Build auf dem Zielgerät prüfen. Der Add-on-Betrieb wurde bei der Repository-Umstellung nicht neu ausgerollt.
 
+## Neue Funktionen (0.5.20–0.5.48)
+
+- **Energiefluss** (Blitz oben rechts): liest das HA-Energie-Dashboard (`energy/get_prefs`), Leistungssensoren und die Recorder-Statistik. Voraussetzung ist ein eingerichtetes Energie-Dashboard mit Geräteverbräuchen; Lampen ohne eigene Messung lassen sich mit PowerCalc (HACS) ergänzen.
+- **Tagesdemo** (`?daydemo`): simulierter Tag mit Kamerafahrten und Benchmark; schaltet nichts in Home Assistant.
+- **Tiere draußen** (Einstellungen → Qualität): optionale Hofkatze und Vögel.
+- **Markierungsfilter** (Leiste rechts): Kategorien ein-/ausblenden, pro Browser gespeichert.
+
+Einzelheiten: [Energie, Demo, Tiere und Filter](../docs/ENERGY_DEMO_WILDLIFE.md).
+
 ## Weitere Informationen
 
+- [Erste Schritte](../docs/GETTING_STARTED.md)
 - [Funktionen und Grenzen](../PROJECT_STATUS.md)
 - [Blender-Workflow](../BLENDER_WORKFLOW.md)
 - [Fehler und Vorschläge](https://github.com/Raza55/HomeTwin3D/issues)

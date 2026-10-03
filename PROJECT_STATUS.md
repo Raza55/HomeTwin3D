@@ -1,8 +1,21 @@
 # Projektstand, Funktionen und Optimierungen
 
-Stand: **01.10.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
+Stand: **03.10.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
 
-## Aktueller Release 0.5.9 vom 01.10.2026
+## Aktueller Release 0.5.48 vom 03.10.2026
+
+- Add-on 0.5.48 auf `main`; Images und beide Prüfabläufe erfolgreich. Webapp-Paket weiterhin 0.2.1.
+- Neu seit 0.5.9 (Einzelheiten im [Änderungsverlauf](CHANGELOG.md)): Tagesdemo mit 27 Kapiteln, Einleitungsdialog, Fingerbedienung der Popups,
+  Ich-Perspektive und Benchmark; Energiefluss aus dem HA-Energie-Dashboard (Zeiträume, Ebenen, einzelne Lampen über PowerCalc);
+  optionale Tiere draußen; Markierungsfilter; animierte Türen, Kippfenster, Sieben-Segment-Anzeigen, Spiegel mit Tagesverlauf.
+- Performance-Pass 0.5.43: Demo-Benchmark Desktop 2187 → 3514, größtes Einzelbild auf dem Tablet 45 000 → 9 000 Draw Calls
+  (siehe [Energie, Demo, Tiere und Filter](docs/ENERGY_DEMO_WILDLIFE.md#leistung)).
+- Modellstand v111 (Schreibtisch); Ablauf in [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md).
+- 186 JS-/TS-Tests, Typecheck, Datenschutzprüfung, öffentlicher und Add-on-Build in CI.
+
+Einrichtung für neue Nutzer: [Erste Schritte](docs/GETTING_STARTED.md).
+
+## Release 0.5.9 vom 01.10.2026
 
 - Add-on 0.5.9 ist auf `main` veröffentlicht; die Images für AMD64 und ARM64 sowie beide GitHub-Prüfabläufe sind erfolgreich. Die Paketversion der Webapp bleibt 0.2.1.
 - Übertragungen desselben Browsers laufen nacheinander; neue Änderungen während eines Uploads bleiben vorgemerkt. Empfangene Assets werden vor der Übernahme vollständig geladen und zusammen gespeichert; Speicherfehler lösen einen Rollback aus.

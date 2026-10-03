@@ -151,27 +151,63 @@ function buildCat(scene: Scene): Mesh {
     parts.push({ mesh, part, color, stripes });
   };
   const sphere = (name: string, segments = 7) => MeshBuilder.CreateSphere(name, { diameter: 1, segments }, scene);
-  add(sphere('cat-body', 9), 0, fur, new Vector3(0, .27, 0), new Vector3(.17, .17, .4), undefined, true);
-  add(sphere('cat-neck'), 0, fur, new Vector3(0, .345, .19), new Vector3(.135, .16, .15), undefined, true);
-  add(sphere('cat-head', 9), 0, fur, new Vector3(0, .43, .25), new Vector3(.19, .17, .175), undefined, true);
-  add(sphere('cat-cheeks'), 0, light, new Vector3(0, .395, .29), new Vector3(.15, .08, .09));
-  add(sphere('cat-muzzle'), 0, light, new Vector3(0, .4, .325), new Vector3(.08, .06, .05));
-  add(sphere('cat-nose', 5), 0, pink, new Vector3(0, .424, .352), new Vector3(.026, .018, .018));
+  /** Reshapes a unit sphere (coordinates -.5 … .5) before it is scaled and placed. */
+  const shape = (mesh: Mesh, fn: (p: Vector3) => void) => {
+    const positions = mesh.getVerticesData('position')!, p = new Vector3();
+    for (let i = 0; i < positions.length; i += 3) {
+      p.set(positions[i], positions[i + 1], positions[i + 2]);
+      fn(p);
+      positions[i] = p.x; positions[i + 1] = p.y; positions[i + 2] = p.z;
+    }
+    mesh.updateVerticesData('position', positions);
+    mesh.createNormals(true);
+    return mesh;
+  };
+  // Proportions after a real cat model: the head is narrower than the body and sits
+  // only a little above the back line; a thick neck slopes up and forward into it.
+  // Body: the back line rises at the front into the neck (the chest stays at leg height).
+  add(shape(sphere('cat-body', 12), p => {
+    const t = Math.min(1, Math.max(0, (p.z - .05) / .45)), rise = t * t * (3 - 2 * t);
+    p.y += rise * (p.y + .5) * .5;
+    p.z += rise * (p.y + .5) * .06;
+  }), 0, fur, new Vector3(0, .27, 0), new Vector3(.17, .17, .4), undefined, true);
+  // Neck widens towards the shoulders so that it flows into the body without a crease.
+  add(shape(sphere('cat-neck', 9), p => { const k = 1 + (.5 - p.y) * .35; p.x *= k; p.z *= k; }), 0, fur,
+    new Vector3(0, .335, .2), new Vector3(.11, .17, .11), new Vector3(.95, 0, 0), true);
+  // Head: wide cheeks low on the sides, flatter crown and face, narrow chin.
+  const head = { x: 0, y: .4, z: .28, rx: .075, ry: .07, rz: .066 };
+  add(shape(sphere('cat-head', 12), p => {
+    if (p.y > 0) p.y *= .9;
+    p.x *= 1 + .15 * Math.exp(-(((p.y + .1) / .2) ** 2)) * (p.z > -.15 ? 1 : .6);
+    if (p.y < -.2) p.x *= 1 - (-.2 - p.y) * .9;
+    if (p.z > 0) p.z *= .88;
+  }), 0, fur, new Vector3(head.x, head.y, head.z), new Vector3(head.rx * 2, head.ry * 2, .15), undefined, true);
+  /** Point on the front of the head, dx/dy from its center. */
+  const face = (dx: number, dy: number, out = 0) =>
+    new Vector3(dx, head.y + dy, head.z + out + head.rz * Math.sqrt(Math.max(0, 1 - (dx / head.rx) ** 2 - (dy / head.ry) ** 2)));
+  add(sphere('cat-chin'), 0, light, face(0, -.04, -.008), new Vector3(.04, .03, .035));
+  add(sphere('cat-nose', 5), 0, pink, face(0, -.01, .008), new Vector3(.022, .016, .016));
   for (const side of [-1, 1]) {
-    add(sphere('cat-eye'), 0, iris, new Vector3(side * .046, .455, .322), new Vector3(.046, .05, .026));
-    add(sphere('cat-pupil', 5), 0, pupil, new Vector3(side * .046, .455, .334), new Vector3(.015, .04, .01));
-    add(MeshBuilder.CreateCylinder('cat-ear', { diameterTop: 0, diameterBottom: .07, height: .08, tessellation: 4 }, scene), 0, dark,
-      new Vector3(side * .055, .52, .235), undefined, new Vector3(0, Math.PI / 4, side * -.3));
-    add(MeshBuilder.CreateCylinder('cat-ear-inner', { diameterTop: 0, diameterBottom: .042, height: .055, tessellation: 4 }, scene), 0, pink,
-      new Vector3(side * .053, .513, .249), undefined, new Vector3(0, Math.PI / 4, side * -.3));
+    add(sphere('cat-whisker-pad'), 0, light, face(side * .019, -.027, .002), new Vector3(.05, .04, .045));
+    add(sphere('cat-eye'), 0, iris, face(side * .033, .012, -.006), new Vector3(.04, .044, .024));
+    add(sphere('cat-pupil', 5), 0, pupil, face(side * .033, .012, .004), new Vector3(.013, .035, .01));
+    // Ears on the outer corners of the crown, splayed outwards.
+    add(MeshBuilder.CreateCylinder('cat-ear', { diameterTop: 0, diameterBottom: .07, height: .075, tessellation: 4 }, scene), 0, dark,
+      new Vector3(side * .057, .466, .272), undefined, new Vector3(0, Math.PI / 4, side * -.45));
+    add(MeshBuilder.CreateCylinder('cat-ear-inner', { diameterTop: 0, diameterBottom: .042, height: .05, tessellation: 4 }, scene), 0, pink,
+      new Vector3(side * .054, .459, .285), undefined, new Vector3(0, Math.PI / 4, side * -.45));
   }
   // Legs: 1 front left, 2 front right, 3 hind left, 4 hind right; each with a paw.
-  [[.055, .13], [-.055, .13], [.06, -.14], [-.06, -.14]].forEach(([x, z], i) => {
-    add(MeshBuilder.CreateCylinder('cat-leg', { diameterTop: .05, diameterBottom: .038, height: .21, tessellation: 6, subdivisions: 3 }, scene), i + 1, i < 2 ? light : fur, new Vector3(x, .115, z));
+  // All four in fur colour with pale socks (see below).
+  // Tops reach well into the body so that no cut end shows.
+  [[.048, .13], [-.048, .13], [.055, -.14], [-.055, -.14]].forEach(([x, z], i) => {
+    add(MeshBuilder.CreateCylinder('cat-leg', { diameterTop: .052, diameterBottom: .038, height: .24, tessellation: 8, subdivisions: 4 }, scene), i + 1, fur, new Vector3(x, .125, z));
     add(sphere('cat-paw', 5), i + 1, light, new Vector3(x, .016, z + .012), new Vector3(.05, .032, .062));
   });
   const tailPath = [0, 1, 2, 3, 4, 5, 6].map(i => { const t = i / 6; return new Vector3(0, .29 + t * .2 + Math.sin(t * 2.4) * .04, -.19 - t * .27); });
   add(MeshBuilder.CreateTube('cat-tail', { path: tailPath, radiusFunction: i => .03 - i * .002, tessellation: 7, cap: Mesh.CAP_END }, scene), 5, fur, Vector3.Zero(), undefined, undefined, true);
+  // Rounded tip instead of the flat tube cap.
+  add(sphere('cat-tail-tip', 6), 5, fur, tailPath[6], new Vector3(.037, .037, .037), undefined, true);
 
   let merged: VertexData | null = null;
   const tags: number[] = [];
@@ -186,9 +222,11 @@ function buildCat(scene: Scene): Mesh {
       const x = positions[i * 3], y = positions[i * 3 + 1], z = positions[i * 3 + 2];
       const stripe = stripes && y > .29 && Math.sin((z + y * .6) * 46) > .55 ? .72 : 1;
       let c = color.scale(stripe);
+      const clamp = (v: number) => Math.min(1, Math.max(0, v));
+      // Pale socks on all four legs, blending into the paws.
+      if (part >= 1 && part <= 4) c = Color3.Lerp(c, light, clamp((.085 - y) / .05));
       if (stripes) {
         // Pale belly, bib and muzzle that blend into the fur (no hard band at the neck).
-        const clamp = (v: number) => Math.min(1, Math.max(0, v));
         const bellyShare = clamp((.215 - y) / .05);
         const bib = clamp(1 - Math.abs(x) / .065) * clamp((z - .13) / .07) * clamp((.385 - y) / .07);
         c = Color3.Lerp(c, light, Math.max(bellyShare, bib));

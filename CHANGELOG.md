@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.51 – Katze: Kopf, Hals und Beine überarbeitet (03.10.2026)
+
+- Kopf nach den Proportionen eines echten Katzenmodells: schmaler als der Körper, tiefer angesetzt, breite Wangen, flachere Stirn, schmales Kinn, Schnurrhaarpolster; Ohren außen an den Ecken des Oberkopfs. Die Rückenlinie steigt vorne fließend in einen kurzen, schräg gestellten Hals an (kein „Schneemann“ aus zwei Kugeln mehr).
+- Alle vier Beine in Fellfarbe mit hellen Socken (vorher nur die Vorderbeine hell); Beinansätze sitzen tiefer im Körper, die Schwanzspitze ist abgerundet.
+
 ## 0.5.50 – Demo: Filter seltener umschalten (03.10.2026)
 
 - Die Tagesdemo stellt die Markierungsfilter nur noch an vier Wendepunkten um (Haus verlassen, Feierabend, Gaming, Nacht) statt in fast jedem Kapitel: morgens und abends Licht, Rollos und Medien, tagsüber Geräte und Rollos, beim Gaming Geräte und Licht, nachts nur Licht. Die Energiekapitel lassen die Auswahl unverändert.

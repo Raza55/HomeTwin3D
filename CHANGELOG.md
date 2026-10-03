@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.49 – Zahnrad statt Seitenpanel, TV-Quelle und PC-Start in der Demo, Vögel auf geprüften Routen (03.10.2026)
+
+- Das linke Panel entfällt: Ein Zahnrad neben dem Logo öffnet die Einstellungen, dort startet *Editor öffnen* den Editor. Das Kartenpanel erscheint nur noch, wenn Karten angelegt sind (oder beim Anordnen).
+- Tagesdemo: Morgens und abends wählt der Finger im TV-Dial-Popup die Quelle SHIELD, bevor Nachrichten bzw. Film starten. Die Gaming-Session beginnt mit einem langen Druck auf die PC-Markierung (Haltering). Interaktionen warten, bis der Schleier nach der Energieansicht weg ist. Demotag 206 s.
+- Vögel: fliegen nur noch auf Routen, die einmal beim Start gegen die echte Geometrie geprüft werden (Himmelspunkte, Verbindungen, Anflugpunkte je Landeplatz), zwischengespeichert pro Browser. Gemessen: von rund 100 auf 0–3 Durchquerungen von Baumkronen und Fassaden je 2 000 Flugabschnitte; im Flug keine Hindernisprüfungen mehr pro Bild.
+
 ## 0.5.48 – Demo: Finger an Filter und Küchenlicht, reale Leistung; Dokumentation (03.10.2026)
 
 - Tagesdemo: Der Finger schaltet die Markierungskategorien je Kapitel sichtbar in der Filterleiste um. Vor dem Kochen stellt er im Popup der Küchenspots kaltweißes Licht bei voller Helligkeit ein (Reiter „Weiß“, Temperaturregler); die Kamera fährt erst danach an die Küchenzeile. Interaktionen laufen nacheinander. Demotag 183 s.

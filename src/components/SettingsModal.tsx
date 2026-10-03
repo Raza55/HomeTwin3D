@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Server, Palette, Box, Wrench, ChevronLeft, ChevronRight, X,
   LayoutTemplate, Compass, Github, Upload, RefreshCw, AlertTriangle, Clapperboard,
+  PencilRuler,
 } from 'lucide-react';
 import { haSocketUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
@@ -81,6 +82,8 @@ interface Props {
   onStartTour: () => void;
   /** Plays the simulated day (story, weather, devices) with a benchmark at the end. */
   onStartDayDemo: () => void;
+  /** Opens the editor (lights, blinds, screens, rooms, model). */
+  onOpenEditor?: () => void;
 
   haSettings: HASettings;
   onHASettingsSave: (settings: HASettings) => void;
@@ -189,7 +192,7 @@ export default function SettingsModal({
   parkMinBrightness, onParkMinBrightnessChange, wildlifeEnabled, onWildlifeEnabledChange, cameraSensitivity, onCameraSensitivityChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
-  onEditGrid, onChangeHomeView, onStartTour, onStartDayDemo,
+  onEditGrid, onChangeHomeView, onStartTour, onStartDayDemo, onOpenEditor,
   haSettings, onHASettingsSave, haStatus,
   modelStatus, modelStatusColor, onReloadModel, onStartVisualMatching,
 }: Props) {
@@ -488,6 +491,10 @@ export default function SettingsModal({
               </nav>
 
               <div className="settings-quick-actions">
+                {onOpenEditor && <button type="button" className="settings-btn" onClick={() => { onClose(); onOpenEditor(); }}>
+                  <PencilRuler size={16} strokeWidth={1.6} />
+                  {t('settings.openEditor')}
+                </button>}
                 <button type="button" className="settings-btn" onClick={() => { onEditGrid(); onClose(); }}>
                   <LayoutTemplate size={16} strokeWidth={1.6} />
                   {t('settings.editGrid')}

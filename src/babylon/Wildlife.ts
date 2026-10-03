@@ -1,7 +1,9 @@
 import {
-  Color3, Frustum, MaterialPluginBase, Matrix, Mesh, MeshBuilder, Quaternion, ShaderLanguage, StandardMaterial, Vector3, VertexData,
+  Color3, Frustum, MaterialPluginBase, Matrix, Mesh, MeshBuilder, Quaternion, Ray, ShaderLanguage, StandardMaterial, Vector3, VertexData,
   type Material, type MaterialDefines, type Observer, type Scene, type UniformBuffer,
 } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core';
+import { OcclusionBVHCache } from './OcclusionBVH';
 
 /**
  * Optional wildlife outside the building: a cat that visits the courtyard now and
@@ -270,6 +272,8 @@ type CatStep =
 interface Bird {
   pos: Vector3; vel: Vector3; state: 'fly' | 'land' | 'perch';
   target: Vector3; perch: Vector3 | null; timer: number; burst: number; hop: number;
+  /** Points still to fly through (checked route), and the last sky point reached. */
+  route: Vector3[]; node: number;
   phase: number; freq: number; beat: number; fold: number; yaw: number; roll: number; peck: number;
 }
 
@@ -609,31 +613,44 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   const matrices = new Float32Array(Math.max(1, count) * 16);
   const flaps = new Float32Array(Math.max(1, count) * 4);
   const occupied = new Set<Vector3>();
-  const flightCenter = Vector3.Lerp(courtyard.treeCenter, courtyard.playCenter, .4);
-  // Flight targets stay out of the plane-tree canopy (about 8–19 m up within ~15 m of the grove).
-  const canopy = (p: Vector3) => Math.hypot(p.x - courtyard.treeCenter.x, p.z - courtyard.treeCenter.z) < 16 && p.y - groundY > 6 && p.y - groundY < 20;
-  const skyTarget = (): Vector3 => {
-    // Often across the flat itself, a few metres above the roof: visible from the plan view too.
-    let p = new Vector3(bounds.x + rand(-1, 1) * bounds.halfX, groundY + rand(9, 15), bounds.z + rand(-1, 1) * bounds.halfZ);
-    if (Math.random() >= .4) {
-      for (let i = 0; i < 20; i++) {
-        p = new Vector3(flightCenter.x + rand(-28, 28), groundY + rand(4, 22), flightCenter.z + rand(-28, 28));
-        if (!canopy(p) && !buildingAt(p, 3)) break;
+
+  // ---- flight routes
+  // Birds fly only along routes checked once against the real geometry (trees, buildings, the flat):
+  // a network of sky points, plus per landing spot an approach point outside the crown. In flight
+  // they just steer from point to point, with no per-frame obstacle tests.
+  const routes = buildRoutes(scene, {
+    seedPoints: () => {
+      let seed = 4711;
+      const r = (a: number, b: number) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return a + seed / 4294967296 * (b - a); };
+      const center = Vector3.Lerp(courtyard.treeCenter, courtyard.playCenter, .4);
+      const points: Vector3[] = [];
+      for (const radius of [9, 17, 26]) for (let i = 0; i < 7; i++) {
+        const a = i / 7 * TAU + radius * .1;
+        points.push(new Vector3(center.x + Math.cos(a) * radius, groundY + r(4, 21), center.z + Math.sin(a) * radius));
       }
-    }
-    // Over a building: well above its roof.
-    const below = buildingAt(p, 3);
-    if (below) p.y = below.top + rand(3, 6);
-    return p;
-  };
-  const freePerch = (from?: Vector3[]) => { const free = (from ?? perches).filter(p => !occupied.has(p)); return free.length ? pick(free) : null; };
+      // Above the flat (seen from the plan view), a few metres over its roof.
+      const top = buildings.length ? buildings[buildings.length - 1].top : groundY + 8;
+      for (const [fx, fz] of [[-.6, -.6], [.6, -.5], [0, 0], [-.5, .6], [.6, .6]]) points.push(new Vector3(bounds.x + fx * bounds.halfX, top + r(3.5, 7), bounds.z + fz * bounds.halfZ));
+      return points.map(p => { const b = buildingAt(p, 1.5); if (b) p.y = Math.max(p.y, b.top + 3.5); return p; });
+    },
+    perches: perches.map(p => {
+      const tree = allTrees.find(t => t.perches.includes(p));
+      if (!tree) return { perch: p, approach: p.add(new Vector3(rand(-1.5, 1.5), 3, rand(-1.5, 1.5))) };
+      const out = new Vector3(p.x - tree.x, 0, p.z - tree.z); if (out.lengthSquared() < .01) out.set(1, 0, 0);
+      return { perch: p, approach: p.add(out.normalize().scale(1.7)).addInPlaceFromFloats(0, 1.1, 0) };
+    }),
+    exclude: m => m === birdMesh || m === cat || m === blob,
+  });
+  const usable = (p: Vector3) => routes.ready && routes.approach.has(p);
+  const freePerch = (from?: Vector3[]) => { const free = (from ?? perches).filter(p => !occupied.has(p) && usable(p)); return free.length ? pick(free) : null; };
+
   const birds: Bird[] = [];
   for (let i = 0; i < count; i++) {
-    const perch = i % 2 === 0 ? freePerch() : null;
-    if (perch) occupied.add(perch);
-    const pos = perch ? perch.clone() : skyTarget();
-    birds.push({ pos, vel: new Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize().scale(6), state: perch ? 'perch' : 'fly', target: skyTarget(), perch,
-      timer: perch ? rand(3, 25) : rand(8, 25), burst: rand(0, 1), hop: rand(1, 4), phase: rand(0, TAU), freq: rand(15, 19), beat: 0, fold: perch ? 1 : 0, yaw: rand(0, TAU), roll: 0, peck: 0 });
+    // Everyone starts sitting; flying begins once the routes are known (a few frames after start).
+    const perch = perches.filter(p => !occupied.has(p))[Math.floor(Math.random() * perches.length)] ?? perches[i % perches.length];
+    occupied.add(perch);
+    birds.push({ pos: perch.clone(), vel: Vector3.Zero(), state: 'perch', target: perch.clone(), perch, route: [], node: -1,
+      timer: rand(2, 20), burst: rand(0, 1), hop: rand(1, 4), phase: rand(0, TAU), freq: rand(15, 19), beat: 0, fold: 1, yaw: rand(0, TAU), roll: 0, peck: 0 });
   }
   if (count) {
     birdMesh.thinInstanceSetBuffer('matrix', matrices, 16, false);
@@ -641,7 +658,20 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   } else birdMesh.setEnabled(false);
   const scale = new Vector3(BIRD_SCALE, BIRD_SCALE, BIRD_SCALE), rotation = new Quaternion(), matrix = new Matrix();
 
-  const land = (b: Bird, perch: Vector3) => { if (b.perch) occupied.delete(b.perch); occupied.add(perch); b.perch = perch; b.state = 'land'; b.target = perch; };
+  /** Wander: a route to a random sky point (at most a few hops). */
+  const wander = (b: Bird) => {
+    const from = b.node >= 0 ? b.node : routes.nearest(b.pos);
+    const path = routes.path(from, Math.floor(Math.random() * routes.nodes.length));
+    b.route = path.slice(0, 4).map(i => routes.nodes[i]); b.node = path[Math.min(3, path.length - 1)] ?? from;
+  };
+  const land = (b: Bird, perch: Vector3) => {
+    const entry = routes.approach.get(perch)!;
+    const from = b.node >= 0 ? b.node : routes.nearest(b.pos);
+    const path = routes.path(from, entry.nodes[Math.floor(Math.random() * entry.nodes.length)]);
+    if (b.perch) occupied.delete(b.perch); occupied.add(perch);
+    b.perch = perch; b.state = 'land'; b.target = perch;
+    b.route = [...path.map(i => routes.nodes[i]), entry.point, perch];
+  };
   /** Returns whether the bird visibly moves this step. */
   const updateBird = (b: Bird, dt: number) => {
     // Night, rain and snow: into the trees (not onto the lawn) and stay there.
@@ -655,13 +685,18 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       // On the lawn: peck now and then, hop a little.
       if (b.perch && groundPerches.has(b.perch)) {
         b.hop -= dt;
-        if (b.hop < 0) { b.hop = rand(1.2, 3.5); b.yaw += rand(-1.2, 1.2); b.peck = .6; b.pos.addInPlace(new Vector3(Math.sin(b.yaw), 0, Math.cos(b.yaw)).scale(.12)); moved = true; }
+        if (b.hop < 0) { b.hop = rand(1.2, 3.5); b.yaw += rand(-1.2, 1.2); b.peck = .6; moved = true; }
         if (b.peck > 0) { b.peck -= dt; moved = true; }
       }
       if (b.timer < 0) {
-        if (b.perch) occupied.delete(b.perch);
-        b.perch = null; b.state = 'fly'; b.target = skyTarget(); b.timer = rand(8, 26);
-        b.vel.set(Math.sin(b.yaw) * 2, 3.5, Math.cos(b.yaw) * 2);
+        if (!b.perch || !usable(b.perch)) { b.timer = rand(1, 3); return moved; }
+        // Take off: up to the approach point, then into the network.
+        const entry = routes.approach.get(b.perch)!;
+        b.pos.copyFrom(b.perch);
+        occupied.delete(b.perch); b.perch = null; b.state = 'fly'; b.timer = rand(8, 26);
+        b.node = entry.nodes[Math.floor(Math.random() * entry.nodes.length)];
+        b.route = [entry.point, routes.nodes[b.node]];
+        b.vel.set(0, 2.5, 0);
         return true;
       }
       return moved;
@@ -671,37 +706,36 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       const perch = freePerch(grounded ? treePerches : undefined);
       if (perch) land(b, perch); else b.timer = rand(4, 8);
     }
-    const to = b.target.subtract(b.pos), dist = to.length();
-    if (b.state === 'fly' && dist < 4) b.target = skyTarget();
-    const landing = b.state === 'land';
-    const cruise = landing ? Math.min(7, Math.max(1.2, dist * 1.1)) : 7.5;
-    const desired = to.normalize().scale(cruise);
-    // A building ahead (or around the bird): climb and turn away from its middle.
-    // (Not on the last metres of a landing: lawn spots and trees may stand close to a wall.)
-    const ahead = b.pos.add(b.vel.scale(.9)), wall = landing && dist < 4 ? undefined : buildingAt(ahead) ?? buildingAt(b.pos);
-    if (wall) {
-      const mid = wall.points.reduce((m, [x, z]) => m.addInPlaceFromFloats(x / wall.points.length, 0, z / wall.points.length), Vector3.Zero());
-      const out = new Vector3(b.pos.x - mid.x, 0, b.pos.z - mid.z).normalize().scale(cruise * .6);
-      desired.set(out.x, Math.max(desired.y, 4.5), out.z);
+    if (!b.route.length) wander(b);
+    const target = b.route[0] ?? b.pos;
+    const to = target.subtract(b.pos), dist = to.length();
+    const final = b.state === 'land' && b.route.length <= 2;
+    // Next point: close enough (the last one, the perch, exactly).
+    if (dist < (b.route.length === 1 && b.state === 'land' ? .12 : final ? .4 : 1.1)) {
+      b.route.shift();
+      if (!b.route.length && b.state === 'land') {
+        b.pos.copyFrom(b.target); b.vel.setAll(0); b.state = 'perch'; b.roll = 0; b.peck = 0;
+        b.timer = grounded ? 1e9 : groundPerches.has(b.target) ? rand(8, 22) : rand(6, 30);
+        return true;
+      }
     }
-    const steer = desired.subtract(b.vel), maxTurn = (landing && dist < 6 || wall ? 14 : 5) * dt;
+    // A little slower close to a turn point, so the bird stays on the checked line.
+    const cruise = final ? Math.min(3.5, Math.max(1, dist * 1.4)) : Math.min(7, 3.5 + dist * .6);
+    const desired = to.normalize().scale(cruise);
+    const steer = desired.subtract(b.vel), maxTurn = (final ? 18 : 12) * dt;
     if (steer.length() > maxTurn) steer.normalize().scaleInPlace(maxTurn);
     const before = Math.atan2(b.vel.x, b.vel.z);
     b.vel.addInPlace(steer);
     b.pos.addInPlace(b.vel.scale(dt));
     const yaw = Math.atan2(b.vel.x, b.vel.z);
     let turn = yaw - before; turn = Math.atan2(Math.sin(turn), Math.cos(turn));
-    b.yaw = yaw; b.roll += (Math.max(-.7, Math.min(.7, -turn / Math.max(dt, .001) * .25)) - b.roll) * Math.min(1, dt * 4);
+    if (b.vel.lengthSquared() > .05) b.yaw = yaw;
+    b.roll += (Math.max(-.7, Math.min(.7, -turn / Math.max(dt, .001) * .25)) - b.roll) * Math.min(1, dt * 4);
     // Bounding flight: bursts of wing beats, then a short glide; steady beating when climbing or landing.
     b.burst += dt;
-    const climbing = b.vel.y > 1 || landing && dist < 8;
-    const flapping = climbing || b.burst % 1.1 < .65;
+    const flapping = b.vel.y > 1 || final || b.burst % 1.1 < .65;
     b.beat += ((flapping ? .95 : 0) - b.beat) * Math.min(1, dt * 10);
     b.fold += ((flapping ? 0 : .3) - b.fold) * Math.min(1, dt * 8);
-    if (landing && dist < .2) {
-      b.pos.copyFrom(b.target); b.vel.setAll(0); b.state = 'perch'; b.roll = 0; b.peck = 0;
-      b.timer = grounded ? 1e9 : groundPerches.has(b.target) ? rand(8, 22) : rand(6, 30);
-    }
     return true;
   };
 
@@ -737,6 +771,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
       flaps.set([b.phase, b.beat, b.fold, b.freq], i * 4);
     });
     if (count) { birdMesh.thinInstanceBufferUpdated('matrix'); birdMesh.thinInstanceBufferUpdated('htFlap'); }
+    if (!routes.ready) animating = true; // keep frames coming while the routes are checked
     if (!!scene.metadata?.wildlifeAnimating !== animating) scene.metadata = { ...scene.metadata, wildlifeAnimating: animating };
   });
 
@@ -758,6 +793,7 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
     },
     dispose() {
       scene.onBeforeRenderObservable.remove(observer);
+      routes.dispose();
       for (const m of [cat, blob, birdMesh]) m.dispose();
       for (const m of [catMaterial, blobMaterial, birdMaterial]) m.dispose();
       if (scene.metadata) scene.metadata = { ...scene.metadata, wildlifeAnimating: false };
@@ -765,4 +801,136 @@ export function createWildlife(scene: Scene, options: WildlifeOptions = {}): Wil
   };
   if (import.meta.env?.DEV) (window as Window & { __wildlife?: Wildlife & { cat?: unknown } }).__wildlife = Object.assign(api, { cat: catState });
   return api;
+}
+
+// ---------------------------------------------------------------- flight routes
+
+interface Routes {
+  /** False until the routes are checked (birds keep sitting meanwhile). */
+  readonly ready: boolean;
+  nodes: Vector3[];
+  /** Per usable landing spot: its approach point and the sky points it connects to. */
+  approach: Map<Vector3, { point: Vector3; nodes: number[] }>;
+  nearest(p: Vector3): number;
+  /** Sky points from `from` to `to` (both included), along checked connections. */
+  path(from: number, to: number): number[];
+  dispose(): void;
+}
+
+const ROUTES_KEY = 'hometwin:birdRoutes';
+const NO_FLY = /wildlife|sky|marker|touch|hitbox|glow|blob|rain|snow|splash|cloud|lightning|bulb_|energy/i;
+
+/**
+ * Checks candidate sky points, their connections and the landing approaches against the scene
+ * geometry with triangle trees (a few milliseconds per frame until done). The result is kept in
+ * localStorage for this layout, so later starts are ready at once.
+ */
+function buildRoutes(scene: Scene, spec: { seedPoints: () => Vector3[]; perches: { perch: Vector3; approach: Vector3 }[]; exclude: (m: AbstractMesh) => boolean }): Routes {
+  const candidates = spec.seedPoints();
+  const r3 = (v: Vector3) => [v.x, v.y, v.z].map(c => Math.round(c * 10) / 10);
+  const meshes = scene.meshes.filter(m => m.isEnabled() && m.isVisible && m.getTotalVertices() > 0 && !spec.exclude(m) && !NO_FLY.test(m.name));
+  const key = JSON.stringify([candidates.map(r3), spec.perches.map(p => [r3(p.perch), r3(p.approach)]), meshes.length]);
+  const routes: Routes & { ready: boolean } = {
+    ready: false, nodes: [], approach: new Map(),
+    nearest(p) { let best = 0, d = Infinity; this.nodes.forEach((n, i) => { const q = Vector3.DistanceSquared(n, p); if (q < d) { d = q; best = i; } }); return best; },
+    path(from, to) {
+      if (from === to) return [to];
+      const prev = new Map<number, number>([[from, -1]]), queue = [from];
+      while (queue.length) {
+        const i = queue.shift()!;
+        if (i === to) break;
+        for (const j of adjacency[i] ?? []) if (!prev.has(j)) { prev.set(j, i); queue.push(j); }
+      }
+      if (!prev.has(to)) return [from];
+      const path: number[] = [];
+      for (let i = to; i !== -1; i = prev.get(i)!) path.unshift(i);
+      return path;
+    },
+    dispose() { scene.onBeforeRenderObservable.remove(observer); },
+  };
+  let adjacency: number[][] = [];
+  const apply = (data: { nodes: number[]; edges: [number, number][]; approach: [number, number[]][] }) => {
+    routes.nodes = data.nodes.map(i => candidates[i]);
+    adjacency = routes.nodes.map(() => []);
+    for (const [a, b] of data.edges) { adjacency[a].push(b); adjacency[b].push(a); }
+    for (const [p, nodes] of data.approach) routes.approach.set(spec.perches[p].perch, { point: spec.perches[p].approach, nodes });
+    routes.ready = true;
+  };
+  try {
+    const cached = JSON.parse(localStorage.getItem(ROUTES_KEY) ?? 'null');
+    if (cached?.key === key) { apply(cached.data); return routes; }
+  } catch { /* no storage: compute */ }
+
+  const trees = new OcclusionBVHCache(64);
+  const ray = new Ray(Vector3.Zero(), Vector3.Up(), 1);
+  const min = new Vector3(), max = new Vector3();
+  const clear = (a: Vector3, b: Vector3) => {
+    min.set(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)); max.set(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
+    const length = Vector3.Distance(a, b);
+    if (length < 1e-3) return true;
+    ray.origin.copyFrom(a); b.subtractToRef(a, ray.direction); ray.direction.scaleInPlace(1 / length); ray.length = length;
+    for (const mesh of meshes) {
+      const box = mesh.getBoundingInfo().boundingBox;
+      if (box.minimumWorld.x > max.x || box.maximumWorld.x < min.x || box.minimumWorld.y > max.y || box.maximumWorld.y < min.y
+        || box.minimumWorld.z > max.z || box.maximumWorld.z < min.z || !ray.intersectsBoxMinMax(box.minimumWorld, box.maximumWorld)) continue;
+      const tree = trees.get(mesh);
+      if (tree) { if (OcclusionBVHCache.segmentHits(tree, mesh, a, b)) return false; continue; }
+      const hit = ray.intersectsMesh(mesh as Mesh, true);
+      if (hit.hit && hit.distance <= length) return false;
+    }
+    return true;
+  };
+  const offset = (v: Vector3, x: number, y: number, z: number) => v.add(new Vector3(x, y, z));
+  // A thick line: centre and half a metre above and below.
+  const corridor = (a: Vector3, b: Vector3) => clear(a, b) && clear(offset(a, 0, .45, 0), offset(b, 0, .45, 0)) && clear(offset(a, 0, -.45, 0), offset(b, 0, -.45, 0));
+
+  function* work(): Generator<void, void, void> {
+    const kept: number[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const p = candidates[i];
+      if (clear(offset(p, -.9, 0, 0), offset(p, .9, 0, 0)) && clear(offset(p, 0, -.9, 0), offset(p, 0, .9, 0)) && clear(offset(p, 0, 0, -.9), offset(p, 0, 0, .9))) kept.push(i);
+      yield;
+    }
+    const edges: [number, number][] = [];
+    for (let a = 0; a < kept.length; a++) for (let b = a + 1; b < kept.length; b++) {
+      const p = candidates[kept[a]], q = candidates[kept[b]];
+      if (Vector3.Distance(p, q) > 30) continue;
+      if (corridor(p, q)) edges.push([a, b]);
+      yield;
+    }
+    // Only the largest connected group of points (no islands).
+    const groupOf = new Array(kept.length).fill(-1);
+    let groups = 0;
+    for (let s = 0; s < kept.length; s++) {
+      if (groupOf[s] >= 0) continue;
+      const stack = [s]; groupOf[s] = groups;
+      while (stack.length) { const i = stack.pop()!; for (const [a, b] of edges) { const j = a === i ? b : b === i ? a : -1; if (j >= 0 && groupOf[j] < 0) { groupOf[j] = groups; stack.push(j); } } }
+      groups++;
+    }
+    const sizes = new Array(groups).fill(0); groupOf.forEach(g => sizes[g]++);
+    const main = sizes.indexOf(Math.max(...sizes));
+    const index = new Map<number, number>(); const nodes: number[] = [];
+    kept.forEach((c, i) => { if (groupOf[i] === main) { index.set(i, nodes.length); nodes.push(c); } });
+    const finalEdges = edges.filter(([a, b]) => index.has(a) && index.has(b)).map(([a, b]) => [index.get(a)!, index.get(b)!] as [number, number]);
+    const approach: [number, number[]][] = [];
+    for (let p = 0; p < spec.perches.length; p++) {
+      const { perch, approach: point } = spec.perches[p];
+      const end = Vector3.Lerp(point, perch, Math.max(0, 1 - .15 / Math.max(.2, Vector3.Distance(point, perch))));
+      yield;
+      if (!clear(point, end) || !clear(offset(point, 0, .3, 0), offset(end, 0, .3, 0))) continue;
+      const near = nodes.map((c, i) => ({ i, d: Vector3.Distance(candidates[c], point) })).filter(n => n.d < 26).sort((x, y) => x.d - y.d);
+      const linked: number[] = [];
+      for (const n of near) { if (linked.length >= 3) break; yield; if (corridor(point, candidates[nodes[n.i]])) linked.push(n.i); }
+      if (linked.length) approach.push([p, linked]);
+    }
+    const data = { nodes, edges: finalEdges, approach };
+    try { localStorage.setItem(ROUTES_KEY, JSON.stringify({ key, data })); } catch { /* private mode: computed again next time */ }
+    apply(data);
+  }
+  const job = work();
+  const observer: Observer<Scene> | null = scene.onBeforeRenderObservable.add(() => {
+    const until = performance.now() + 3;
+    while (performance.now() < until) if (job.next().done) { scene.onBeforeRenderObservable.remove(observer); return; }
+  });
+  return routes;
 }

@@ -28,6 +28,17 @@
   gap: 10px;
 }
 
+/* Settings gear next to the logo (the only menu entry; the editor starts from the settings). */
+.hud-settings {
+  pointer-events: auto;
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .25); transition: color .15s, border-color .15s;
+}
+.hud-settings:hover { color: var(--text); border-color: var(--accent); }
+.hud-settings:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* HUD logo (app icon, public/favicon) */
 .hud-logo {
   width: 36px;

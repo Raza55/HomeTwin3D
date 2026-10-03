@@ -11,7 +11,7 @@ export interface Text { de: string; en: string }
 export const DAY_START_CLOCK = 5 * 60 + 30;
 export const DAY_LENGTH = 1440;
 /** Real seconds for the whole day at 1× speed. */
-export const DAY_REAL_SECONDS = 183;
+export const DAY_REAL_SECONDS = 206;
 /** Late summer: wake-up in the dawn, sunrise with the coffee, dusk for the movie. */
 export const DEMO_DATE = { month: 8, day: 5 } as const; // 5 September
 
@@ -68,6 +68,10 @@ export type StoryAction =
   /** `swatch` + `hue`: a colour button; `kelvin`: the white temperature slider. */
   | { type: 'control'; kind: 'light'; rooms: RoomRole[]; swatch?: string; hue?: number; kelvin?: number; brightness: number }
   | { type: 'control'; kind: 'blinds'; rooms: RoomRole[]; position: number }
+  /** The TV Dial popup on the board: the finger picks a source (e.g. SHIELD) before the picture starts. */
+  | { type: 'control'; kind: 'tv'; choice: 'shield' | 'pc' | 'playstation' | 'retropie' }
+  /** Long press on the PC marker starts the PC (as on the board). */
+  | { type: 'control'; kind: 'pc' }
   | { type: 'tv'; mode: TVMode; title?: Text }
   | { type: 'pc'; on: boolean; screen?: ScreenKind }
   | { type: 'coffee'; phase: 'on' | 'brew' | 'off'; minutes?: number }
@@ -152,14 +156,16 @@ export const STORY: StoryBeat[] = [
   beat('07:24', [{ type: 'door', kind: 'window', open: false }]),
   beat('07:25', [{ type: 'light', target: { rooms: ['bath'] }, on: false }]),
   beat('07:30', [
-    { type: 'tv', mode: 'news' },
+    // On the board: TV Dial → SHIELD (the news starts a moment later).
+    { type: 'control', kind: 'tv', choice: 'shield' },
     { type: 'light', target: { rooms: ['dining'] }, on: true, brightness: 55, kelvin: 3000, ramp: 2 },
     { type: 'echo', rooms: ['kitchen', 'living'], playing: false },
   ], {
     id: 'breakfast', icon: 'tv',
     title: { de: 'Frühstück mit Nachrichten', en: 'Breakfast with the news' },
-    text: { de: 'Vom Esstisch der Blick zum Fernseher: Die Nachrichten laufen, das Licht über dem Tisch ist gedimmt.', en: 'From the dining table the view goes to the TV: the news is on, the light above the table is dimmed.' },
+    text: { de: 'Am Board die Quelle wählen: SHIELD. Vom Esstisch der Blick zum Fernseher – die Nachrichten laufen, das Licht über dem Tisch ist gedimmt.', en: 'Pick the source on the board: SHIELD. From the dining table the view goes to the TV – the news is on, the light above the table is dimmed.' },
   }),
+  beat('07:35', [{ type: 'tv', mode: 'news' }]),
   beat('07:40', [{ type: 'fan', on: false }]),
   beat('08:08', [{ type: 'lock', locked: false }]),
   beat('08:10', [{ type: 'door', kind: 'entrance', open: true }], {
@@ -288,12 +294,14 @@ export const STORY: StoryBeat[] = [
     { type: 'light', target: { all: true, exclude: ['living', 'outdoor', 'hall'] }, on: false, stagger: 0.3 },
     { type: 'light', target: { rooms: ['living'] }, on: true, brightness: 12, kelvin: WARM, ramp: 3 },
     { type: 'colorloop', target: { rooms: ['living', 'dining'], color: true, fallback: 2 }, on: true, brightness: 50, hues: [236, 248, 258, 246], period: 30, saturation: 62, breathe: .22 },
-    { type: 'tv', mode: 'movie', title: { de: 'Nordlicht – Reise ans Ende der Welt', en: 'Northern Light – Journey to the End of the World' } },
+    // On the board: TV Dial → SHIELD, then the film starts.
+    { type: 'control', kind: 'tv', choice: 'shield' },
   ], {
     id: 'cinema', icon: 'film',
     title: { de: 'Kinoabend', en: 'Movie night' },
-    text: { de: 'Licht gedimmt, die Farblampen tauchen den Raum in ruhiges, langsam atmendes Nachtblau wie ein Ambilight, der Fernseher zeigt den Film.', en: 'Lights dimmed, the colour lamps bathe the room in calm, slowly breathing night blue like an ambilight, the TV plays the film.' },
+    text: { de: 'Am Board SHIELD gewählt, Licht gedimmt: Die Farblampen tauchen den Raum in ruhiges, langsam atmendes Nachtblau wie ein Ambilight, der Fernseher zeigt den Film.', en: 'SHIELD picked on the board, lights dimmed: the colour lamps bathe the room in calm, slowly breathing night blue like an ambilight, the TV plays the film.' },
   }),
+  beat('20:20', [{ type: 'tv', mode: 'movie', title: { de: 'Nordlicht – Reise ans Ende der Welt', en: 'Northern Light – Journey to the End of the World' } }]),
   beat('21:10', [], {
     id: 'energy', icon: 'zap',
     title: { de: 'Energiefluss', en: 'Energy flow' },
@@ -308,13 +316,17 @@ export const STORY: StoryBeat[] = [
     { type: 'tv', mode: 'off' },
     { type: 'colorloop', target: { all: true }, on: false },
     { type: 'light', target: { rooms: ['living', 'dining'] }, on: false, stagger: 0.3 },
-    { type: 'pc', on: true, screen: 'game' },
-    { type: 'colorloop', target: { rooms: ['office'], color: true, fallback: 1 }, on: true, brightness: 55, hues: [205, 228, 250], period: 26, saturation: 70, breathe: .25 },
+    // On the board: a long press on the PC marker starts the PC.
+    { type: 'control', kind: 'pc' },
   ], {
     id: 'gaming', icon: 'gamepad',
     title: { de: 'Gaming-Session', en: 'Gaming session' },
     text: { de: 'Der Film ist aus, im Schlafzimmer startet der PC ein Spiel. Gehäuse und Lüfter leuchten im Regenbogen, die Lampen atmen langsam in kühlem Blau.', en: 'The movie ends, the PC in the bedroom launches a game. Case and fans glow in rainbow colours, the lamps breathe slowly in cool blue.' },
   }),
+  beat('22:23', [
+    { type: 'pc', on: true, screen: 'game' },
+    { type: 'colorloop', target: { rooms: ['office'], color: true, fallback: 1 }, on: true, brightness: 55, hues: [205, 228, 250], period: 26, saturation: 70, breathe: .25 },
+  ]),
   beat('23:15', [
     { type: 'pc', on: false },
     { type: 'colorloop', target: { all: true }, on: false },
@@ -420,14 +432,16 @@ const PACE: { clock: string; speed: number }[] = [
   // Let the coffee machine's popup show its progress.
   { clock: '06:45', speed: 0.2 },
   { clock: '06:54', speed: 0.9 },
-  { clock: '07:30', speed: 0.35 },
+  // Breakfast: the board's TV Dial in real time, then the news.
+  { clock: '07:29', speed: 0.045 },
+  { clock: '07:36', speed: 0.2 },
   { clock: '07:53', speed: 0.9 },
   // Leaving: lock, door and lock again, slow enough to watch.
   { clock: '08:06', speed: 0.22 },
   { clock: '08:22', speed: 2 },
-  { clock: '09:00', speed: 0.27 },
+  { clock: '09:00', speed: 0.24 },
   { clock: '09:19', speed: 2 },
-  { clock: '11:07', speed: 0.27 },
+  { clock: '11:07', speed: 0.24 },
   { clock: '11:25', speed: 2 },
   // The cat's visit: time to watch it settle on the bench.
   { clock: '11:38', speed: 0.3 },
@@ -445,11 +459,15 @@ const PACE: { clock: string; speed: number }[] = [
   // Board interactions run in real time: the clock nearly stands still meanwhile.
   { clock: '19:44', speed: 0.12 },
   { clock: '20:03', speed: 1.1 },
-  { clock: '20:15', speed: 0.6 },
+  // Movie night: the TV Dial in real time, then the film.
+  { clock: '20:14', speed: 0.05 },
+  { clock: '20:21', speed: 0.6 },
   // Energy view: first the current power, then the week.
   { clock: '21:08', speed: 0.2 },
   { clock: '21:44', speed: 1.2 },
-  { clock: '22:20', speed: 0.5 },
+  // Gaming: the long press on the board in real time, then the PC boots into the game.
+  { clock: '22:19', speed: 0.021 },
+  { clock: '22:24', speed: 0.5 },
   { clock: '23:10', speed: 1.2 },
   { clock: '23:45', speed: 3 },
   { clock: '02:25', speed: 1.1 },
@@ -556,7 +574,7 @@ export const SHOTS: Shot[] = [
     { t: .84, eye: { at: TOWARDS_TABLE, metres: 0 }, look: { kind: 'room', room: 'kitchen' }, turn: 48 },
     { t: 1, eye: { at: { kind: 'coffee' }, metres: 1.3, approach: true }, look: { kind: 'coffee' } },
   ], 80),
-  shot('breakfast-news', '07:31', '07:52', [
+  shot('breakfast-news', '07:37', '07:52', [
     // Seated at the dining table, looking across it to the TV.
     { t: 0, eye: { at: { kind: 'table' }, metres: .85, away: { kind: 'tv' }, height: 1.38 }, look: { kind: 'tv' }, drop: .15 },
     { t: 1, eye: { at: { kind: 'table' }, metres: .7, away: { kind: 'tv' }, height: 1.38 }, look: { kind: 'tv' }, drop: .1 },

@@ -1,6 +1,6 @@
 # Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter
 
-Stand: Add-on 0.5.48 (03.10.2026). Bedienung und Voraussetzungen der Funktionen, die seit 0.5.20 dazugekommen
+Stand: Add-on 0.5.49 (03.10.2026). Bedienung und Voraussetzungen der Funktionen, die seit 0.5.20 dazugekommen
 sind. Einrichtung des Boards insgesamt: [Erste Schritte](GETTING_STARTED.md).
 
 ## Energiefluss
@@ -40,6 +40,8 @@ bleiben unverändert.
   der Finger der Demo schaltet sie sichtbar in der Filterleiste um.
 - **Bedienung am Board:** Der Finger tippt auf Lampen und Rollos und bedient deren echte Popups – etwa vor dem
   Kochen die Küchenspots (Reiter „Weiß“, kaltweiß, volle Helligkeit) oder später Farbe und Rollos im Wohnzimmer.
+  Morgens und abends wählt er im TV-Dial-Popup die Quelle SHIELD, bevor das Bild startet; die Gaming-Session
+  beginnt mit einem langen Druck auf die PC-Markierung.
 - **Energiekapitel:** Energiefluss *Jetzt* und *Woche*. Die Leistung folgt dem Geschehen der Demo (Waschmaschine mit
   Heizphasen, Trockner, Kaffeemaschine beim Brühen, Fernseher beim Videoabend, PC beim Spielen, Standby sonst);
   Lampengruppen folgen dem Licht der Demo. Die Wochenwerte sind typische Werte einer Wohnung.
@@ -53,7 +55,9 @@ läuft um Bänke und Bäume, springt auf Bänke und Pfosten und liegt dort, vers
 bei Regen oder Schnee Schutz. Kleine Vögel fliegen über Hof und Wohnung, landen in Baumkronen oder auf dem
 Rasen und weichen Gebäuden aus; nachts und bei schlechtem Wetter bleiben sie sitzen.
 
-Alles wird im Code erzeugt (keine Asset-Dateien), Bewegung im Vertex-Shader: drei Draw Calls. Der Render-Loop
+Alles wird im Code erzeugt (keine Asset-Dateien), Bewegung im Vertex-Shader: drei Draw Calls. Vögel fliegen nur auf Routen, die einmal beim Start gegen die echte
+Geometrie (Bäume, Gebäude, Wohnung) geprüft werden – ein Netz aus Himmelspunkten plus je Landeplatz ein Anflugpunkt
+außerhalb der Krone; das Ergebnis wird pro Browser zwischengespeichert. Im Flug gibt es keine Hindernisprüfung pro Bild. Der Render-Loop
 ruht weiter, solange sich nichts Sichtbares bewegt. Unter WebGPU (`?engine=webgpu`) gleiten die Tiere ohne
 Bein- und Flügelbewegung. Die Außenanlage selbst ist eine prozedurale Beispielumgebung.
 

@@ -1,12 +1,12 @@
-# Übergabe: HomeTwin3D (aktuell 0.5.48)
+# Übergabe: HomeTwin3D (aktuell 0.5.49)
 
-## Nachtrag 0.5.10–0.5.48 (02.–03.10.2026)
+## Nachtrag 0.5.10–0.5.49 (02.–03.10.2026)
 
 Vor Arbeiten weiterhin `git status`, `origin/main` und `3dash-addon/config.yaml` prüfen (andere Agenten veröffentlichen parallel).
 Release-Ablauf unverändert: Version und CHANGELOG erhöhen, `npm run privacy:check`, nach `main` pushen, die Workflows
 „Add-on images“ und „Validate HomeTwin3D“ abwarten, dann in HA `check_updates` und `update`.
 
-**Tagesdemo** (`src/services/dayDemo/`): `story.ts` (Beats, Kapitel, Tempo `PACE`, `DAY_REAL_SECONDS` = 183, Shots, `CHAPTER_FRAMING`,
+**Tagesdemo** (`src/services/dayDemo/`): `story.ts` (Beats, Kapitel, Tempo `PACE`, `DAY_REAL_SECONDS` = 206, Shots, `CHAPTER_FRAMING`,
 `CHAPTER_MARKERS`), `engine.ts` (Aktionen auf eine `DemoHAConnection`), `controller.ts` (Uhr, Kamera-Rundflug mit Gebäudeschutz
 `clearBeta`, Vorbereitung der Shader, Benchmark), `shots.ts` (Ich-Perspektive), `cast.ts` (Rollen aus dem Modell), `energyDemo.ts`
 (synthetisches Energie-Dashboard). Fingerbedienung: `src/components/DayDemo/boardTouch.ts`. Tests: `npm run test:daydemo`.

@@ -2,9 +2,9 @@
 
 Stand: **03.10.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
 
-## Aktueller Release 0.5.48 vom 03.10.2026
+## Aktueller Release 0.5.49 vom 03.10.2026
 
-- Add-on 0.5.48 auf `main`; Images und beide Prüfabläufe erfolgreich. Webapp-Paket weiterhin 0.2.1.
+- Add-on 0.5.49 auf `main`; Images und beide Prüfabläufe erfolgreich. Webapp-Paket weiterhin 0.2.1.
 - Neu seit 0.5.9 (Einzelheiten im [Änderungsverlauf](CHANGELOG.md)): Tagesdemo mit 27 Kapiteln, Einleitungsdialog, Fingerbedienung der Popups,
   Ich-Perspektive und Benchmark; Energiefluss aus dem HA-Energie-Dashboard (Zeiträume, Ebenen, einzelne Lampen über PowerCalc);
   optionale Tiere draußen; Markierungsfilter; animierte Türen, Kippfenster, Sieben-Segment-Anzeigen, Spiegel mit Tagesverlauf.

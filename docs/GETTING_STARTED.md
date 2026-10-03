@@ -73,7 +73,7 @@ Die gespeicherten Zuordnungen lassen sich als JSON exportieren und in Blender ü
 
 ## 6. Anpassen
 
-**Editor** (unten links):
+**Editor** (Zahnrad oben links neben dem Logo → *Editor öffnen*):
 
 | Bereich | Wofür |
 | --- | --- |
@@ -86,14 +86,14 @@ Die gespeicherten Zuordnungen lassen sich als JSON exportieren und in Blender ü
 | Räume | Raumflächen für Zuordnung, Raumaktionen und Kamerafahrten |
 | Modell | Modellteile verschieben, drehen, skalieren, zurücksetzen |
 
-**Einstellungen** (unten links): Texturen oder Skizzenstil, Schattenqualität, Wettereffekte,
+**Einstellungen** (Zahnrad oben links): Texturen oder Skizzenstil, Schattenqualität, Wettereffekte,
 Mindesthelligkeit draußen, **Tiere draußen** (Katze und Vögel, optional), Perspektive, Sprache, Theme
 und die gemeinsame Version für alle Geräte.
 
 **Auf dem Plan:** Die Leiste oben rechts schaltet zwischen Texturen, **Energiefluss**, Lauf-/Flugmodus
 und der Startansicht um. Die schmale Leiste darunter **filtert die Markierungen** nach Hauptkategorie
-(Licht, Rollos, Lüftung, Türen & Fenster, Geräte, Medien). Karten im Seitenpanel zeigen Sensoren,
-Skripte und Verläufe.
+(Licht, Rollos, Lüftung, Türen & Fenster, Geräte, Medien). Optionale Karten (Sensoren, Skripte, Verläufe)
+legt man über Einstellungen → *Karten anordnen* an; erst dann erscheint links ein Kartenpanel.
 
 Mehr zu Energiefluss, Tagesdemo, Tieren und Filter: [Energie, Demo, Tiere und Filter](ENERGY_DEMO_WILDLIFE.md).
 Geräte und Warnungen im Detail: [Geräte und Warnungen](DEVICES_AND_ALERTS.md).

@@ -11,6 +11,7 @@ import {
   Snowflake,
   SunMedium,
   type LucideIcon,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import type { DirectionalLight, HemisphericLight } from '@babylonjs/core';
 import { updateSunPosition, minutesToLabel, getSunPosition } from '../babylon/SunController';
@@ -23,6 +24,8 @@ import { isRaining, isSnowing, type WeatherData } from '../services/weatherApi';
 import './HUD.css';
 
 interface Props {
+  /** Opens the settings (gear next to the logo; the editor is started from there). */
+  onSettings?: () => void;
   latitude: number;
   longitude: number;
   northOffset: number;
@@ -69,6 +72,7 @@ function weatherVisualFor(weather?: WeatherData | null): { icon: LucideIcon; var
 }
 
 export default function HUD({
+  onSettings,
   latitude,
   longitude,
   northOffset,
@@ -208,6 +212,7 @@ export default function HUD({
 
       <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
         <img className="hud-logo" src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="HomeTwin3D" draggable={false} />
+        {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
         {(simulationMode || demoMode) && (
           <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>
         )}

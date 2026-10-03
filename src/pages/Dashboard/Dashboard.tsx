@@ -22,7 +22,7 @@ import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } fro
 import { useNavigate } from 'react-router-dom';
 import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
 import { MarkerCategoryScope } from '../../components/useMapMarkers';
-import { MARKER_CATEGORIES, type MarkerCategory } from '../../babylon/MarkerLayer';
+import { MARKER_CATEGORIES, getMarkerLayer, type MarkerCategory } from '../../babylon/MarkerLayer';
 import { CHAPTER_MARKERS } from '../../services/dayDemo/story';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
 import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, Matrix, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
@@ -82,6 +82,7 @@ import { updateSunPosition, minutesToLabel } from '../../babylon/SunController';
 import { createWeatherEffects, type WeatherEffectsContext } from '../../babylon/WeatherEffects';
 import { createWildlife, type Wildlife } from '../../babylon/Wildlife';
 import { buildDemoEnergy } from '../../services/dayDemo/energyDemo';
+import { TV_DIAL_AUTOMATION } from '../../services/tvDial';
 import { reducedEffects } from '../../babylon/DeviceClass';
 import { fetchWeather, type WeatherData } from '../../services/weatherApi';
 import { showGroundGrid, hideGroundGrid, syncGridColors, disposeGroundGrid, createModelShadow } from '../../babylon/GroundGrid';
@@ -325,6 +326,8 @@ export default function Dashboard() {
   const [cardStates, setCardStates] = useState<Record<string, HAState>>({});
   const [gridEditMode, setGridEditMode] = useState(false);
   const [panelCollapsed,setPanelCollapsed]=useState(()=>getSetting('misc').panelCollapsed ?? false);
+  // The side panel only holds cards: without any (and while not arranging them) the plan uses the whole width;
+  // settings and editor open from the gear next to the logo.
   useEffect(()=>{updateSettings('misc',{panelCollapsed});},[panelCollapsed]);
   const panelCollapsedRef=useRef(panelCollapsed);panelCollapsedRef.current=panelCollapsed;
   const [cardPanelOpen, setCardPanelOpen] = useState(false);
@@ -335,6 +338,7 @@ export default function Dashboard() {
     [cardPanelOpen],
   );
   const [sidePanelConfig, setSidePanelConfig] = useState<import('../../types').SidePanelConfig | undefined>(undefined);
+  const showSidePanel = !!sidePanelConfig?.cards?.length || gridEditMode;
   const [settingsMounted, setSettingsMounted] = useState(false);
   useEffect(() => { if (settingsOpen) setSettingsMounted(true); }, [settingsOpen]);
   const [showTour, setShowTour] = useState(
@@ -1822,6 +1826,20 @@ export default function Dashboard() {
       };
       touch = new BoardTouch({
         point: control => {
+          if (control.kind === 'hold') {
+            // The PC's marker as the marker layer placed it (screen coordinates).
+            // (Several PCs: the one whose marker is in view, i.e. the one the camera frames.)
+            const ids = new Set((configRef.current?.model?.floorplan?.objects ?? []).filter(o => o.it?.kind === 'pc').map(o => o.id));
+            const marker = getMarkerLayer(ctx.scene).markers().find(m => ids.has(m.spec.id) && m.placement.visible);
+            return marker ? { x: marker.placement.x, y: marker.placement.y } : null;
+          }
+          if (control.kind === 'tv') {
+            // The TV marker sits just above the screen (markers are drawn in WebGL; their buttons are parked off screen).
+            const plane = Object.values(displayMeshMapRef.current).find(entry => entry.config.kind === 'tv')?.plane;
+            if (!plane) return null;
+            const box = plane.getBoundingInfo().boundingBox;
+            return toScreen(new Vector3(box.centerWorld.x, box.maximumWorld.y + .12, box.centerWorld.z));
+          }
           if (control.kind === 'light') {
             const bulb = meshMapRef.current[control.entityId]?.bulb;
             return bulb ? toScreen(bulb.getAbsolutePosition()) : null;
@@ -1830,21 +1848,27 @@ export default function Dashboard() {
           const panel = blind ? ctx.scene.getMeshByName(`blind_panel_${blind.id}`) ?? ctx.scene.getMeshByName(`blind_frame_${blind.id}`) : null;
           return panel ? toScreen(panel.getBoundingInfo().boundingBox.centerWorld) : null;
         },
-        open: (control, x, y) => control.kind === 'light' ? showQuick(control.entityId, x, y, true) : openBlindModal(control.entityId, x, y),
+        open: (control, x, y) => control.kind === 'hold' ? undefined
+          : control.kind === 'tv' ? document.querySelector<HTMLButtonElement>('.tv-dial-marker')?.click()
+          : control.kind === 'light' ? showQuick(control.entityId, x, y, true) : openBlindModal(control.entityId, x, y),
       });
       controller = new DayDemoController(cast, {
         setState: (entityId, state, attributes) => ha.setState(entityId, state, attributes),
         getState: entityId => ha.getState(entityId),
         // The coffee machine's popup opens while it brews (and closes afterwards).
         popup: (_target, open) => setCoffeeOpen(open ? configRef.current?.model?.floorplan?.objects.find(object => object.coffee)?.id ?? null : null),
-        control: request => {
+        // A beat's board interaction runs after the chapter's filter change (queued a moment later),
+        // so the device's marker is already shown when the finger reaches it.
+        control: request => setTimeout(() => {
           if (request.kind === 'blinds') { void touch?.run(request); return; }
+          if (request.kind === 'pc') { void touch?.run({ kind: 'hold', target: 'pc' }); return; }
+          if (request.kind === 'tv') { void touch?.run({ kind: 'tv', source: request.choice === 'shield' ? 'SHIELD' : request.choice }); return; }
           // A single lamp in view (a lamp group opens another popup).
           const lights = configRef.current?.lights ?? [];
           const single = request.candidates.filter(id => quickLightCluster(lights, id).length <= 1);
           const entityId = single.find(id => { const bulb = meshMapRef.current[id]?.bulb; return !!bulb && !!toScreen(bulb.getAbsolutePosition()); }) ?? single[0] ?? request.entityId;
           void touch?.run({ kind: 'light', entityId, swatch: request.swatch, kelvin: request.kelvin, brightness: request.brightness });
-        },
+        }, 80),
       }, {
         scene: ctx.scene, engine: ctx.engine, sun: ctx.sunLight, hemi: ctx.hemiLight, requestRender: ctx.requestRender,
         location: () => ({
@@ -1899,6 +1923,8 @@ export default function Dashboard() {
       // lamp groups follow the demo's lights.
       const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de', kind => controller!.engine.deviceActivity(kind));
       ha.requestHandler = message => energyDemo.request(message);
+      // The board's TV Dial is usable in the demo (its automation counts as active; requests go nowhere).
+      ha.setState(TV_DIAL_AUTOMATION, 'on', { friendly_name: 'TV Dial', current: 0 });
       const updatePower = () => {
         for (const { entityId, watts } of energyDemo.powerStates(id => ha.getState(id))) {
           if (ha.getState(entityId)?.state !== String(watts)) ha.setState(entityId, String(watts), { unit_of_measurement: 'W', device_class: 'power' });
@@ -2506,8 +2532,8 @@ export default function Dashboard() {
 
 
   return (
-    <div className="dashboard-wrapper" style={{ '--panel-size': `${panelCollapsed?0:panelSize}px` } as React.CSSProperties}>
-      <SidePanel
+    <div className="dashboard-wrapper" style={{ '--panel-size': `${panelCollapsed||!showSidePanel?0:panelSize}px` } as React.CSSProperties}>
+      {showSidePanel && <SidePanel
         config={sidePanelConfig}
         ha={haRef.current}
         cardStates={cardStates}
@@ -2533,7 +2559,7 @@ export default function Dashboard() {
           setSimulationMode(false);
           navigate('/onboarding');
         } : undefined}
-      />
+      />}
       {cardPanelOpen && (
         <Suspense fallback={null}>
           <CardPropertiesPanel
@@ -2561,6 +2587,7 @@ export default function Dashboard() {
           onClose={() => { setMatchingOpen(false); setMatchingObjectIds(undefined); if (matchingChanged.current) { matchingChanged.current = false; handleReloadModel(); } }} /></Suspense>}
 
         <HUD
+          onSettings={() => setSettingsOpen(true)}
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}
           longitude={(configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude)}
           northOffset={northOffset}
@@ -2822,6 +2849,7 @@ export default function Dashboard() {
               onReloadModel={handleReloadModel}
               onStartTour={() => { setSettingsOpen(false); setShowTour(true); }}
               onStartDayDemo={() => { setSettingsOpen(false); closeQuick(); setDayDemo(true); }}
+              onOpenEditor={() => navigate('/editor')}
             />
           </Suspense>
         )}

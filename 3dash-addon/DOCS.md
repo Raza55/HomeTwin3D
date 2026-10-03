@@ -57,7 +57,7 @@ Ab 0.4.1 lädt Home Assistant vorgebaute Images (`ghcr.io/raza55/{arch}-addon-ho
 
 Ein Push auf GitHub ersetzt keine laufende Installation. Der Build verwendet den jeweiligen Stand von `main`; für veröffentlichte Updates die Add-on-Version erhöhen und den Supervisor-Build auf dem Zielgerät prüfen. Der Add-on-Betrieb wurde bei der Repository-Umstellung nicht neu ausgerollt.
 
-## Neue Funktionen (0.5.20–0.5.48)
+## Neue Funktionen (0.5.20–0.5.49)
 
 - **Energiefluss** (Blitz oben rechts): liest das HA-Energie-Dashboard (`energy/get_prefs`), Leistungssensoren und die Recorder-Statistik. Voraussetzung ist ein eingerichtetes Energie-Dashboard mit Geräteverbräuchen; Lampen ohne eigene Messung lassen sich mit PowerCalc (HACS) ergänzen.
 - **Tagesdemo** (`?daydemo`): simulierter Tag mit Kamerafahrten und Benchmark; schaltet nichts in Home Assistant.

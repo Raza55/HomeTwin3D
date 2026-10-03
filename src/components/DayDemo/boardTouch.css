@@ -36,3 +36,17 @@
   to { opacity: 0; transform: scale(2.1); }
 }
 @media (prefers-reduced-motion: reduce) { .board-finger.ripple::after { animation-duration: .01s; } }
+
+/* Long press: a ring fills around the fingertip while it is held. */
+.board-finger.hold::before {
+  inset: -7px;
+  border: 3px solid transparent;
+  border-top-color: var(--accent, #38bdf8);
+  border-right-color: var(--accent, #38bdf8);
+  animation: board-finger-hold 1.1s linear forwards;
+}
+@keyframes board-finger-hold {
+  from { transform: rotate(0); opacity: .4; }
+  to { transform: rotate(540deg); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .board-finger.hold::before { animation: none; opacity: 1; } }

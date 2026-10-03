@@ -9,6 +9,10 @@ export type BoardControl =
   /** A colour button (`swatch`) or a white temperature (`kelvin`, slider), then the brightness. */
   | { kind: 'light'; entityId: string; swatch?: string; kelvin?: number; brightness: number }
   | { kind: 'blinds'; entityId: string; position: number }
+  /** The TV Dial popup: picks this source (its label, e.g. SHIELD). */
+  | { kind: 'tv'; source: string }
+  /** Long press on a marker (the PC's: switches it on). */
+  | { kind: 'hold'; target: string }
   /** Taps these buttons of the marker filter on the plan's right edge. */
   | { kind: 'filter'; categories: string[] };
 
@@ -49,8 +53,12 @@ export class BoardTouch {
     const abort = new AbortController();
     this.abort = abort;
     try {
+      // Not while the plan is veiled (switching between textures and the energy view).
+      for (let i = 0; i < 40 && document.querySelector('.day-demo-veil.on'); i++) await this.wait(100, abort.signal);
       if (control.kind === 'light') await this.light(control, abort.signal);
       else if (control.kind === 'filter') await this.filter(control, abort.signal);
+      else if (control.kind === 'tv') await this.tv(control, abort.signal);
+      else if (control.kind === 'hold') await this.hold(control, abort.signal);
       else await this.blinds(control, abort.signal);
     } catch (error) {
       if (!(error instanceof Cancelled)) console.warn('[DayDemo] Board interaction failed:', error);
@@ -98,6 +106,32 @@ export class BoardTouch {
     if (button) { await this.press(button, signal); await this.wait(1400, signal); }
     const close = popup.querySelector<HTMLButtonElement>('button[aria-label="Rollosteuerung schließen"]');
     if (close) await this.press(close, signal);
+  }
+
+  private async tv(control: Extract<BoardControl, { kind: 'tv' }>, signal: AbortSignal): Promise<void> {
+    const popup = await this.openPopup(control, '.tv-dial-popup', signal);
+    const choice = [...popup.querySelectorAll<HTMLButtonElement>('.tv-dial-grid button')].find(b => b.querySelector('strong')?.textContent?.trim().startsWith(control.source));
+    if (choice) { await this.press(choice, signal); await this.wait(1300, signal); }
+    const close = popup.querySelector<HTMLButtonElement>('button[aria-label="TV-Steuerung schließen"]');
+    if (close) await this.press(close, signal);
+  }
+
+  /** Finger glides to the marker and holds it down; a ring fills while it is held. */
+  private async hold(control: Extract<BoardControl, { kind: 'hold' }>, signal: AbortSignal): Promise<void> {
+    // The marker may appear a frame after a filter change.
+    let p = this.deps.point(control);
+    for (let i = 0; !p && i < 15; i++) { await this.wait(100, signal); p = this.deps.point(control); }
+    if (!p) return;
+    this.place(p.x + 140, p.y + 170, 0);
+    await this.wait(30, signal);
+    this.finger.classList.add('visible');
+    await this.moveTo(p.x, p.y, 750, signal);
+    this.finger.classList.add('press', 'hold');
+    await this.wait(1100, signal);
+    this.finger.classList.remove('press', 'hold');
+    this.finger.classList.remove('ripple'); void this.finger.offsetWidth; this.finger.classList.add('ripple');
+    this.deps.open(control, p.x, p.y);
+    await this.wait(700, signal);
   }
 
   /** The marker filter: the finger taps each category button that changes. */

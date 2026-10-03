@@ -8,7 +8,7 @@ HomeTwin3D verbindet einen eigenen 3D-Grundriss mit den Geräten und Zuständen 
 
 Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3Dash von Kdcius und seinen Mitwirkenden](https://github.com/Kdcius/3Dash_webapp). Die Apache-2.0-Lizenz und die ursprünglichen Autorenhinweise bleiben erhalten. Dieses Repository beginnt aus Datenschutzgründen mit einem bereinigten Quelltext-Snapshot ohne die frühere Git-Historie. Einzelheiten: [Herkunft und Danksagung](ORIGIN.md).
 
-> **Entwicklungsstand:** Add-on 0.5.48 · Webapp-Paket 0.2.1 · Stand 03.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
+> **Entwicklungsstand:** Add-on 0.5.49 · Webapp-Paket 0.2.1 · Stand 03.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
 
 ## Was HomeTwin3D kann
 
@@ -114,7 +114,7 @@ npm run build
 npm run build -- --mode addon
 ```
 
-Der Stand 0.5.48 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
+Der Stand 0.5.49 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
 
 Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant WebSocket API**.
 

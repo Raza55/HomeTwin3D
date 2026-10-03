@@ -199,7 +199,7 @@ test('a routed TV shows generated frames and a moving progress bar', () => {
   const cast = buildCast(routed);
   assert.equal(cast.tvRoutes.length, 1);
   const h = harness(cast);
-  h.engine.seek(at('20:14'));
+  h.engine.seek(at('20:19'));
   h.engine.play();
   for (let i = 0; i < 80; i++) h.tick(50);
   assert.equal(h.states.get(route.receiver).attributes.source, 'SHIELD Media');

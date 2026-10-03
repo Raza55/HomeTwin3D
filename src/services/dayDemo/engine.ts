@@ -12,7 +12,9 @@ import {
 export type BoardControlRequest =
   /** `candidates`: lamps that fit, best first (the dashboard taps the first single lamp in view). */
   | { kind: 'light'; entityId: string; candidates: string[]; swatch?: string; kelvin?: number; brightness: number }
-  | { kind: 'blinds'; entityId: string; position: number };
+  | { kind: 'blinds'; entityId: string; position: number }
+  | { kind: 'tv'; choice: string }
+  | { kind: 'pc' };
 
 export interface DayDemoHooks {
   setState(entityId: string, state: string, attributes?: Record<string, unknown>): void;
@@ -541,6 +543,17 @@ export class DayDemoEngine {
    * (its buttons send the commands); after a jump the result is applied directly.
    */
   private controlAction(action: Extract<StoryAction, { type: 'control' }>, at: number): void {
+    if (action.kind === 'pc') {
+      if (!this.cast.pcs.length) return;
+      if (!this.seeking) this.hooks.control?.({ kind: 'pc' });
+      return this.addLog('monitor', { de: 'Board: PC per langem Druck gestartet', en: 'Board: PC started with a long press' });
+    }
+    if (action.kind === 'tv') {
+      if (!this.cast.tvRoutes.length) return;
+      if (!this.seeking) this.hooks.control?.({ kind: 'tv', choice: action.choice });
+      const name = action.choice === 'shield' ? 'SHIELD' : action.choice;
+      return this.addLog('tv', { de: `Board: TV Dial → ${name}`, en: `Board: TV Dial → ${name}` });
+    }
     if (action.kind === 'light') {
       // A lamp whose colour shows: pendants and ceiling lights first, strips behind furniture last.
       const score = (l: CastLight) => (this.hooks.getState(l.entityId)?.state === 'on' ? 0 : 4) + (/strip|leiste|band/i.test(l.label) ? 2 : 0)

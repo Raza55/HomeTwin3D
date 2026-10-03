@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.50 – Demo: Filter seltener umschalten (03.10.2026)
+
+- Die Tagesdemo stellt die Markierungsfilter nur noch an vier Wendepunkten um (Haus verlassen, Feierabend, Gaming, Nacht) statt in fast jedem Kapitel: morgens und abends Licht, Rollos und Medien, tagsüber Geräte und Rollos, beim Gaming Geräte und Licht, nachts nur Licht. Die Energiekapitel lassen die Auswahl unverändert.
+
 ## 0.5.49 – Zahnrad statt Seitenpanel, TV-Quelle und PC-Start in der Demo, Vögel auf geprüften Routen (03.10.2026)
 
 - Das linke Panel entfällt: Ein Zahnrad neben dem Logo öffnet die Einstellungen, dort startet *Editor öffnen* den Editor. Das Kartenpanel erscheint nur noch, wenn Karten angelegt sind (oder beim Anordnen).

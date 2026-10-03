@@ -1969,7 +1969,8 @@ export default function Dashboard() {
         if (id === 'visitor') wildlifeRef.current?.visit();
         // Only the markers the chapter is about (the plan is calmer, e.g. none at all outside).
         // While the day plays, the finger switches them in the filter bar; otherwise they change at once.
-        const target = CHAPTER_MARKERS[id] ?? [];
+        const target = CHAPTER_MARKERS[id] ? [...CHAPTER_MARKERS[id]] : null;
+        if (!target) return;
         const current = demoCategoriesRef.current ?? MARKER_CATEGORIES;
         const flip = MARKER_CATEGORIES.filter(c => current.includes(c) !== target.includes(c));
         const view = controller!.getView();

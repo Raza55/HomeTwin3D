@@ -635,15 +635,15 @@ const anchor = (at: ShotAnchor, zoom = .42): Framing => ({ at, zoom, tilt: -.05 
 const overview = (zoom: number, tilt: number): Framing => ({ at: 'overview', zoom, tilt });
 
 /**
- * Plan markers per chapter (filter categories): only what the chapter is about, so the plan stays calm.
- * Chapters not listed show none (weather over the site, the courtyard, the energy view has its own labels).
+ * Plan markers per phase of the day (filter categories), so the finger switches them only a few times:
+ * morning, out of the house, evening, gaming, night. Chapters not listed (energy view) keep the current set.
  */
-export const CHAPTER_MARKERS: Record<string, ('light' | 'blind' | 'climate' | 'door' | 'device' | 'media')[]> = {
-  night: ['door'], wake: ['light', 'blind'], sunrise: ['blind'], coffee: ['device', 'light'], bath: ['light', 'climate'],
-  breakfast: ['media'], away: ['door', 'light'], chores: ['device'], shade: ['blind'], warning: ['blind', 'door'],
-  storm: ['blind', 'light'], clearing: ['blind'], home: ['door', 'light', 'media'], cooking: ['light', 'climate'],
-  airing: ['door', 'blind'], sunset: ['blind', 'light'], board: ['light', 'blind'], cinema: ['media', 'light'],
-  gaming: ['device', 'light'], goodnight: ['light', 'blind'], nightlight: ['light'],
+const MORNING = ['light', 'blind', 'media'] as const, AWAY = ['device', 'blind'] as const, EVENING = ['light', 'blind', 'media'] as const;
+export const CHAPTER_MARKERS: Record<string, readonly ('light' | 'blind' | 'climate' | 'door' | 'device' | 'media')[]> = {
+  night: MORNING, wake: MORNING, sunrise: MORNING, coffee: MORNING, bath: MORNING, breakfast: MORNING,
+  away: AWAY, chores: AWAY, sunny: AWAY, visitor: AWAY, shade: AWAY, warning: AWAY, storm: AWAY, clearing: AWAY,
+  home: EVENING, cooking: EVENING, airing: EVENING, sunset: EVENING, board: EVENING, cinema: EVENING,
+  gaming: ['device', 'light'], goodnight: ['light'], nightlight: ['light'], snow: ['light'], dawn: ['light'],
 };
 
 export const CHAPTER_FRAMING: Record<string, Framing> = {

@@ -1,6 +1,6 @@
 # Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter
 
-Stand: Add-on 0.5.49 (03.10.2026). Bedienung und Voraussetzungen der Funktionen, die seit 0.5.20 dazugekommen
+Stand: Add-on 0.5.50 (03.10.2026). Bedienung und Voraussetzungen der Funktionen, die seit 0.5.20 dazugekommen
 sind. Einrichtung des Boards insgesamt: [Erste Schritte](GETTING_STARTED.md).
 
 ## Energiefluss
@@ -36,8 +36,8 @@ bleiben unverändert.
   Modells anhand von Namen, Entity-IDs und Räumen ihren Rollen zu. Fehlt eine Rolle, entfällt der Schritt.
 - **Kamera:** Rundflug je Kapitel und Ich-Perspektive an Fenstern, Kaffeemaschine, Küchenzeile, Esstisch,
   TV und PC. Die Kamera bleibt außerhalb von Nachbarhäusern.
-- **Markierungen:** Jedes Kapitel zeigt nur die Kategorien, um die es geht (z. B. Bad: Licht und Lüftung);
-  der Finger der Demo schaltet sie sichtbar in der Filterleiste um.
+- **Markierungen:** Je Tagesabschnitt nur die passenden Kategorien (morgens und abends Licht, Rollos, Medien; tagsüber
+  Geräte und Rollos; Gaming Geräte und Licht; nachts Licht). Der Finger schaltet sie an vier Stellen sichtbar um.
 - **Bedienung am Board:** Der Finger tippt auf Lampen und Rollos und bedient deren echte Popups – etwa vor dem
   Kochen die Küchenspots (Reiter „Weiß“, kaltweiß, volle Helligkeit) oder später Farbe und Rollos im Wohnzimmer.
   Morgens und abends wählt er im TV-Dial-Popup die Quelle SHIELD, bevor das Bild startet; die Gaming-Session

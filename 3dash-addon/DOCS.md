@@ -74,7 +74,9 @@ rendert. So geht es:
 4. Das Board auf allen Tablets nur noch über die `https://` Adresse öffnen und dort als Lesezeichen oder Home-Bildschirm-App
    speichern. Mit `?perf` an der Adresse lässt sich die Bildrate prüfen.
 
-Den Proxy nicht ungeschützt ins Internet stellen (siehe gemeinsame Version oben). Auf einer HTTPS-Seite verbindet sich die App über `/ha-ws` des
+Den Proxy nicht ungeschützt ins Internet stellen (siehe gemeinsame Version oben).
+
+Auf einer HTTPS-Seite verbindet sich die App über `/ha-ws` des
 Add-ons mit Home Assistant (fester Upstream `homeassistant:8123`, Anmeldung weiterhin per Token); in der App wird die
 HA-Adresse wie gewohnt eingetragen.
 

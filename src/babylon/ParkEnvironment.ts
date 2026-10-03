@@ -132,9 +132,28 @@ export function createParkEnvironment(scene:Scene,center:Vector3,size:Vector3,wi
    const crown=place(pool.create(`crown:${i%3}:${(i+k)%3}`,'park-tree',()=>MeshBuilder.CreateSphere('park-tree',{diameter:2.7+(i%3)*.3,segments:7},scene)),leaves[(i+k)%3],p.x+Math.cos(a)*offset,groundY+h+.5+(k===0?.7:0),p.z+Math.sin(a)*offset);crown.scaling.y=1.1;
   }
  });
+ // A third vent bench stands beside the south path where it curves away, 12.4 m (centre to
+ // centre) beyond the second bench and on the same side of the path, turned with it.
+ const extraVentBenches:{x:number;z:number;angle:number}[]=[];
+ const southRoute=referencePaths.find(route=>route.bench==='start');
+ if(southRoute){
+  const line=Curve3.CreateCatmullRomSpline([[pathX,entryZ+11],benchSouth,...southRoute.points.map(fromReference)]
+   .map(([x,z])=>new Vector3(x,0,z)),12).getPoints();
+  // The spline starts at entryZ + 11; the second bench of the straight row is centred at entryZ + 9.6.
+  let remaining=12.4-1.4;
+  for(let i=1;i<line.length;i++){
+   const step=Vector3.Distance(line[i-1],line[i]);
+   if(step<remaining){remaining-=step;continue;}
+   const tangent=line[i].subtract(line[i-1]).normalize(),at=Vector3.Lerp(line[i-1],line[i],remaining/step);
+   const angle=Math.atan2(tangent.x,tangent.z);
+   // Same 2.05 m offset to the path's left (−X while the path runs +Z) as the first two benches.
+   extraVentBenches.push({x:at.x-2.05*Math.cos(angle),z:at.z+2.05*Math.sin(angle),angle});
+   break;
+  }
+ }
  // Photo references: open plane-tree grove, ventilation benches and balcony play area.
  const courtyard=createCourtyardDetails(scene,hostRoot,center,groundY,
-  {x:grove[0],z:grove[1]},pathX,material,{x:playground[0],z:playground[1]},entryZ+1);
+  {x:grove[0],z:grove[1]},pathX,material,{x:playground[0],z:playground[1]},entryZ+1,extraVentBenches);
  scene.metadata={...scene.metadata,courtyard,parkTrees,buildings:[...buildings,{points:host.footprint.map(([x,z])=>[center.x+x,center.z+z] as [number,number]),top:center.y+size.y/2}],siteReference:{north:fromReference([272,0]),south:fromReference([272,925]),fromReference,host:host.footprint,entrance:host.entrance,grove,pathX}};
  // Everything above is static: one draw per material instead of ~100 meshes and instances.
  const merge=mergeStaticExterior([root,hostRoot],hostRoot,m=>m.name.endsWith('-batch'));

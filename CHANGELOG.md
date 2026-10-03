@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.52 – Dritte Lüftungsbank am Südweg (03.10.2026)
+
+- Außenanlage: Eine dritte Lüftungsbank steht dort, wo der Weg hinter den beiden Bänken in die Kurve geht – auf derselben Wegseite, mit demselben Abstand zur Wegmitte und entlang der Kurve gedreht. Position und Drehung folgen aus dem Wegverlauf.
+- Die Hofkatze umgeht die neue Bank und nutzt sie als Sitzplatz; das Springen zwischen den beiden ausgerichteten Bänken bleibt unverändert.
+
 ## 0.5.51 – Katze: Kopf, Hals und Beine überarbeitet (03.10.2026)
 
 - Kopf nach den Proportionen eines echten Katzenmodells: schmaler als der Körper, tiefer angesetzt, breite Wangen, flachere Stirn, schmales Kinn, Schnurrhaarpolster; Ohren außen an den Ecken des Oberkopfs. Die Rückenlinie steigt vorne fließend in einen kurzen, schräg gestellten Hals an (kein „Schneemann“ aus zwei Kugeln mehr).

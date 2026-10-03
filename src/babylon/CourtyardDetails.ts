@@ -9,7 +9,9 @@ function outerPerches(leaves:{m:Mesh;r:number}[],x:number,z:number,count:number)
 /** Photo-based courtyard details in metres. Static parts are batched by material. */
 export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,groundY:number,
  treeCenter:{x:number;z:number},pathX:number,material:(name:string,color:string)=>StandardMaterial,
- playCenter:{x:number;z:number}={x:treeCenter.x-1,z:treeCenter.z+23},benchAnchorZ=treeCenter.z){
+ playCenter:{x:number;z:number}={x:treeCenter.x-1,z:treeCenter.z+23},benchAnchorZ=treeCenter.z,
+ /** Further vent benches beside curved paths: centre and yaw (radians) of the long axis. */
+ extraVentBenches:{x:number;z:number;angle:number}[]=[]){
  const bark=material('courtyard-plane-bark','#9c9c80'),patch=material('courtyard-bark-cream','#d1cab0');
  const foliage=['#516a34','#698440','#7e9148','#415d31'].map((c,i)=>material('courtyard-leaf-'+i,c));
  const timber=material('courtyard-weathered-timber','#98917c'),concrete=material('courtyard-vent-concrete','#b9b5a4');
@@ -70,16 +72,27 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  // Broad seat decks on two concrete ventilation housings facing the window/path.
  // First plinth starts 2.15 m beyond the entrance centre, clear of the side path.
  const benchShift=6.5,benchX=pathX-2.05; // 1.08 m half-path + 0.78 m half-plinth + narrow verge.
- for(let i=0;i<2;i++){
-  const z=bz+benchShift-3.1+i*5.2;
-  box('vent-bench-plinth',p(benchX,.09,z),1.55,.18,4.5,concrete);
-  box('vent-bench-body',p(benchX,.46,z),1.35,.65,4.2,concrete);
+ // One vent bench around (cx, cz); local offsets are turned with the bench (long axis = local z).
+ const ventBench=(cx:number,cz:number,angle=0)=>{
+  const cos=Math.cos(angle),sin=Math.sin(angle);
+  const part=(name:string,lx:number,y:number,lz:number,w:number,h:number,d:number,mat:StandardMaterial)=>{
+   box(name,p(cx+lx*cos+lz*sin,y,cz-lx*sin+lz*cos),w,h,d,mat).rotation.y=angle;
+  };
+  part('vent-bench-plinth',0,.09,0,1.55,.18,4.5,concrete);
+  part('vent-bench-body',0,.46,0,1.35,.65,4.2,concrete);
   for(const side of [-1,1]){
-   box('vent-dark-opening',p(benchX+side*.683,.46,z),.025,.40,3.8,dark);
-   for(let n=0;n<6;n++)box('vent-horizontal-louvre',p(benchX+side*.71,.29+n*.066,z),.045,.025,3.78,metal);
+   part('vent-dark-opening',side*.683,.46,0,.025,.40,3.8,dark);
+   for(let n=0;n<6;n++)part('vent-horizontal-louvre',side*.71,.29+n*.066,0,.045,.025,3.78,metal);
   }
-  for(let n=0;n<11;n++)box('vent-bench-seat-slat',p(benchX,.825,z-1.95+n*.39),1.48,.09,.355,timber);
- }
+  for(let n=0;n<11;n++)part('vent-bench-seat-slat',0,.825,-1.95+n*.39,1.48,.09,.355,timber);
+ };
+ for(let i=0;i<2;i++)ventBench(benchX,bz+benchShift-3.1+i*5.2);
+ for(const b of extraVentBenches)ventBench(b.x,b.z,b.angle);
+ // Axis-aligned footprint of a turned bench (plinth half extents .78 × 2.25).
+ const turnedFootprint=({x,z,angle}:{x:number;z:number;angle:number})=>{
+  const c=Math.abs(Math.cos(angle)),s=Math.abs(Math.sin(angle));
+  return {x:center.x+x,z:center.z+z,halfX:c*.78+s*2.25,halfZ:s*.78+c*2.25};
+ };
  const bin=add(MeshBuilder.CreateCylinder('courtyard-bin',{height:.85,diameter:.38,tessellation:12},scene),dark,p(benchX-1.2,.7,bz+benchShift+5));
  box('bin-post',p(bin.position.x-center.x,.28,bin.position.z-center.z),.08,.56,.08,metal);
  // The balcony looks further along the courtyard, toward a small sand play area.
@@ -138,17 +151,19 @@ export function createCourtyardDetails(scene:Scene,parent:Mesh,center:Vector3,gr
  const box2=(x:number,z:number,halfX:number,halfZ:number)=>({x:center.x+x,z:center.z+z,halfX,halfZ});
  // Geometry is static: reduce thousands of individual details to one draw per material.
  for(const [mat,parts] of batches){const merged=Mesh.MergeMeshes(parts,true,true,undefined,false,false);if(merged){merged.name=mat.name+'-batch';merged.material=mat;merged.parent=parent;merged.isPickable=false;merged.receiveShadows=true;}}
- return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2,trees,
+ return {treeCenter:p(tx,0,tz),playCenter:p(playX,0,playZ),benchCenter:p(benchX,0,bz+benchShift),playBenchCenter:p((beamX+seatX)/2,0,(beamZ+seatZ)/2),planeTreeCount:5,ventBenchCount:2+extraVentBenches.length,trees,
   // Solid vent benches (centre, half extents) and seats an animal could jump onto (top heights).
   obstacles:[
    // Both vent benches as one block: the 0.7 m gap between them is no path.
    box2(benchX,bz+benchShift-.5,.78,4.85),
+   ...extraVentBenches.map(turnedFootprint),
    box2(beamX,beamZ,.3,1.15),box2(seatX-.1,seatZ,.35,1.0),box2(benchX-1.2,bz+benchShift+5,.22,.22),
    ...posts.map(([x,z])=>box2(playX+x,playZ+z,.16,.16)),box2(playX+.6,playZ-.7,1.15,.75), // posts, rope net
    ...shrubs.map(([dx,dz])=>{const [x,z]=aroundPlay(dx,dz);return box2(x,z,.75,.75);}),box2(entryShrubX,entryShrubZ,.95,.95),
    ...[[2,12],[-5,25],[6,34]].map(([dx,dz])=>{const [x,z]=aroundPlay(dx,dz);return box2(x,z,.2,.2);}),
   ],
   // The two broad vent-bench decks in front of the flat (seat top, centre, half extents of the slats).
+  // Turned benches further along the path are plain seats: deck hopping assumes neighbouring, aligned decks.
   decks:[0,1].map(i=>({x:center.x+benchX,z:center.z+bz+benchShift-3.1+i*5.2,y:groundY+.87,halfX:.68,halfZ:2.05})),
-  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),p(beamX,.61,beamZ),p(seatX+.03,.5,seatZ),p(playX-1,1.1,playZ+1.6)],dispose:()=>textures.forEach(t=>t.dispose())};
+  seats:[...[0,1].map(i=>p(benchX,.87,bz+benchShift-3.1+i*5.2)),...extraVentBenches.map(b=>p(b.x,.87,b.z)),p(beamX,.61,beamZ),p(seatX+.03,.5,seatZ),p(playX-1,1.1,playZ+1.6)],dispose:()=>textures.forEach(t=>t.dispose())};
 }

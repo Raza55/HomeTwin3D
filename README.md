@@ -114,7 +114,7 @@ npm run build
 npm run build -- --mode addon
 ```
 
-Der Stand 0.5.49 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
+Der Stand 0.5.49 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in der [Modellhistorie](docs/MODEL_HISTORY.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
 
 Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant WebSocket API**.
 
@@ -135,7 +135,8 @@ Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant
 - [Projektstand, wichtige Funktionen und Performance-Optimierungen](PROJECT_STATUS.md)
 - [Neue Geräte, Warnungen, TV Dial und PC-Screenshots](docs/DEVICES_AND_ALERTS.md)
 - [Optionaler Windows-/MQTT-Screenshot-Helfer](tools/pc-screen/README.md)
-- [Blender-Workflow und Modellhistorie](BLENDER_WORKFLOW.md)
+- [Eigenes Modell mit Blender einbinden (auch mit KI-Agenten)](BLENDER_WORKFLOW.md)
+- [Modellhistorie der Referenzwohnung](docs/MODEL_HISTORY.md)
 - [Änderungsverlauf](CHANGELOG.md)
 - [Herkunft, Ausgangscommits und Weiterentwicklung](ORIGIN.md)
 - [Historische Erweiterungen des früheren Forks](FORK_CHANGES.md) · [English](FORK_CHANGES.en.md)

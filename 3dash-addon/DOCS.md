@@ -70,7 +70,7 @@ Einzelheiten: [Energie, Demo, Tiere und Filter](../docs/ENERGY_DEMO_WILDLIFE.md)
 
 - [Erste Schritte](../docs/GETTING_STARTED.md)
 - [Funktionen und Grenzen](../PROJECT_STATUS.md)
-- [Blender-Workflow](../BLENDER_WORKFLOW.md)
+- [Eigenes Modell mit Blender einbinden](../BLENDER_WORKFLOW.md)
 - [Fehler und Vorschläge](https://github.com/Raza55/HomeTwin3D/issues)
 
 

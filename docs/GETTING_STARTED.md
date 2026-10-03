@@ -49,7 +49,7 @@ unsicheren Seiten deutlich langsamer.
    nur eine temporäre Kopie; die Blender-Datei bleibt bearbeitbar. Ein eingebettetes Manifest beschreibt
    Lampen, Rollos, Geräte und Sensoren.
 
-Ausführlich: [Blender-Workflow](../BLENDER_WORKFLOW.md#export-und-import).
+Ausführlich, mit allen Eigenschaften, Stolperfallen und der Arbeit mit KI-Agenten: [Eigenes Modell mit Blender einbinden](../BLENDER_WORKFLOW.md).
 
 ## 4. Verbinden und Modell laden
 

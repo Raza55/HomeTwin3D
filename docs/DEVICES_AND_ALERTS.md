@@ -14,7 +14,7 @@ Der Rauchmarker folgt `sensor.rauchstatus_balkon` und erscheint nur beim ausdrü
 
 `EchoMarkers` zeigt Dot-/Show-Symbole sowie Bereitschaft, Wiedergabe, Pause, Stummschaltung und Nichterreichbarkeit. Das Popup bietet Titel, Lautstärke und die vom jeweiligen HA-Mediengerät unterstützten Befehle. Offline-Geräte besitzen keine aktiven Steuerungen.
 
-Die drei Modellobjekte lassen sich über den Assistenten oder das Stiftsymbol neu zuordnen. Bewusst leere Zuordnungen und bestehende IDs bleiben beim Reimport erhalten. Die Beispielzuordnungen sind installationsspezifisch und stehen im [Blender-Verlauf](../BLENDER_WORKFLOW.md).
+Die drei Modellobjekte lassen sich über den Assistenten oder das Stiftsymbol neu zuordnen. Bewusst leere Zuordnungen und bestehende IDs bleiben beim Reimport erhalten. Die Beispielzuordnungen sind installationsspezifisch und stehen in der [Modellhistorie](MODEL_HISTORY.md).
 
 ## Kaffeevollautomat
 

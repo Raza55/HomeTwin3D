@@ -139,7 +139,7 @@ http://127.0.0.1:5187/HomeTwin3D/tools/model-view-qa.html?a=../.qa/alt.glb&b=../
 
 ## 8. Schritt E – Dokumentieren
 
-- In [BLENDER_WORKFLOW.md](../BLENDER_WORKFLOW.md) oben einen Abschnitt `## <Thema> vNN (Datum)` ergänzen: was sich
+- In [MODEL_HISTORY.md](MODEL_HISTORY.md) oben einen Abschnitt `## <Thema> vNN (Datum)` ergänzen: was sich
   geändert hat, welche Skripte beteiligt sind, Kennzahlen (entfernte/neue Dreiecke, Bytes), Import-Seite und Backup-Schlüssel.
 - In [PROJECT_STATUS.md](../PROJECT_STATUS.md) den aktuellen Modellstand anpassen.
 

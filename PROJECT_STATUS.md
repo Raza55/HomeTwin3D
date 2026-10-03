@@ -154,7 +154,7 @@ Der Sonnenstand wird aus Zeit, Standort und Nordausrichtung berechnet. Das Dashb
 
 ### Bereits dokumentierte Messungen
 
-Die [Blender-Dokumentation](BLENDER_WORKFLOW.md) hält frühere v89/v90-Vergleiche fest: GLB-Größe von 99.956.180 auf 90.867.400 Bytes (rund 9,1 % weniger); 7.437.987 Dreiecksecken bytegenau geprüft. Schattenproxies benötigen in diesem Modell rund 22,8 MB zusätzliche Geometriebuffer. Schattenbündelung und Transmission-Culling sparten in drei Perspektiven 475/420/461 Draw Calls (13,8/11,9/13,3 %) bei damals pixelgleichen Bildern.
+Die [Modellhistorie](docs/MODEL_HISTORY.md) hält frühere v89/v90-Vergleiche fest: GLB-Größe von 99.956.180 auf 90.867.400 Bytes (rund 9,1 % weniger); 7.437.987 Dreiecksecken bytegenau geprüft. Schattenproxies benötigen in diesem Modell rund 22,8 MB zusätzliche Geometriebuffer. Schattenbündelung und Transmission-Culling sparten in drei Perspektiven 475/420/461 Draw Calls (13,8/11,9/13,3 %) bei damals pixelgleichen Bildern.
 
 Diese Zahlen sind historische, modellabhängige Messungen, keine neue Messreihe dieses Dokumentationslaufs und keine garantierte FPS-Steigerung. Aktuelle Unit-Tests prüfen die funktionalen Eigenschaften mit Testdaten. Erneute visuelle Messungen erfordern die jeweiligen lokalen GLBs und einen Browser/GPU-Prüflauf.
 
@@ -189,7 +189,7 @@ Damit sind 82 automatisierte Tests erfolgreich. Unter Node 26 melden einzelne Te
 
 Zusätzliche `tools/*.test.mjs` und `tools/*-qa.html` prüfen bestimmte Modellversionen oder visuelle Abläufe. Sie sind nicht alle Bestandteil der fünf npm-Testgruppen und benötigen teilweise Dateien aus `../blender/` oder `.qa/`. Die QA-Seiten werden über den Vite-Entwicklungsserver geöffnet, etwa `/HomeTwin3D/tools/tv-media-qa.html`; sie sind nicht Bestandteil des Produktionsbuilds. Manche Seiten bieten einen ausdrücklichen Importknopf, der lokale Browserdaten verändert.
 
-In diesem Lauf wurden weder echte Geräte geschaltet noch HA/Add-on-Deployment oder eine neue visuelle GPU-Prüfung durchgeführt. Modellhistorie und Reproduktionsskripte stehen in [BLENDER_WORKFLOW.md](BLENDER_WORKFLOW.md).
+In diesem Lauf wurden weder echte Geräte geschaltet noch HA/Add-on-Deployment oder eine neue visuelle GPU-Prüfung durchgeführt. Modellhistorie und Reproduktionsskripte stehen in [docs/MODEL_HISTORY.md](docs/MODEL_HISTORY.md).
 
 ## Bekannte Grenzen und nächste sinnvolle Arbeiten
 

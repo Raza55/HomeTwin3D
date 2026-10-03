@@ -32,9 +32,9 @@ Die Darstellung verwendet Echtzeit-Näherungen. TV-Screenshots sind kein HDMI-Li
 
 Aufnahmen aus den Testsimulationen mit simulierten Zuständen. Sie zeigen die Referenzwohnung des Projekts, die nicht im Repository enthalten ist. Keine echten Desktop-Screenshots. [Bildnachweise und zugehörige Prüfseiten](docs/images/README.md).
 
-**Grundriss mit simulierten Batteriewarnungen**
+**Gesamter Plan am Abend: Lampen- und Rollo-Markierungen, Filterleiste rechts, Werkzeugleiste und Wetter oben**
 
-![3D-Grundriss mit gerätebezogenen Batteriewarnungen](docs/images/floorplan-battery-warnings.png)
+![Gesamtansicht der 3D-Wohnung mit leuchtenden Lampen, Markierungen und Bedienleisten](docs/images/floorplan-overview.png)
 
 **Kaffeeprogramm mit Status, Restzeit und Stopp-Aktion**
 

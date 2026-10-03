@@ -155,6 +155,33 @@
   opacity: 1;
 }
 
+/* Marker filter: a narrow column of category toggles below the toolbar. */
+.dashboard-marker-filter {
+  position: absolute;
+  top: 148px;
+  right: 32px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.dashboard-marker-filter .dashboard-icon-btn {
+  width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--muted); opacity: .55;
+  cursor: pointer; transition: background .15s, color .15s, opacity .15s;
+}
+.dashboard-marker-filter .dashboard-icon-btn.active { color: var(--accent); opacity: 1; background: color-mix(in srgb, var(--accent-dim) 55%, transparent); }
+.dashboard-marker-filter .dashboard-icon-btn:disabled { cursor: default; }
+.dashboard-marker-filter .dashboard-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-marker-filter .dashboard-icon-btn:hover:not(:disabled) { color: var(--text); opacity: 1; }
+}
+
 @media (max-width: 768px) {
   .dashboard-wrapper {
     flex-direction: column;
@@ -176,4 +203,5 @@
     top: 64px;
     right: 18px;
   }
+  .dashboard-marker-filter { top: 118px; right: 18px; }
 }

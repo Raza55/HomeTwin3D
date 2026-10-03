@@ -41,6 +41,8 @@ export interface RenderSettings {
   sketchSpecular: number;
   /** Energy flow over the sketch model (textures off). */
   energyView: boolean;
+  /** Marker filter: main categories hidden on the plan (lights, blinds, ...). */
+  hiddenMarkerCategories?: string[];
 }
 
 export interface EnvironmentSettings {

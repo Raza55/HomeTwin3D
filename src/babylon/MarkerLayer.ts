@@ -22,8 +22,14 @@ import { MarkerVertexBuffers } from './MarkerVertexBuffers';
  * The overlay is a separate utility scene, so mirror probes, glow and shadow
  * passes never see it. `?markers=dom` restores positioned DOM markers.
  */
+/** Main kinds of plan markers, shown or hidden together (filter bar; the day demo per chapter). */
+export type MarkerCategory = 'light' | 'blind' | 'climate' | 'door' | 'device' | 'media';
+export const MARKER_CATEGORIES: MarkerCategory[] = ['light', 'blind', 'climate', 'door', 'device', 'media'];
+
 export interface MapMarkerSpec {
   id: string;
+  /** Filter category; markers without one (warnings) are always shown. */
+  category?: MarkerCategory;
   element: () => HTMLElement | null | undefined;
   /** World anchor for this frame, written into `out`; null hides the marker. */
   anchor: (out: Vector3) => Vector3 | null;
@@ -171,7 +177,9 @@ export class MarkerLayer {
         if (!element || !projection) continue;
         // Scripted first-person shots (day demo) show the room without plan markers.
         // The energy view shows only its own labels.
-        if (this.scene.metadata?.hideMarkers || (!!this.scene.metadata?.energyView !== !!spec.energy)) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
+        // `markerCategories`: the categories shown (filter bar or day demo chapter); unset shows all.
+        const shown = this.scene.metadata?.markerCategories as ReadonlySet<MarkerCategory> | undefined;
+        if (this.scene.metadata?.hideMarkers || (!!this.scene.metadata?.energyView !== !!spec.energy) || (spec.category && shown && !shown.has(spec.category))) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         const point = spec.anchor(this.point);
         if (!point) { if (this.mode === 'dom') setMarkerStyle(element, 'display', 'none'); continue; }
         marker.point.copyFrom(point);

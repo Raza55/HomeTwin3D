@@ -1,17 +1,25 @@
-import { useEffect, useRef, type DependencyList } from 'react';
+import { createContext, createElement, useContext, useEffect, useRef, type DependencyList, type ReactNode } from 'react';
 import type { Scene } from '@babylonjs/core';
-import { getMarkerLayer, type MapMarkerSpec, type MarkerGroup, type MarkerPlacement } from '../babylon/MarkerLayer';
+import { getMarkerLayer, type MapMarkerSpec, type MarkerCategory, type MarkerGroup, type MarkerPlacement } from '../babylon/MarkerLayer';
 import './MapMarkers.css';
+
+/** The filter category of every marker registered below (the marker filter on the plan's right edge). */
+const CategoryContext = createContext<MarkerCategory | undefined>(undefined);
+export function MarkerCategoryScope({ value, children }: { value: MarkerCategory; children: ReactNode }) {
+  return createElement(CategoryContext.Provider, { value }, children);
+}
 
 /** Registers a component's map markers with the scene's marker layer while `deps` are unchanged. */
 export function useMapMarkers(scene: Scene, build: () => MapMarkerSpec[], deps: DependencyList) {
   const group = useRef<MarkerGroup | null>(null);
+  const category = useContext(CategoryContext);
   useEffect(() => {
-    const added = getMarkerLayer(scene).add(build());
+    const specs = build();
+    const added = getMarkerLayer(scene).add(category ? specs.map(spec => spec.category ? spec : { ...spec, category }) : specs);
     group.current = added;
     return () => { added.dispose(); if (group.current === added) group.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, ...deps]);
+  }, [scene, category, ...deps]);
   return group;
 }
 

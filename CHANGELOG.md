@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.47 – Markierungsfilter (03.10.2026)
+
+- Neue schmale Leiste rechts unter der Werkzeugleiste: Licht, Rollos, Lüftung, Türen & Fenster, Geräte und Medien lassen sich einzeln aus- und einblenden; die Auswahl bleibt gespeichert. Warnungen (Wasser, Batterie) bleiben immer sichtbar.
+- Tagesdemo: Jedes Kapitel zeigt nur die Markierungen, um die es geht (z. B. Bad: Licht und Lüftung, Kochen: Licht und Lüftung, Videoabend: Medien und Licht); Wetter-, Hof- und Energiekapitel zeigen keine. Die Leiste zeigt dabei die Auswahl der Demo, die eigene Einstellung gilt danach wieder.
+
 ## 0.5.46 – Demo: Hue-Sync-Stimmung beim Videoabend wieder da (03.10.2026)
 
 - Der Videoabend zeigt wieder das atmosphärische Hue-Sync-Licht rund um den Fernseher. Ursache war die mit 0.5.43 eingeführte Vorbereitung der Skizzenansicht vor dem Demostart: Das Umschalten bei dunklen Lampen ließ sie danach weniger Flächen beleuchten. Die Vorbereitung entfällt; der Wechsel zur Energieansicht liegt weiter hinter dem Schleier.

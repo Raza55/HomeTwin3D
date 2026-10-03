@@ -20,7 +20,10 @@ import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Footprints, Move3d, Orbit, Image as ImageIcon, Zap } from 'lucide-react';
+import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
+import { MarkerCategoryScope } from '../../components/useMapMarkers';
+import { MARKER_CATEGORIES, type MarkerCategory } from '../../babylon/MarkerLayer';
+import { CHAPTER_MARKERS } from '../../services/dayDemo/story';
 import { WalkthroughCamera, nextNavigationMode, type NavigationMode } from '../../babylon/WalkthroughCamera';
 import { Animation, Camera, Color3, Color4, CubicEase, EasingFunction, Matrix, ShadowGenerator, Tools, Vector3, type AbstractMesh, type IPointerEvent, type Mesh, type PickingInfo, type Observer, type Scene, type TransformNode } from '@babylonjs/core';
 import { createParkEnvironment } from '../../babylon/ParkEnvironment';
@@ -730,6 +733,21 @@ export default function Dashboard() {
   const handleShowTexturesChange = useCallback((enabled: boolean) => applyTextures(enabled), [applyTextures]);
   const applyTexturesRef = useRef(applyTextures);
   applyTexturesRef.current = applyTextures;
+  // Marker filter (right edge): hidden main categories, remembered; the day demo sets its own per chapter.
+  const [hiddenCategories, setHiddenCategories] = useState<MarkerCategory[]>(() => (getSetting('render').hiddenMarkerCategories ?? []).filter((c): c is MarkerCategory => (MARKER_CATEGORIES as string[]).includes(c)));
+  const [demoCategories, setDemoCategories] = useState<MarkerCategory[] | null>(null);
+  const toggleCategory = useCallback((category: MarkerCategory) => setHiddenCategories(current => {
+    const next = current.includes(category) ? current.filter(c => c !== category) : [...current, category];
+    updateSettings('render', { hiddenMarkerCategories: next });
+    return next;
+  }), []);
+  useEffect(() => {
+    const ctx = sceneCtxRef.current;
+    if (!ctx) return;
+    const shown = demoCategories ?? MARKER_CATEGORIES.filter(c => !hiddenCategories.includes(c));
+    ctx.scene.metadata = { ...ctx.scene.metadata, markerCategories: shown.length === MARKER_CATEGORIES.length ? undefined : new Set(shown) };
+    ctx.requestRender();
+  }, [hiddenCategories, demoCategories, sceneReady]);
   // Day demo: its energy chapters show the energy view ('now', then the week).
   const [demoEnergyMode, setDemoEnergyMode] = useState<'now' | 'week' | null>(null);
   // Day demo: a dark veil while the plan switches between textures and the sketch model
@@ -1916,6 +1934,8 @@ export default function Dashboard() {
           }));
         }
         if (id === 'visitor') wildlifeRef.current?.visit();
+        // Only the markers the chapter is about (the plan is calmer, e.g. none at all outside).
+        setDemoCategories(CHAPTER_MARKERS[id] ?? null);
       });
       setDayDemoController(controller);
     }).catch(error => {
@@ -1929,6 +1949,7 @@ export default function Dashboard() {
       ha.requestHandler = null;
       setDemoEnergyMode(null);
       setDemoVeil(false);
+      setDemoCategories(null);
       applyTexturesRef.current(getSetting('render').showTextures, false);
       if (demoWildlife && !wildlifeEnabledRef.current) { wildlifeRef.current?.dispose(); wildlifeRef.current = null; }
       controller?.dispose();
@@ -2519,7 +2540,7 @@ export default function Dashboard() {
       )}
       <div className="dashboard">
         <canvas ref={canvasRef} tabIndex={0} aria-label="3D-Wohnung" onPointerLeave={leaveQuick} onWheel={closeQuick} />
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <LightClusterMarkers scene={sceneCtxRef.current.scene} config={configRef.current} meshes={meshMapRef.current} states={lastStatesRef.current} onOpen={showQuick} onLeave={leaveQuick} onAssign={id=>{closeQuick();setMatchingCategory(configRef.current?.model?.floorplan?.objects.find(o=>o.id===id)?.domain==='light'?'light':'other');setMatchingObjectId(id);setMatchingOpen(true);}}/>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="light"><LightClusterMarkers scene={sceneCtxRef.current.scene} config={configRef.current} meshes={meshMapRef.current} states={lastStatesRef.current} onOpen={showQuick} onLeave={leaveQuick} onAssign={id=>{closeQuick();setMatchingCategory(configRef.current?.model?.floorplan?.objects.find(o=>o.id===id)?.domain==='light'?'light':'other');setMatchingObjectId(id);setMatchingOpen(true);}}/></MarkerCategoryScope>}
 
 
         {matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <Suspense fallback={null}><VisualMatchingGuide scene={sceneCtxRef.current.scene} initialConfig={configRef.current} objectId={matchingObjectId} objectIds={matchingObjectIds} category={matchingCategory}
@@ -2595,6 +2616,19 @@ export default function Dashboard() {
             <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
           </button>
         </div>
+        {sceneReady && !(dayDemoController ? demoEnergyMode : !showTextures && energyView) && (
+          <div className="dashboard-marker-filter" role="group" aria-label={t('markers.filter')}>
+            {([['light', Lightbulb], ['blind', Blinds], ['climate', Fan], ['door', DoorOpen], ['device', WashingMachine], ['media', Tv]] as const).map(([category, Icon]) => {
+              const shown = dayDemoController ? (demoCategories ?? MARKER_CATEGORIES).includes(category) : !hiddenCategories.includes(category);
+              return (
+                <button key={category} type="button" className={`dashboard-icon-btn${shown ? ' active' : ''}`} disabled={!!dayDemoController}
+                  aria-pressed={shown} aria-label={t(`markers.category.${category}`)} title={t(`markers.category.${category}`)} onClick={() => toggleCategory(category)}>
+                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {navigationMode !== 'normal' && !dayDemoController && <div className="walkthrough-controls" aria-label="Rundgang-Steuerung">
           <span><strong>{t(`dashboard.nav.${navigationMode}`)}</strong> · WASD / Pfeiltasten · Rechts ziehen: umsehen{navigationMode === 'fly' ? ' · Q/E: ab/auf' : ' · Tür anklicken: öffnen/schließen'} · Esc: Normal</span>
@@ -2679,17 +2713,17 @@ export default function Dashboard() {
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
         {(dayDemoController ? !!demoEnergyMode : !showTextures && energyView && haSeen) && sceneReady && sceneCtxRef.current && configRef.current && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} mode={dayDemoController ? demoEnergyMode ?? undefined : undefined} onClose={() => { if (!dayDemoController) handleShowTexturesChange(true); }} /></Suspense>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} />}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="door"><DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} /></MarkerCategoryScope>}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && <TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <ITMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={itOpen} onOpen={setITOpen} onSave={(id,it)=>{const next=structuredClone(configRef.current!);const object=next.model?.floorplan?.objects.find(o=>o.id===id);if(object){object.it=it;updateConfig(next);handleReloadModel();}}}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <CoffeeMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={coffeeOpen} onOpen={setCoffeeOpen} onAssign={id=>{setCoffeeOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <EchoMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={echoOpen} onOpen={setEchoOpen} onAssign={id=>{setEchoOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && <MarkerCategoryScope value="media"><TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><ITMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={itOpen} onOpen={setITOpen} onSave={(id,it)=>{const next=structuredClone(configRef.current!);const object=next.model?.floorplan?.objects.find(o=>o.id===id);if(object){object.it=it;updateConfig(next);handleReloadModel();}}}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><CoffeeMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={coffeeOpen} onOpen={setCoffeeOpen} onAssign={id=>{setCoffeeOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="media"><EchoMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={echoOpen} onOpen={setEchoOpen} onAssign={id=>{setEchoOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/></MarkerCategoryScope>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <BatteryWarningMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <WaterLeakMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <FanMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={fanOpen} onOpen={setFanOpen} onAssign={id=>{setFanOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <ApplianceMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingOpen(true);}}/>}
-        {!matchingOpen && sceneReady && sceneCtxRef.current && <BlindMarkers scene={sceneCtxRef.current.scene} meshes={blindMeshMapRef.current} config={configRef.current!} states={lastStatesRef.current} onAssign={id=>{handleBlindModalClose();closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingOpen(true);}} onOpen={openBlindModal}/>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="climate"><FanMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={fanOpen} onOpen={setFanOpen} onAssign={id=>{setFanOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><ApplianceMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingOpen(true);}}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && <MarkerCategoryScope value="blind"><BlindMarkers scene={sceneCtxRef.current.scene} meshes={blindMeshMapRef.current} config={configRef.current!} states={lastStatesRef.current} onAssign={id=>{handleBlindModalClose();closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingOpen(true);}} onOpen={openBlindModal}/></MarkerCategoryScope>}
         <BlindModal
           anchor={blindAnchor} connected={haStatus === 'connected'} config={configRef.current!} states={lastStatesRef.current}
           visible={blindModalVisible}

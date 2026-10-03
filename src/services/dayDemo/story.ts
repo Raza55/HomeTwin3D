@@ -610,6 +610,18 @@ const room = (r: RoomRole, zoom = .42): Framing => ({ at: { kind: 'room', room: 
 const anchor = (at: ShotAnchor, zoom = .42): Framing => ({ at, zoom, tilt: -.05 });
 const overview = (zoom: number, tilt: number): Framing => ({ at: 'overview', zoom, tilt });
 
+/**
+ * Plan markers per chapter (filter categories): only what the chapter is about, so the plan stays calm.
+ * Chapters not listed show none (weather over the site, the courtyard, the energy view has its own labels).
+ */
+export const CHAPTER_MARKERS: Record<string, ('light' | 'blind' | 'climate' | 'door' | 'device' | 'media')[]> = {
+  night: ['door'], wake: ['light', 'blind'], sunrise: ['blind'], coffee: ['device', 'light'], bath: ['light', 'climate'],
+  breakfast: ['media'], away: ['door', 'light'], chores: ['device'], shade: ['blind'], warning: ['blind', 'door'],
+  storm: ['blind', 'light'], clearing: ['blind'], home: ['door', 'light', 'media'], cooking: ['light', 'climate'],
+  airing: ['door', 'blind'], sunset: ['blind', 'light'], board: ['light', 'blind'], cinema: ['media', 'light'],
+  gaming: ['device', 'light'], goodnight: ['light', 'blind'], nightlight: ['light'],
+};
+
 export const CHAPTER_FRAMING: Record<string, Framing> = {
   night: anchor(ENTRANCE, .5), wake: room('bedroom', .4), sunrise: room('living', .55), coffee: anchor({ kind: 'coffee' }, .36),
   bath: room('bath', .32), breakfast: anchor({ kind: 'tv' }, .45), away: anchor(ENTRANCE, .4), chores: anchor({ kind: 'between', a: { kind: 'washer' }, b: { kind: 'room', room: 'living' }, share: .45 }, .55),

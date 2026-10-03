@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { TubeConfig, TubeLineConfig, TubeInputUnit, TubeOriginDirection, TubeFlowType, LightPosition } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { fineSliderRange } from '../utils/editorControls';
-import LucideIcon from './SidePanel/cards/LucideIcon';
+import LucideIcon from './LucideIcon';
 import { FormPanel, AccordionSection } from './FormPanel';
 import EntityPicker, { type HAEntityOption } from './EntityPicker';
 import { useTranslation } from '../contexts/LanguageContext';

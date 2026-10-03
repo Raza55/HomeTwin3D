@@ -32,7 +32,7 @@ entsprechenden Editor-Funktionen gesetzt.
 
 ## Editor und Bedienung
 
-- Der Editor ist als eigener Eintrag auf der obersten Ebene des Seitenpanels erreichbar.
+- Der Editor öffnet sich aus den Einstellungen (Zahnrad neben dem Logo).
 - Die Editor-Kategorien verwenden kompakte Lucide-Icons mit Anzahl, Tooltip und
   zugänglichem `aria-label` statt langer Tab-Texte.
 - Die globalen Transformationsmodi Verschieben, Drehen und Skalieren stehen direkt in

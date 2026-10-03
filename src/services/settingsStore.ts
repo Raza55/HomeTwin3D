@@ -84,9 +84,6 @@ export interface ControlsSettings {
 export const DEFAULT_CAMERA_SENSITIVITY: CameraSensitivity = { rotate: 100, tilt: 100, zoom: 100, pan: 100 };
 
 export interface MiscSettings {
-  panelRatio: number | null;
-  /** Side panel folded away (kept across reloads, e.g. on the wall tablet). */
-  panelCollapsed?: boolean;
   language: LanguageCode;
   /** Changed defaults already applied to this browser (see applyDefaultChanges). */
   defaultsVersion?: number;
@@ -160,7 +157,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     homeView: null,
   },
   misc: {
-    panelRatio: null,
     language: getDefaultLanguage(),
     defaultsVersion: 1,
   },
@@ -240,14 +236,8 @@ function migrate(): void {
     ].forEach(k => localStorage.removeItem(k));
   }
 
-  // Migrate panelRatio from standalone key
-  const panelRatio = localStorage.getItem('panelRatio');
-  if (panelRatio !== null) {
-    const current = getSettings();
-    current.misc.panelRatio = parseFloat(panelRatio);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-    localStorage.removeItem('panelRatio');
-  }
+  // The side panel (and its size) is gone.
+  localStorage.removeItem('panelRatio');
 }
 
 /** Convert a flat settings object to the new sectioned format. */

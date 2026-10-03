@@ -106,7 +106,6 @@ http://127.0.0.1:5187/HomeTwin3D/tools/model-view-qa.html?a=../.qa/alt.glb&b=../
 - `clip` blendet alles oberhalb dieser Höhe aus (Decke). `find` listet die Bounds passender Meshes. `doors=open` öffnet vor
   dem Rendern alle Türen.
 - Vite liefert geänderte Dateien unter `.qa/` teils gecacht aus; nach Änderungen einen neuen Dateinamen verwenden.
-- Für Leistungsmessungen das Seitenpanel einklappen.
 
 ## 7. Schritt D – Import in die App
 

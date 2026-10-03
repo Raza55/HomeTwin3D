@@ -92,8 +92,8 @@ und die gemeinsame Version für alle Geräte.
 
 **Auf dem Plan:** Die Leiste oben rechts schaltet zwischen Texturen, **Energiefluss**, Lauf-/Flugmodus
 und der Startansicht um. Die schmale Leiste darunter **filtert die Markierungen** nach Hauptkategorie
-(Licht, Rollos, Lüftung, Türen & Fenster, Geräte, Medien). Optionale Karten (Sensoren, Skripte, Verläufe)
-legt man über Einstellungen → *Karten anordnen* an; erst dann erscheint links ein Kartenpanel.
+(Licht, Rollos, Lüftung, Türen & Fenster, Geräte, Medien). Der Plan nutzt die ganze Breite; ein Seitenpanel
+gibt es nicht.
 
 Mehr zu Energiefluss, Tagesdemo, Tieren und Filter: [Energie, Demo, Tiere und Filter](ENERGY_DEMO_WILDLIFE.md).
 Geräte und Warnungen im Detail: [Geräte und Warnungen](DEVICES_AND_ALERTS.md).

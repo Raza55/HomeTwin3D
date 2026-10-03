@@ -155,86 +155,7 @@ export const SIMULATION_CONFIG: AppConfig = {
     { id: '8686bae5-c0e4-4c6a-a277-7d149c37780a', name: 'patio' },
     { id: '1a2a8c38-32e6-4f25-b6cb-47a42009b96e', name: 'living' },
   ],
-  sidePanel: {
-    columns: 4,
-    rowHeight: 56,
-    cards: [
-      // ── Indicator cards ──
-      {
-        id: 'sim-indicator-temp',
-        type: 'indicator' as const,
-        title: 'Temperature',
-        showTitle: true,
-        entityId: 'sensor.indoor_temperature',
-        unit: '°C',
-        precision: 1,
-        icon: 'Thermometer',
-        layout: { x: 0, y: 2, w: 4, h: 2 },
-      },
-      {
-        id: 'sim-indicator-humidity',
-        type: 'indicator' as const,
-        title: 'Humidity',
-        showTitle: true,
-        entityId: 'sensor.indoor_humidity',
-        unit: '%',
-        precision: 0,
-        icon: 'Droplets',
-        layout: { x: 2, y: 1, w: 2, h: 2 },
-      },
-      {
-        id: 'sim-indicator-power',
-        type: 'indicator' as const,
-        title: 'Power',
-        showTitle: true,
-        entityId: 'sensor.home_power',
-        unit: 'W',
-        precision: 0,
-        icon: 'Zap',
-        layout: { x: 0, y: 0, w: 1, h: 2 },
-      },
-      {
-        id: 'sim-indicator-co2',
-        type: 'indicator' as const,
-        title: 'CO₂',
-        showTitle: true,
-        entityId: 'sensor.indoor_co2',
-        unit: 'ppm',
-        precision: 0,
-        icon: 'Wind',
-        layout: { x: 1, y: 0, w: 1, h: 2 },
-      },
-      // ── Graph card ──
-      {
-        id: 'sim-graph-temp',
-        type: 'graph' as const,
-        title: 'Temperature (24h)',
-        showTitle: true,
-        entityId: 'sensor.indoor_temperature',
-        period: '24h',
-        layout: { x: 0, y: 2, w: 4, h: 3 },
-      },
-      // ── Script / action cards ──
-      {
-        id: 'sim-script-goodnight',
-        type: 'script' as const,
-        title: 'Good Night',
-        showTitle: true,
-        entityId: 'script.goodnight',
-        icon: 'Moon',
-        layout: { x: 0, y: 5, w: 2, h: 1 },
-      },
-      {
-        id: 'sim-script-movie',
-        type: 'script' as const,
-        title: 'Movie Mode',
-        showTitle: true,
-        entityId: 'script.movie_mode',
-        icon: 'Clapperboard',
-        layout: { x: 2, y: 5, w: 2, h: 1 },
-      },
-    ],
-  },
+  // No cards: the plan uses the whole width, like a fresh installation.
   tubes: [
     {
       id: 'sim-tube-internet',
@@ -345,7 +266,6 @@ export const SIMULATION_SETTINGS: AppSettings = {
     homeView: null,
   },
   misc: {
-    panelRatio: null,
     language: 'de-DE',
   },
 };

@@ -5,10 +5,10 @@ import type { DisplayConfig, HAState, HAHistoryPoint } from '../types';
 import { fetchHistory, generateDemoHistory } from '../services/haHistoryApi';
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import LucideIcon from './SidePanel/cards/LucideIcon';
-import './SidePanel/cards/IndicatorModal.css';
+import LucideIcon from './LucideIcon';
+import './DisplayModal.css';
 
-// --- Thermostat gauge helpers (same as IndicatorModal) ---
+// --- Thermostat gauge helpers (thermostat dial) ---
 const ARC_SWEEP = 240;
 const ARC_START = 150;
 const GAUGE_R = 90;

@@ -18,7 +18,7 @@ import { notifyEntityStates } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
-import { lazy, Suspense, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
 import { MarkerCategoryScope } from '../../components/useMapMarkers';
@@ -64,8 +64,7 @@ import { createSmartDeviceMesh, removeSmartDeviceMesh, updateSmartDeviceState, t
 import { getConfig, updateConfig, getModelBlob, getModelObjectBlob } from '../../services/configApi';
 import { bindFloorplanMeshes } from '../../babylon/FloorplanBindings';
 import { applyFloorplanLightState, configureFloorplanShadows, configureFloorplanLightInfluence, createLightVariantPrewarmer, createShadowMapPrewarmer, enableClusteredFloorplanLights, individualFloorplanLights, invalidateFloorplanShadows, prewarmFloorplanShadowShaders } from '../../babylon/FloorplanLighting';
-import { getEntityCache, setEntityCache } from '../../services/entityCache';
-import type { HAEntityOption } from '../../components/EntityPicker';
+import { setEntityCache } from '../../services/entityCache';
 import { getSetting, updateSettings, DEFAULT_CAMERA_SENSITIVITY, type CameraSensitivity, type HomeViewPose } from '../../services/settingsStore';
 import { HAConnection, type HAConnectionStatus, type HALike, setActiveHAConnection } from '../../services/haWebSocket';
 import { DemoHAConnection } from '../../services/demoHAConnection';
@@ -99,10 +98,9 @@ import RemoteModal from '../../components/RemoteModal';
 import BlindModal from '../../components/BlindQuickControls';
 import BlindMarkers from '../../components/BlindMarkers';
 import DisplayModal from '../../components/DisplayModal';
-import SidePanel from '../../components/SidePanel/SidePanel';
 import { dashboardTourSteps } from '../../components/GuidedTour/tourSteps';
 import { SIMULATION_CONFIG, SIMULATION_MODEL_URL } from '../../data/simulationData';
-import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, LightSceneOption, CardLayout, SidePanelCard } from '../../types';
+import type { AppConfig, DisplayConfig, LightConfig, RemoteButton, HAState, LightSceneOption } from '../../types';
 import './Dashboard.css';
 import { markStartup } from '../../babylon/StartupTiming';
 import { enableTouchZoneBatching } from '../../babylon/TouchZoneBatch';
@@ -114,7 +112,6 @@ const SettingsModal = lazy(() => import('../../components/SettingsModal'));
 const DebugPanel = lazy(() => import('../../components/DebugPanel'));
 const EnergyFlowView = lazy(() => import('../../components/EnergyFlow/EnergyFlowView'));
 const GuidedTour = lazy(() => import('../../components/GuidedTour/GuidedTour'));
-const CardPropertiesPanel = lazy(() => import('../../components/SidePanel/CardPropertiesPanel'));
 
 const LONG_PRESS_MS = 500;
 const LIGHT_INTENSITY_BASE = 0.8;
@@ -196,7 +193,6 @@ export default function Dashboard() {
   const smartDevicesByEntityRef = useRef<Map<string, SmartDeviceMeshMap[string][]>>(new Map());
   const displayMeshMapRef = useRef<DisplayMeshMap>({});
   const tubeMapRef = useRef<TubeMap>({});
-  const panelEntityIdsRef = useRef<Set<string>>(new Set());
   /** Entities referenced by the 3D configuration; only their events need a new frame. */
   const sceneEntityIdsRef = useRef<Set<string>>(new Set());
   const displayIdsByEntityRef = useRef<Map<string, string[]>>(new Map());
@@ -302,43 +298,7 @@ export default function Dashboard() {
   const modelDiagonalRef = useRef(1);
   const [debugOpen, setDebugOpen] = useState(false);
   const [homeViewSetting, setHomeViewSetting] = useState(false);
-  const [panelSize, setPanelSize] = useState(() => {
-    const mobile = window.matchMedia('(max-width: 768px)').matches;
-    const saved = getSetting('misc').panelRatio;
-    if (saved !== null) {
-      return mobile ? window.innerHeight * saved : window.innerWidth * saved;
-    }
-    return mobile ? 280 : 350;
-  });
-
-  // Resizing fires per pointer move: the size follows at once, storing waits for a pause.
-  const panelRatioSaveRef = useRef<number | undefined>(undefined);
-  const handlePanelResize = useCallback((size: number) => {
-    setPanelSize(size);
-    window.clearTimeout(panelRatioSaveRef.current);
-    panelRatioSaveRef.current = window.setTimeout(() => {
-      const mobile = window.matchMedia('(max-width: 768px)').matches;
-      const ratio = mobile ? size / window.innerHeight : size / window.innerWidth;
-      updateSettings('misc', { panelRatio: ratio });
-    }, 300);
-  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [cardStates, setCardStates] = useState<Record<string, HAState>>({});
-  const [gridEditMode, setGridEditMode] = useState(false);
-  const [panelCollapsed,setPanelCollapsed]=useState(()=>getSetting('misc').panelCollapsed ?? false);
-  // The side panel only holds cards: without any (and while not arranging them) the plan uses the whole width;
-  // settings and editor open from the gear next to the logo.
-  useEffect(()=>{updateSettings('misc',{panelCollapsed});},[panelCollapsed]);
-  const panelCollapsedRef=useRef(panelCollapsed);panelCollapsedRef.current=panelCollapsed;
-  const [cardPanelOpen, setCardPanelOpen] = useState(false);
-  const [editingCard, setEditingCard] = useState<SidePanelCard | null>(null);
-  // Snapshot the entity list when the card panel opens — keeps a stable ref for EntityPicker memoization.
-  const cardPanelEntities = useMemo<HAEntityOption[]>(
-    () => (cardPanelOpen ? getEntityCache() : []),
-    [cardPanelOpen],
-  );
-  const [sidePanelConfig, setSidePanelConfig] = useState<import('../../types').SidePanelConfig | undefined>(undefined);
-  const showSidePanel = !!sidePanelConfig?.cards?.length || gridEditMode;
   const [settingsMounted, setSettingsMounted] = useState(false);
   useEffect(() => { if (settingsOpen) setSettingsMounted(true); }, [settingsOpen]);
   const [showTour, setShowTour] = useState(
@@ -367,7 +327,6 @@ export default function Dashboard() {
   };
 
   const rebuildEntityIndexes = useCallback((config: AppConfig | null) => {
-    const panelEntityIds = new Set<string>();
     const displayIdsByEntity = new Map<string, string[]>();
     const tubeIdsBySensor = new Map<string, string[]>();
 
@@ -376,13 +335,6 @@ export default function Dashboard() {
       if (ids) ids.push(id);
       else map.set(entityId, [id]);
     };
-
-    for (const card of config?.sidePanel?.cards ?? []) {
-      panelEntityIds.add(card.entityId);
-      if (card.type === 'indicator' && card.climateEntityId) {
-        panelEntityIds.add(card.climateEntityId);
-      }
-    }
 
     for (const display of [...(config?.displays ?? []), ...Object.values(displayMeshMapRef.current).map(e=>e.config)]) {
       for (const entityId of displayStateDependencies(display)) {
@@ -397,7 +349,6 @@ export default function Dashboard() {
       }
     }
 
-    panelEntityIdsRef.current = panelEntityIds;
     smartDevicesByEntityRef.current = indexByEntity(Object.values(smartDeviceMeshMapRef.current), entry => entry.config.entityId);
     sceneEntityIdsRef.current = collectEntityIds(config);
     displayIdsByEntityRef.current = displayIdsByEntity;
@@ -1046,14 +997,12 @@ export default function Dashboard() {
       // Load config
       if (simulationMode) {
         configRef.current = SIMULATION_CONFIG;
-        setSidePanelConfig(SIMULATION_CONFIG.sidePanel);
         rebuildEntityIndexes(SIMULATION_CONFIG);
       } else {
         try {
           const config = await getConfig();
           if (disposed) return;
           configRef.current = config;
-          setSidePanelConfig(config.sidePanel);
           rebuildEntityIndexes(config);
           if (config.location.northOffset !== undefined) setNorthOffset(config.location.northOffset);
         } catch (e) {
@@ -1624,7 +1573,7 @@ export default function Dashboard() {
       },
       onStateChanged: (entityId: string, state: HAState) => {
         // Scene-bound entities render promptly instead of at the static floor rate;
-        // other sensors only affect DOM overlays or the side panel.
+        // other sensors only affect DOM overlays.
         if (sceneEntityIdsRef.current.has(entityId) || displayIdsByEntityRef.current.has(entityId) || isHueSyncControl(entityId)) {
           sceneCtxRef.current?.requestRender();
         }
@@ -1672,10 +1621,6 @@ export default function Dashboard() {
           applyRemoteMode(lightId, state.state);
         }
 
-        if (panelEntityIdsRef.current.has(entityId)) {
-          setCardStates(prev => ({ ...prev, [entityId]: state }));
-        }
-
         // Update tube labels referencing this sensor.
         for (const tubeId of tubeIdsBySensorRef.current.get(entityId) ?? []) {
           const entry = tubeMapRef.current[tubeId];
@@ -1707,7 +1652,6 @@ export default function Dashboard() {
           setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));
         }
         refreshQuickStates(n=>n+1);
-        const newCardStates: Record<string, HAState> = {};
         states.forEach((state) => {
           lastStatesRef.current[state.entity_id] = state;
           if (state.entity_id === modalEntityIdRef.current) setModalState(state);
@@ -1717,11 +1661,7 @@ export default function Dashboard() {
             if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
           }
           for (const entry of smartDevicesByEntityRef.current.get(state.entity_id) ?? []) updateSmartDeviceState(entry, state);
-          if (panelEntityIdsRef.current.has(state.entity_id)) newCardStates[state.entity_id] = state;
         });
-        if (Object.keys(newCardStates).length > 0) {
-          setCardStates(prev => ({ ...prev, ...newCardStates }));
-        }
         // Apply initial remote mode colors (mode sensor states are now in lastStatesRef)
         for (const [modeEntityId, lightId] of Object.entries(modeSensorToLight)) {
           const modeState = lastStatesRef.current[modeEntityId];
@@ -1749,10 +1689,6 @@ export default function Dashboard() {
       haRef.current = demo;
       setActiveHAConnection(demo);
       const sensorIds: string[] = [];
-      for (const c of config.sidePanel?.cards ?? []) {
-        if (c.type !== 'script') sensorIds.push(c.entityId);
-        if (c.type === 'indicator' && c.climateEntityId) sensorIds.push(c.climateEntityId);
-      }
       // Include display source entity IDs in demo mode
       for (const d of config.displays ?? []) {
         for (const s of d.sources) {
@@ -1803,9 +1739,6 @@ export default function Dashboard() {
     let controller: DayDemoController | null = null;
     setSunLiveMode(false);
     let lastWeatherKey = '';
-    // The demo uses the whole width; the side panel comes back as it was afterwards.
-    const panelBefore = panelCollapsedRef.current;
-    setPanelCollapsed(true);
     let touch: import('../../components/DayDemo/boardTouch').BoardTouch | null = null;
     let powerTimer: ReturnType<typeof setInterval> | null = null;
     let unsubscribeChapters: (() => void) | null = null;
@@ -2010,7 +1943,6 @@ export default function Dashboard() {
       ha.serviceHook = null;
       setDayDemoController(null);
       setCoffeeOpen(null);
-      setPanelCollapsed(panelBefore);
       delete (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo;
       // Back to the real day: live sun, real (or no) weather, live theme.
       setSunLiveMode(true);
@@ -2411,84 +2343,6 @@ export default function Dashboard() {
     return () => canvas.removeEventListener('touchstart', handler);
   }, [resetView, homeViewSetting, saveHomeView]);
 
-  // Grid edit mode: save layout changes to server
-  const handleGridLayoutChange = useCallback((layouts: Record<string, CardLayout>) => {
-    const config = configRef.current;
-    if (!config?.sidePanel) return;
-    const updatedCards = config.sidePanel.cards.map(card => {
-      const newLayout = layouts[card.id];
-      return newLayout ? { ...card, layout: newLayout } : card;
-    });
-    const updatedPanel = { ...config.sidePanel, cards: updatedCards };
-    configRef.current = { ...config, sidePanel: updatedPanel };
-    rebuildEntityIndexes(configRef.current);
-    setSidePanelConfig(updatedPanel);
-    // Sync editing card layout if properties panel is open
-    setEditingCard(prev => {
-      if (!prev) return prev;
-      const newLayout = layouts[prev.id];
-      return newLayout ? { ...prev, layout: newLayout } : prev;
-    });
-    try { updateConfig({ sidePanel: updatedPanel }); } catch (err) {
-      console.warn('[Config] Failed to save grid layout:', err);
-    }
-  }, [rebuildEntityIndexes]);
-
-  const handleEditGridDone = useCallback(() => {
-    setGridEditMode(false);
-  }, []);
-
-  const handleCardAdd = useCallback(() => {
-    setEditingCard(null);
-    setCardPanelOpen(true);
-  }, []);
-
-  const handleCardEdit = useCallback((card: SidePanelCard) => {
-    // Read the latest version from config (layout may have changed via drag/resize)
-    const latest = configRef.current?.sidePanel?.cards.find(c => c.id === card.id);
-    setEditingCard(latest ?? card);
-    setCardPanelOpen(true);
-  }, []);
-
-  const handleCardDelete = useCallback((cardId: string) => {
-    const config = configRef.current;
-    if (!config?.sidePanel) return;
-    const updatedCards = config.sidePanel.cards.filter(c => c.id !== cardId);
-    const updatedPanel = { ...config.sidePanel, cards: updatedCards };
-    configRef.current = { ...config, sidePanel: updatedPanel };
-    rebuildEntityIndexes(configRef.current);
-    updateConfig({ sidePanel: updatedPanel });
-    setSidePanelConfig(updatedPanel);
-  }, [rebuildEntityIndexes]);
-
-  const handleCardSave = useCallback((card: SidePanelCard) => {
-    const config = configRef.current;
-    if (!config) return;
-    const panel = config.sidePanel ?? { cards: [] };
-    const exists = panel.cards.some(c => c.id === card.id);
-    const updatedCards = exists
-      ? panel.cards.map(c => c.id === card.id ? card : c)
-      : [...panel.cards, card];
-    const updatedPanel = { ...panel, cards: updatedCards };
-    configRef.current = { ...config, sidePanel: updatedPanel };
-    rebuildEntityIndexes(configRef.current);
-    updateConfig({ sidePanel: updatedPanel });
-    setSidePanelConfig(updatedPanel);
-    setCardPanelOpen(false);
-    setEditingCard(null);
-  }, [rebuildEntityIndexes]);
-
-  // Live preview: update the grid as the user edits fields (no persist)
-  const handleCardPreview = useCallback((card: SidePanelCard) => {
-    const config = configRef.current;
-    if (!config?.sidePanel) return;
-    const updatedCards = config.sidePanel.cards.map(c => c.id === card.id ? card : c);
-    const updatedPanel = { ...config.sidePanel, cards: updatedCards };
-    // Update state for live render, but don't persist yet
-    rebuildEntityIndexes({ ...config, sidePanel: updatedPanel });
-    setSidePanelConfig(updatedPanel);
-  }, [rebuildEntityIndexes]);
-
   // Apply camera controls based on device type
   useEffect(() => {
     const camera = sceneCtxRef.current?.camera;
@@ -2533,7 +2387,7 @@ export default function Dashboard() {
     };
   }, [camControls.desktop, camControls.mobile, cameraSensitivity, sceneReady, computeIdealRadius]);
 
-  // Resize Babylon engine when canvas container changes size (e.g. side panel open/close)
+  // Resize Babylon engine when the canvas changes size (window, rotation)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2546,51 +2400,7 @@ export default function Dashboard() {
 
 
   return (
-    <div className="dashboard-wrapper" style={{ '--panel-size': `${panelCollapsed||!showSidePanel?0:panelSize}px` } as React.CSSProperties}>
-      {showSidePanel && <SidePanel
-        config={sidePanelConfig}
-        ha={haRef.current}
-        cardStates={cardStates}
-        onSettingsOpen={() => setSettingsOpen(true)}
-        onStartEdit={() => setGridEditMode(true)}
-        panelSize={panelSize}
-        collapsed={panelCollapsed}
-        onToggleCollapsed={()=>setPanelCollapsed(value=>!value)}
-        onPanelResize={size=>{setPanelCollapsed(false);handlePanelResize(size);}}
-        editMode={gridEditMode}
-        onEditDone={handleEditGridDone}
-        onLayoutChange={handleGridLayoutChange}
-        onSetTemperature={(entityId, temperature) => {
-          haRef.current?.callService('climate', 'set_temperature', entityId, { temperature });
-        }}
-        onSetHvacMode={(entityId, mode) => {
-          haRef.current?.callService('climate', 'set_hvac_mode', entityId, { hvac_mode: mode });
-        }}
-        onCardAdd={handleCardAdd}
-        onCardEdit={handleCardEdit}
-        onCardDelete={handleCardDelete}
-        onExitSimulation={simulationMode ? () => {
-          setSimulationMode(false);
-          navigate('/onboarding');
-        } : undefined}
-      />}
-      {cardPanelOpen && (
-        <Suspense fallback={null}>
-          <CardPropertiesPanel
-            card={editingCard}
-            haEntities={cardPanelEntities}
-            onSave={handleCardSave}
-            onCancel={() => {
-              // Drop the live preview: show the stored cards again.
-              setSidePanelConfig(configRef.current?.sidePanel);
-              if (configRef.current) rebuildEntityIndexes(configRef.current);
-              setCardPanelOpen(false);
-              setEditingCard(null);
-            }}
-            onPreview={handleCardPreview}
-          />
-        </Suspense>
-      )}
+    <div className="dashboard-wrapper">
       <div className="dashboard">
         <canvas ref={canvasRef} tabIndex={0} aria-label="3D-Wohnung" onPointerLeave={leaveQuick} onWheel={closeQuick} />
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="light"><LightClusterMarkers scene={sceneCtxRef.current.scene} config={configRef.current} meshes={meshMapRef.current} states={lastStatesRef.current} onOpen={showQuick} onLeave={leaveQuick} onAssign={id=>{closeQuick();setMatchingCategory(configRef.current?.model?.floorplan?.objects.find(o=>o.id===id)?.domain==='light'?'light':'other');setMatchingObjectId(id);setMatchingOpen(true);}}/></MarkerCategoryScope>}
@@ -2849,7 +2659,6 @@ export default function Dashboard() {
               onSketchColorChange={handleSketchColorChange}
               sketchSpecular={sketchSpecular}
               onSketchSpecularChange={handleSketchSpecularChange}
-              onEditGrid={() => setGridEditMode(true)}
               onChangeHomeView={() => { changeNavigationMode('normal'); setHomeViewSetting(true); }}
               haSettings={getSetting('connection').haSettings}
               onHASettingsSave={(settings) => {
@@ -2864,6 +2673,7 @@ export default function Dashboard() {
               onStartTour={() => { setSettingsOpen(false); setShowTour(true); }}
               onStartDayDemo={() => { setSettingsOpen(false); closeQuick(); setDayDemo(true); }}
               onOpenEditor={() => navigate('/editor')}
+              onExitSimulation={simulationMode ? () => { setSimulationMode(false); navigate('/onboarding'); } : undefined}
             />
           </Suspense>
         )}
@@ -2883,7 +2693,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {showTour && (
+        {showTour && sceneReady && (
           <Suspense fallback={null}>
             <GuidedTour
               steps={dashboardTourSteps}

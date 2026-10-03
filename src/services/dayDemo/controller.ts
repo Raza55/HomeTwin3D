@@ -24,7 +24,7 @@ export interface DayDemoSceneDeps {
   location(): { latitude: number; longitude: number; northOffset: number };
   /** Applies weather to particles/fog/park and returns the cloud cover factor for the sun. */
   applyWeather(weather: WeatherData): number;
-  /** Throttled: virtual clock minutes and weather for HUD, theme and side panels. */
+  /** Throttled: virtual clock minutes and weather for HUD, theme and overlays. */
   onClock?(clockMinutes: number, weather: WeatherData): void;
   /** First-person camera for the tour's window/PC/TV shots (optional). */
   walk?: WalkControl;

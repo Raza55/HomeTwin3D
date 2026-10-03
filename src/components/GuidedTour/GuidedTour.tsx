@@ -17,8 +17,10 @@ interface Rect {
 
 type ArrowDir = 'arrow-top' | 'arrow-bottom' | 'arrow-left' | 'arrow-right';
 
-export default function GuidedTour({ steps, onComplete }: Props) {
+export default function GuidedTour({ steps: allSteps, onComplete }: Props) {
   const t = useTranslation();
+  // e.g. the marker filter bar is hidden in the energy view
+  const [steps] = useState(() => allSteps.filter(s => !s.optional || !s.target || document.querySelector(s.target)));
   const [current, setCurrent] = useState(0);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const [keyFulfilled, setKeyFulfilled] = useState(false);

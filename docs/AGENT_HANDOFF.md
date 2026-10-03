@@ -45,7 +45,7 @@ Neue Demo-Kapitel brauchen mindestens 5 s Echtzeit (Test) und verschieben die no
 - Verdeckungsbäume der Marker (`OcclusionBVHCache`) am Geometrie-Inhalt festmachen, damit Texturwechsel sie nicht neu bauen.
 - Texturen nicht vor dem Demostart zur Shader-Vorbereitung umschalten: Bei dunklen Lampen beleuchten diese danach weniger
   Flächen.
-- Leistung immer mit eingeklapptem Seitenpanel und auf dem Zielgerät messen; NullEngine-Tests ersetzen keine GPU-Messung.
+- Leistung immer auf dem Zielgerät messen; NullEngine-Tests ersetzen keine GPU-Messung.
 
 ## Offene Grenzen
 

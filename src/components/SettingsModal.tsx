@@ -3,8 +3,8 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useNavigate } from 'react-router-dom';
 import {
   Server, Palette, Box, Wrench, ChevronLeft, ChevronRight, X,
-  LayoutTemplate, Compass, Github, Upload, RefreshCw, AlertTriangle, Clapperboard,
-  PencilRuler,
+  Compass, Github, Upload, RefreshCw, AlertTriangle, Clapperboard,
+  PencilRuler, LogOut,
 } from 'lucide-react';
 import { haSocketUrl, type HAConnectionStatus } from '../services/haWebSocket';
 import type { HASettings } from '../types';
@@ -77,9 +77,10 @@ interface Props {
   sketchSpecular: number;
   onSketchSpecularChange: (value: number) => void;
 
-  onEditGrid: () => void;
   onChangeHomeView: () => void;
   onStartTour: () => void;
+  /** Only in simulation mode: leave it and return to the onboarding. */
+  onExitSimulation?: () => void;
   /** Plays the simulated day (story, weather, devices) with a benchmark at the end. */
   onStartDayDemo: () => void;
   /** Opens the editor (lights, blinds, screens, rooms, model). */
@@ -192,7 +193,7 @@ export default function SettingsModal({
   parkMinBrightness, onParkMinBrightnessChange, wildlifeEnabled, onWildlifeEnabledChange, cameraSensitivity, onCameraSensitivityChange,
   sunShadowRes, onSunShadowResChange, onPointShadowResChange,
   showTextures, sketchColor, onSketchColorChange, sketchSpecular, onSketchSpecularChange,
-  onEditGrid, onChangeHomeView, onStartTour, onStartDayDemo, onOpenEditor,
+  onChangeHomeView, onStartTour, onStartDayDemo, onOpenEditor, onExitSimulation,
   haSettings, onHASettingsSave, haStatus,
   modelStatus, modelStatusColor, onReloadModel, onStartVisualMatching,
 }: Props) {
@@ -495,10 +496,6 @@ export default function SettingsModal({
                   <PencilRuler size={16} strokeWidth={1.6} />
                   {t('settings.openEditor')}
                 </button>}
-                <button type="button" className="settings-btn" onClick={() => { onEditGrid(); onClose(); }}>
-                  <LayoutTemplate size={16} strokeWidth={1.6} />
-                  {t('settings.editGrid')}
-                </button>
                 <button type="button" className="settings-btn" onClick={onStartTour}>
                   <Compass size={16} strokeWidth={1.6} />
                   {t('settings.startTour')}
@@ -507,6 +504,10 @@ export default function SettingsModal({
                   <Clapperboard size={16} strokeWidth={1.6} />
                   {t('settings.dayDemo')}
                 </button>
+                {onExitSimulation && <button type="button" className="settings-btn" onClick={() => { onClose(); onExitSimulation(); }}>
+                  <LogOut size={16} strokeWidth={1.6} />
+                  {t('settings.exitSimulation')}
+                </button>}
               </div>
 
               <footer className="settings-about">

@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { collectFloorplanBindings, exportFloorplanBindings, importFloorplanBindings, mergeFloorplan, readFloorplanManifest } from './floorplanImport';
-import type { AppConfig, BlindConfig, DisplayConfig, LightConfig, LightGroup, ModelConfig, RoomConfig, ShadowWallConfig, SidePanelConfig, SmartDeviceConfig, TubeConfig } from '../types';
+import type { AppConfig, BlindConfig, DisplayConfig, LightConfig, LightGroup, ModelConfig, RoomConfig, ShadowWallConfig, SmartDeviceConfig, TubeConfig } from '../types';
 import {
   saveModel as dbSaveModel,
   getModel as dbGetModel,
@@ -87,7 +87,6 @@ export function updateConfig(data: {
   smartDevices?: SmartDeviceConfig[];
   rooms?: RoomConfig[];
   location?: { latitude: number; longitude: number; northOffset?: number };
-  sidePanel?: SidePanelConfig;
   tubes?: TubeConfig[];
   homeView?: AppConfig['homeView'];
   onboarding?: { completed: boolean };

@@ -27,7 +27,7 @@ are used.
 
 ## Editor and Navigation
 
-- The editor is available as a top-level entry in the side panel.
+- The editor opens from the settings (gear next to the logo).
 - Editor categories use compact Lucide icons with counts, tooltips, and accessible
   `aria-label` values instead of long tab labels.
 - Global Move, Rotate, and Scale modes are available directly inside the 3D view.

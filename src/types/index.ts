@@ -398,7 +398,6 @@ export interface AppConfig {
   shadowWalls?: ShadowWallConfig[];
   smartDevices?: SmartDeviceConfig[];
   rooms?: RoomConfig[];
-  sidePanel?: SidePanelConfig;
   tubes?: TubeConfig[];
   /**
    * Home view for every browser of the installation (camera pose the centre
@@ -429,7 +428,6 @@ export interface FullConfig {
   shadowWalls?: ShadowWallConfig[];
   smartDevices?: SmartDeviceConfig[];
   rooms?: RoomConfig[];
-  sidePanel?: SidePanelConfig;
   tubes?: TubeConfig[];
   onboarding?: OnboardingState;
 }
@@ -523,55 +521,6 @@ export interface TubeConfig {
   labelHeight: number;
   /** Individual tube lines within this group. */
   lines: TubeLineConfig[];
-}
-
-// --- Side Panel ---
-
-export interface CardLayout {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-interface BaseCard {
-  id: string;
-  title: string;
-  showTitle?: boolean;
-  layout: CardLayout;
-}
-
-export interface ScriptCard extends BaseCard {
-  type: 'script';
-  entityId: string;
-  icon?: string;
-  longPressEntityId?: string;
-  doublePressEntityId?: string;
-}
-
-export interface IndicatorCard extends BaseCard {
-  type: 'indicator';
-  entityId: string;
-  unit?: string;
-  precision?: number;
-  icon?: string;
-  /** Optional climate entity to show heating controls in the indicator modal. */
-  climateEntityId?: string;
-}
-
-export interface GraphCard extends BaseCard {
-  type: 'graph';
-  entityId: string;
-  period: string;
-  refreshInterval?: number;
-}
-
-export type SidePanelCard = ScriptCard | IndicatorCard | GraphCard;
-
-export interface SidePanelConfig {
-  columns?: number;
-  rowHeight?: number;
-  cards: SidePanelCard[];
 }
 
 export interface HAHistoryPoint {

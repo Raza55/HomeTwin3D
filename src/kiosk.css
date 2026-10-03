@@ -27,12 +27,7 @@ html.kiosk .time-display {
 
 html.kiosk .dashboard-render-toggle { top: var(--kiosk-row); }
 
-/* Side panel and dialogs keep clear of the status bar and the home indicator. */
-html.kiosk .side-panel-inner {
-  padding-top: calc(var(--kiosk-top) + 18px);
-  padding-bottom: calc(var(--kiosk-bottom) + 12px);
-}
-
+/* Dialogs keep clear of the status bar and the home indicator. */
 html.kiosk .settings-backdrop {
   padding-top: calc(var(--kiosk-top) + 20px);
   padding-bottom: calc(var(--kiosk-bottom) + 16px);
@@ -43,8 +38,6 @@ html.kiosk .home-view-overlay { padding-top: var(--kiosk-top); }
 
 @media (max-width: 768px) {
   html.kiosk .time-display { right: calc(18px + var(--kiosk-toolbar-width) + 8px); }
-  /* The bottom panel holds the side panel content: only the home indicator matters. */
-  html.kiosk .side-panel-inner { padding-top: 12px; }
 }
 
 /* Narrow phones: no room for one row, the toolbar goes below the weather again. */

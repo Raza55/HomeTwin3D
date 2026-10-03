@@ -118,7 +118,7 @@ function applyAppearance(resolved: ResolvedTheme) {
   const [sr, sg, sb] = hexToRgb(surface);
   root.setProperty('--surface-alpha', `rgba(${sr}, ${sg}, ${sb}, 1)`);
 
-  // Side panel background (same panelBgColor but with panelOpacity)
+  // Panel background (editor, dialogs): same panelBgColor but with panelOpacity
   const alpha = s.panelOpacity / 100;
   root.setProperty('--side-panel-bg', `rgba(${sr}, ${sg}, ${sb}, ${alpha})`);
 

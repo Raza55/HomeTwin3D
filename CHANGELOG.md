@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.54 · Neuer Rundgang, kein Seitenpanel mehr (03.10.2026)
+
+- Der Rundgang erklärt in sechs kurzen Schritten die aktuelle Bedienung: Bewegen, Markierungen (Tippen öffnet die Steuerung, Halten bis der Ring sich schließt schaltet direkt, ? heißt noch nicht zugeordnet), Filterleiste, Ansichtsleiste oben rechts und das Zahnrad mit Einstellungen und Editor. Er hebt dabei jeweils das passende Bedienelement hervor und startet erst, wenn die 3D Ansicht geladen ist. In der Energieansicht ohne Filterleiste entfällt der Filterschritt.
+- Das Kartenpanel ist entfernt, samt *Karten anordnen*: Der Plan nutzt immer die ganze Breite. Bereits angelegte Karten bleiben in der gespeicherten Konfiguration, werden aber nicht mehr angezeigt.
+- Simulation: keine Demokarten mehr; *Simulation verlassen* steht jetzt in den Einstellungen.
+
 ## 0.5.53 · Finger der Tagesdemo trifft die Symbole (03.10.2026)
 
 - Der Finger der Tagesdemo zielt bei Lampen, Rollos und Fernseher auf das gezeichnete Symbol der Markierung, so wie beim PC schon zuvor. Bisher steuerte er die Glühbirne, die Mitte des Rollos oder eine geschätzte Stelle über dem Fernseher an und tippte deshalb oft neben das Symbol. Geräte ohne Symbol werden weiter an ihrer Position im Modell angetippt.

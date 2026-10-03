@@ -21,6 +21,8 @@ export interface TourStep {
   onEnterEvent?: string;
   /** Automatically advance to next step when the wait condition is fulfilled. */
   autoAdvance?: boolean;
+  /** Leave the step out when its target is not on screen when the tour starts. */
+  optional?: boolean;
 }
 
 // Short dashboard tour after onboarding: no waiting for gestures, it just explains.
@@ -28,6 +30,7 @@ export const dashboardTourSteps: TourStep[] = [
   { title: 'tour.dashboard.0.title', body: 'tour.dashboard.0.body' },
   { title: 'tour.dashboard.1.title', body: 'tour.dashboard.1.body', target: '.dashboard > canvas', spotlightPadding: 0 },
   { title: 'tour.dashboard.2.title', body: 'tour.dashboard.2.body' },
-  { title: 'tour.dashboard.3.title', body: 'tour.dashboard.3.body', target: '.side-panel', spotlightPadding: 0 },
-  { title: 'tour.dashboard.4.title', body: 'tour.dashboard.4.body', target: '.side-panel-footer', spotlightPadding: 4 },
+  { title: 'tour.dashboard.3.title', body: 'tour.dashboard.3.body', target: '.dashboard-marker-filter', spotlightPadding: 4, optional: true },
+  { title: 'tour.dashboard.4.title', body: 'tour.dashboard.4.body', target: '.dashboard-render-toggle', spotlightPadding: 4 },
+  { title: 'tour.dashboard.5.title', body: 'tour.dashboard.5.body', target: '.hud-settings', spotlightPadding: 4 },
 ];

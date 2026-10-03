@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } fro
 import type { DisplayAnimation, DisplayCondition, DisplayConfig, DisplayKind, DisplaySource, LightPosition, TextAlign } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { fineSliderRange } from '../utils/editorControls';
-import LucideIcon from './SidePanel/cards/LucideIcon';
+import LucideIcon from './LucideIcon';
 import { FormPanel, AccordionSection } from './FormPanel';
 import EntityPicker, { type HAEntityOption } from './EntityPicker';
 import { useTranslation } from '../contexts/LanguageContext';

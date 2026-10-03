@@ -1,100 +1,78 @@
-# Projektstand, Funktionen und Optimierungen
+# Funktionen, Grenzen und Technik
 
-Stand: **03.10.2026**, eigenständiges Projekt [HomeTwin3D](https://github.com/Raza55/HomeTwin3D), Branch `main` (Herkunft: [ORIGIN.md](ORIGIN.md)). Diese Übersicht beschreibt den vorhandenen Quellcode und unterscheidet ihn von lokalen Modell- und Laufzeitdaten. Einstieg und Build-Befehle stehen in der [README](README.md).
+Diese Übersicht beschreibt, wie HomeTwin3D arbeitet, was die einzelnen Funktionen voraussetzen und wo ihre Grenzen liegen.
+Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender-Workflow](BLENDER_WORKFLOW.md).
+Änderungen pro Version: [Änderungsverlauf](CHANGELOG.md).
 
-## Aktueller Release 0.5.49 vom 03.10.2026
+## Funktionsweise
 
-- Add-on 0.5.49 auf `main`; Images und beide Prüfabläufe erfolgreich. Webapp-Paket weiterhin 0.2.1.
-- Neu seit 0.5.9 (Einzelheiten im [Änderungsverlauf](CHANGELOG.md)): Tagesdemo mit 27 Kapiteln, Einleitungsdialog, Fingerbedienung der Popups,
-  Ich-Perspektive und Benchmark; Energiefluss aus dem HA-Energie-Dashboard (Zeiträume, Ebenen, einzelne Lampen über PowerCalc);
-  optionale Tiere draußen; Markierungsfilter; animierte Türen, Kippfenster, Sieben-Segment-Anzeigen, Spiegel mit Tagesverlauf.
-- Performance-Pass 0.5.43: Demo-Benchmark Desktop 2187 → 3514, größtes Einzelbild auf dem Tablet 45 000 → 9 000 Draw Calls
-  (siehe [Energie, Demo, Tiere und Filter](docs/ENERGY_DEMO_WILDLIFE.md#leistung)).
-- Modellstand v111 (Schreibtisch); Ablauf in [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md).
-- 186 JS-/TS-Tests, Typecheck, Datenschutzprüfung, öffentlicher und Add-on-Build in CI.
+- Die App läuft vollständig im Browser (React, TypeScript, Babylon.js) und verbindet sich direkt per WebSocket mit Home
+  Assistant. Der Zugriff erfolgt mit einem langlebigen Zugriffstoken, der nur im jeweiligen Browser gespeichert wird.
+- Das Wohnungsmodell ist eine GLB-Datei. Ein eingebettetes Manifest (`3dash_manifest`) beschreibt die Smart-Home-Objekte;
+  es entsteht beim Export mit der Blender-Erweiterung `tools/blender_3dash.py`.
+- Zuordnungen von Modellobjekten zu HA-Entities, Räume, Lichtkalibrierung und Einstellungen liegen in `localStorage`,
+  Modell und zusätzliche Objekte in `IndexedDB`. Beides gehört zum jeweiligen Browser und zur Adresse (Origin).
+- Das Home-Assistant-Add-on liefert die App aus und kann eine **gemeinsame Version** (Modell, Zuordnungen, Einstellungen)
+  für alle Browser im LAN bereitstellen, siehe [Add-on-Dokumentation](3dash-addon/DOCS.md).
 
-Einrichtung für neue Nutzer: [Erste Schritte](docs/GETTING_STARTED.md).
-
-## Release 0.5.9 vom 01.10.2026
-
-- Add-on 0.5.9 ist auf `main` veröffentlicht; die Images für AMD64 und ARM64 sowie beide GitHub-Prüfabläufe sind erfolgreich. Die Paketversion der Webapp bleibt 0.2.1.
-- Übertragungen desselben Browsers laufen nacheinander; neue Änderungen während eines Uploads bleiben vorgemerkt. Empfangene Assets werden vor der Übernahme vollständig geladen und zusammen gespeichert; Speicherfehler lösen einen Rollback aus.
-- Ein Entity-Index reduziert die Gerätesuche bei HA-Updates. Unzugeordnete Geräte fordern keine zusätzliche 3D-Darstellung allein wegen ihrer Domain an.
-- Ladeanzeige und p95-CPU-Framezeit in der Diagnoseanzeige ergänzt. WebGL-/Apple-Einstellungen und das Add-on-Datenformat bleiben kompatibel.
-- 145 JS-/TS-Tests, 5 Python-Tests in CI, Typecheck, Datenschutzprüfung, öffentlicher Build und Add-on-Build erfolgreich. Zusätzlich Browserprüfung mit Simulation und echter IndexedDB.
-
-Implementierung, Release-Nachweise, Messbedingungen und verbleibende Grenzen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md). Insbesondere ist die neue Warteschlange kein serverseitiger Schutz gegen gleichzeitig schreibende unterschiedliche Geräte. Der tatsächliche Update-/GPU-Test auf der privaten Hassio-/Apple-Installation wurde hier nicht durchgeführt.
-
-Die folgenden Ergänzungen und Prüfungen vom 28. und 27.09.2026 bleiben als historischer Ausgangsstand erhalten. Neuere Funktionsänderungen vom 30.09.2026 stehen im [Änderungsverlauf](CHANGELOG.md).
-
-## Ergänzungen vom 28.09.2026
-
-- Lüfter-/Dyson-Steuerung, zustandsabhängiger Rauchmarker, Echo-Mediengeräte und Kaffeeprogramme.
-- PC-/Servergruppen mit eigenem Zuordnungseditor, Messwerten und bestätigten Systemaktionen; RGB-/Bildschirmmaterialien folgen dem Gerätezustand.
-- Optionale PC-Kamera auf der Monitorfläche, begrenzter HA-Kameraproxy und separater Windows-/MQTT-Screenshot-Helfer.
-- TV Dial fordert Quellenwechsel über ein HA-Event an; die eigentliche Schaltfolge bleibt in der HA-Automation.
-- Wasserleck- und Batteriewarnungen an räumlichen Ankern. Batterien werden über HA-Geräteidentität zugeordnet.
-- Budgetierte Marker-Verdeckung, weniger Schatten-Neuberechnungen, wiederverwendete Marker-Vektoren und zustandsabhängige IT-Materialupdates.
-- Modellwerkzeuge für v94–v111 (Ablauf: [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md)) sowie zwei dokumentierte QA-Beispielbilder in der README.
-
-Bedienung, Zuordnungen, Installationsabhängigkeiten und Grenzen: [Geräte und Warnungen](docs/DEVICES_AND_ALERTS.md).
-
-### Prüfungen vom 28.09.2026
-
-| Prüfung | Ergebnis |
-| --- | --- |
-| TypeScript | Erfolgreich |
-| Floorplan / Medien | 28 / 9 Tests erfolgreich |
-| Balkon / Echo / Kaffee / IT | 3 / 3 / 4 / 5 Tests erfolgreich |
-| Beleuchtung / Performance / Walkthrough | 30 / 23 / 3 Tests erfolgreich |
-| Batterie / TV Dial | 2 / 2 Tests erfolgreich |
-| Windows-Screenshot-Helfer | 5 Python-Tests mit synthetischen Bildern erfolgreich |
-
-Summe: **112 JS-/TS-Tests und 5 Python-Tests**. Keine realen Gerätebefehle und keine Desktop-Aufnahme für diese Prüfung. Die Beispielbilder wurden aus vorhandenen QA-Aufnahmen übernommen und visuell geprüft; es wurde keine neue vollständige Browserprüfung durchgeführt. Normaler Build und Add-on-Build erfolgreich. Verbleibende Hinweise: große Vite-Chunks und veraltete Browserslist-Daten.
-
-## Lieferumfang und Versionsstand
-
-- Webapp: React/TypeScript mit Babylon.js, statischer Vite-Build und direkter Home-Assistant-WebSocket-Verbindung.
-- Paketversion in `package.json`: `0.2.1`; Add-on-Version in `3dash-addon/config.yaml`: `0.5.9` (Stand 01.10.2026). Diese Nummern sind unabhängig von den Wohnungsmodell-Versionen.
-- Lokale Modellreihe bis `Wohnung_v111_3Dash_Schreibtisch.blend` und `.glb` in `../blender/`. Das Vorhandensein der Dateien beweist nicht, welche Version ein bestimmter Browser gerade geladen hat.
-- Das Repository enthält Quellcode, Werkzeuge und Simulationsmodell. Persönliche `.blend`-/GLB-Dateien im Nachbarordner, `.qa/`, `dist/`, `node_modules/` und Browserdaten werden nicht mit Git übertragen.
-- Der Add-on-Dockerfile baut aus `Raza55/HomeTwin3D`, Branch `main`. Git-Push und Deployment bleiben getrennte Schritte; siehe README.
-
-## Funktionen und Bedienung
+## Funktionen
 
 ### Modell, Räume und Konfiguration
 
-Ein GLB lässt sich im laufenden Betrieb ersetzen. Importprüfung und Wiederherstellung des vorherigen Modells schützen vor einem fehlgeschlagenen Austausch. Gemeinsame Skalierung, Texturumschaltung und zusätzliche importierte 3D-Objekte werden im Editor verwaltet. Unterobjekte erhalten lokale Transformations-Overrides; nicht mehr passende Overrides werden bei Modellwechsel verworfen.
+Ein GLB lässt sich im laufenden Betrieb ersetzen. Importprüfung und Wiederherstellung des vorherigen Modells schützen vor
+einem fehlgeschlagenen Austausch. Gemeinsame Skalierung, Texturumschaltung und zusätzlich importierte 3D-Objekte (GLB, glTF,
+OBJ, STL) werden im Editor verwaltet. Teile des Hauptmodells lassen sich verschieben, drehen und skalieren, ohne die GLB zu
+verändern.
 
-Home-Assistant-Bereiche liefern Raum- und Gerätezuordnungen. Raumflächen können vom Boden aus erkannt und als Polygon nachbearbeitet werden. Virtuelle Wände unterstützen die Erkennung; separat platzierte Lichtblocker ergänzen fehlende Schattengeometrie. Räume besitzen konfigurierbare Farben und priorisierte Geräte. Das Seitenpanel bietet verschiebbare Karten für Skripte, Statusanzeigen und Verlaufskurven. Energie-/Datenflüsse werden als animierte Pfade dargestellt.
+Raumflächen können vom Boden aus erkannt und als Polygon nachbearbeitet werden; HA-Bereiche liefern Raumzuordnungen.
+Lichtblocker ergänzen fehlende Schattengeometrie, wo das Modell offen ist. Optionale Karten zeigen Skripte, Zustände und
+Verläufe.
 
-### Blender und stabile Gerätezuordnungen
+### Gerätezuordnung
 
-`tools/blender_3dash.py` exportiert eine temporäre aufbereitete Szene mit stabilen `ha_id`-Kennungen und einem `3dash_manifest` in den glTF-Szenen-Extras. Die Blender-Quelle bleibt bearbeitbar. Das Manifest beschreibt Geräte, Räume, Positionen und Lichtparameter; spezielle Extras beschreiben unter anderem Türen und Geräteanimationen.
+Jedes Smart-Home-Objekt im Modell trägt eine stabile Kennung (`ha_id`). Die App speichert die Zuordnung Kennung → Entity
+getrennt vom Modell (`floorplanBindings`). Ein Reimport übernimmt neue Geometrie und Positionen, behält aber Zuordnungen,
+bewusst leere Zuordnungen, Raumbestätigungen und Lichtkalibrierung. Eine gleiche Kennung mit geändertem Gerätetyp erbt keine
+Zuordnung.
 
-`floorplanImport.ts` validiert das Manifest und führt es mit vorhandenen Einstellungen zusammen. `floorplanBindings` hält Entscheidungen unabhängig vom aktuellen Modell fest, einschließlich ausdrücklich leerer Zuordnungen. Ein Reimport übernimmt neue Geometrie, erhält aber passende manuelle Zuordnungen und Kalibrierung. Gleiche IDs mit geändertem Gerätetyp dürfen keine fremden Zuordnungen erben.
+Der visuelle Assistent fokussiert jedes Objekt, markiert es im Modell und schlägt Entities vor (Name, HA-Bereich, Position).
+Schwache oder widersprüchliche Treffer werden nicht automatisch übernommen. Bereits vergebene Entities sind standardmäßig
+ausgeblendet. Zuordnungen lassen sich separat sichern und in Blender zurückspielen.
 
-Der visuelle Assistent fokussiert und markiert Objekte. Vorschläge berücksichtigen Namen, Räume und Positionen; schwache oder widersprüchliche Treffer werden nicht blind übernommen. Bestätigen speichert sofort, Überspringen verändert nichts, eine leere Zuordnung lässt sich bewusst speichern. Bereits vergebene Entities sind standardmäßig ausgeblendet; exklusive Übernahme ist ausdrücklich auswählbar. Separate Zuordnungsbackups ergänzen den vollständigen ZIP-Export.
+### Licht
 
-### Licht, Gruppen und Hue Sync
+Lampen verwenden ihre Modellgeometrie und die beim Export erzeugten Lichtquellen. Die Darstellung folgt Verfügbarkeit,
+Helligkeit, Farbe und Farbtemperatur aus HA. Lichtstrom, Reichweite und Ausrichtung sind pro Lampe kalibrierbar. Es handelt
+sich um Echtzeitbeleuchtung, keine physikalisch vollständige Lichtsimulation.
 
-Modellleuchten verwenden ihre vorhandenen Meshes und exportierten Emitter. Die Anzeige berücksichtigt HA-Verfügbarkeit, Helligkeit, RGB und Farbtemperatur. Lichtleistung, Reichweite und Ausrichtung sind kalibrierbar; die Echtzeitbeleuchtung ist keine physikalisch vollständige globale Beleuchtung.
+Hover öffnet eine Schnellsteuerung, Klick fixiert sie. Nahe Spots derselben Namensfamilie bilden einen gemeinsamen Marker mit
+gemeinsamer und einzelner Farb- und Helligkeitssteuerung; im Editor lassen sich eigene Gruppen festlegen. Mehrere Entities
+können sich eine Bediengruppe teilen und bleiben dabei getrennte HA-Entities. Die App sendet normale HA-Lichtbefehle.
 
-Hover öffnet die Schnellsteuerung, ein Klick fixiert sie. Küchenspots besitzen gemeinsame und einzelne Farb-/Helligkeitssteuerung einschließlich Farbverlauf. Die oberen und unteren Ensis-Kanäle teilen sich eine Bediengruppe, bleiben aber getrennte HA-Entities. Normale Bedienung sendet HA-Serviceaufrufe, keinen Hue-Entertainment-Stream.
+**Hue Sync:** Läuft eine Hue-Sync-Box (Schalter, Bereichsauswahl und Helligkeit als Entities), zeigt die App die beteiligten
+Lampen mit Sperrhinweis an, statt alte Farben vorzutäuschen. Welche Lampen dazugehören, ist eine feste Liste von
+Beispiel-Entities (`src/services/hueSync.ts`), die über die Installationswerte auf eigene Entities umgelenkt wird (siehe
+unten).
 
-`src/services/hueSync.ts` enthält eine installationsspezifische Liste von zehn Lampen des Bereichs `TV-Bereich 2`. Bei aktivem `switch.media_sync` und passendem Bereich zeigt die App diese Lampen blassrosa mit Sperrhinweis. Das ist eine Anzeigeanpassung; sie überschreibt keine HA-Farbe. Nach Ende der Synchronisierung erscheint wieder der reguläre Zustand. Die Liste ist statisch und muss nach Änderungen an Entities oder Entertainment-Bereichen gepflegt werden.
+### Rollos, Türen, Fenster und Schloss
 
-### Rollos, Türkontakte, Schloss und Haushaltsgeräte
+Rollo-Popups bieten Öffnen, Stopp, Schließen und je nach Gerät einen Positionsregler; Raumaktionen steuern alle Rollos
+eines Raums. Die Behang-Geometrie folgt der HA-Position.
 
-Rollo-Popups bieten Öffnen/Stopp/Schließen und je nach Fähigkeiten die Position. Raumaktionen berücksichtigen Verfügbarkeit, deduplizieren Entities und melden Befehlsfehler. HA-Raumzuordnungen haben Vorrang vor Blender-Raumlabels; Positionsregler senden beim Loslassen.
+Tür- und Fensterkontakte bewegen die markierten Türblätter im Modell. Die Dauer des aktuellen Zustands kommt aus
+`last_changed`. Bei Fenster- und Balkontüren kann nach längerer Öffnung eine Kippstellung dargestellt werden; das ist eine
+beschriftete Annahme, kein gemessener Zustand. Türschloss und Türkontakt werden getrennt angezeigt; die Schlossanzeige
+sendet keine Schlossbefehle. Türen lassen sich zusätzlich per Klick lokal öffnen und schließen, bis HA einen neuen Zustand
+meldet.
 
-Tür-/Fensterkontakte steuern markierte bewegliche Flügel. Die Dauer basiert auf `last_changed`. Bei den dafür vorgesehenen Fenster-/Balkonöffnungen wird nach 15 Minuten Öffnungsdauer eine Kippstellung dargestellt: ausdrücklich eine Visualisierungsannahme, kein gemessener Kippzustand. Die Haustür kippt nie. Kontakt und Schlossstatus sind unabhängig; entriegelt bedeutet nicht geöffnet. Die Schlossanzeige sendet keine Schlossbefehle.
+### Haushalts- und weitere Geräte
 
-Waschmaschine und Trockner besitzen getrennte GLB-Animationsclips. Zugeordnete Binärsensoren steuern Wiedergabe/Pause, Zusatzsensoren liefern Programm und Restzeit. Animationen und Statusanzeigen schalten die Geräte nicht.
+Lüfter, Luftreiniger, Saugroboter, Echo-Geräte, Kaffeevollautomat (Home Connect), Waschmaschine und Trockner sowie PC-/
+Servergruppen haben eigene Marker und Popups. Einzelheiten und Voraussetzungen: [Geräte und Warnungen](docs/DEVICES_AND_ALERTS.md).
 
-### Navigation und Innentüren
+### Navigation
 
-Die Navigation wechselt zwischen normaler Orbitansicht, Walk und Fly. Walk nutzt Bodenprüfung und Wandkollisionen; Fly erlaubt freie Höhenänderung. Die Orbitansicht wird beim Verlassen wiederhergestellt.
+Orbitansicht, Laufmodus (Walk) mit Boden- und Wandkollision und Flugmodus.
 
 | Eingabe | Wirkung |
 | --- | --- |
@@ -103,98 +81,97 @@ Die Navigation wechselt zwischen normaler Orbitansicht, Walk und Fly. Walk nutzt
 | Shift | Schneller bewegen |
 | E / Q im Flugmodus | Auf / ab |
 | Escape | Zur normalen Ansicht zurück |
-| Linksklick / kurzes Antippen im Walk-Modus | Erreichbare Innentür öffnen/schließen |
+| Linksklick / kurzes Antippen im Laufmodus | Erreichbare Innentür öffnen/schließen |
 
-Innentüren verwenden `ha_room_door`-Scharnierdaten. Ihr Zustand gilt lokal bis zum Neuladen und sendet keine HA-Befehle. Ziehen zum Umsehen löst keinen Tür-Klick aus.
+Innentüren mit Scharnierdaten (`ha_room_door`) öffnen sich lokal und senden keine HA-Befehle.
 
-### TV, Medien und Proxy
+### TV und Medien
 
-`LivingRoomTVDisplay.ts` legt eine angepasste Anzeige auf `Fernseher_Bildschirm` (Objekt-ID `4784bb9f-40cd-5e6b-9165-63d8ffbe0dc1`). `TVMediaScreen.ts` rendert Medieninhalt; `tvMedia.ts` entscheidet über die Quelle. Bestehende konfigurierte TV-Displays nutzen denselben Mechanismus. `DisplayConfig.tvMedia` kann die folgenden Standard-Entities überschreiben:
+Ein Fernseher im Modell kann Medieninformationen zeigen: Titel, App, Cover oder Screenshot und Fortschritt. Maßgeblich ist der
+Eingang des AV-Receivers: Beim Streaming-Eingang (z. B. NVIDIA SHIELD) erscheinen dessen Metadaten, beim PC-Eingang
+optional ein Desktop-Bild, bei anderen Eingängen der Eingangsname. Screenshots des Streaming-Geräts benötigen eine
+eingerichtete ADB-Integration in HA; sie werden etwa alle zehn Sekunden erneuert und sind kein Livevideo (geschützte Inhalte
+bleiben schwarz). Ohne Bild zeichnet die App für bekannte Apps einen Hintergrund mit App-Namen.
 
-| Feld | Öffentliches Beispiel |
-| --- | --- |
-| `receiver` | `media_player.living_room_receiver` |
-| `shield` | `media_player.streaming_player` |
-| `television` | `media_player.living_room_tv` |
-| `remote` | `media_player.streaming_remote` |
-| `screenshot` | `media_player.streaming_screenshot` |
-
-Der Denon-Eingang ist maßgeblich: `SHIELD Media` zeigt Titel, App, Bild und Fortschritt. `PC` und `Playststion` (vorhandene Eingangsbezeichnung, auch PlayStation/PS5 erkannt) erhalten eigene Illustrationen. Andere Eingänge zeigen ihren Namen ohne alte SHIELD-Metadaten. Ausgeschaltete oder nicht verfügbare Geräte zeigen keine veraltete Wiedergabe. Der Fortschritt läuft lokal sekündlich weiter, pausiert passend und endet an der Mediendauer.
-
-Android TV Remote kann die aktive App ergänzen; Screenshots erfordern eine entsprechend eingerichtete ADB-Integration. Bei SHIELD haben ADB-Bilder Vorrang vor Coverbildern, werden alle zehn Sekunden erneuert und während des Nachladens weiter angezeigt. Quellenwechsel, Ausschalten, Verbindungsverlust und Dispose beenden die Aktualisierung. Es handelt sich nicht um HDMI-Livevideo; geschützte Inhalte können schwarz bleiben.
-
-Bilder verwenden den HA-Medienproxy derselben konfigurierten HA-Origin. Fehlende Bilder fallen auf eine Illustration zurück. Der langlebige HA-Zugriffstoken wird nicht an Bild-URLs angehängt.
-
-- Add-on: `/ha-media/media_player.…` wird in `3dash-addon/nginx.conf` an einen festen lokalen HA-Upstream weitergeleitet. Bildbezogene URL-Tokens werden verwendet, Authorization/Cookies entfernt und Caching/URL-Logging abgeschaltet. Frontend und Nginx-Konfiguration gemeinsam bereitstellen und den installationsbezogenen Upstream prüfen.
-- Vite: `/HomeTwin3D/ha-media/media_player.…`; Öffentliches Standardziel `http://homeassistant.local:8123`. Für andere Installationen `HA_MEDIA_PROXY_TARGET` in `.env.local` setzen.
-- Andere statische Hosts benötigen eine passende Proxy-/CORS-Konfiguration für Bilder auf Canvas.
+Die Fernseher-Anzeige hängt am Modellobjekt `Fernseher_Bildschirm`. Receiver, Streaming-Gerät, TV, Fernbedienung und
+Screenshot-Quelle sind Beispiel-Entities in `src/services/tvMedia.ts`, die über die Installationswerte auf eigene Entities
+umgelenkt werden. Bilder laufen über den Medienproxy des Add-ons; der Zugriffstoken wird nicht an Bild-URLs gehängt.
 
 ### Sonne, Wetter und Außenumgebung
 
-Der Sonnenstand wird aus Zeit, Standort und Nordausrichtung berechnet. Das Dashboard liest die HA-Standortkonfiguration. Der öffentliche Basisstandort ist neutral (0, 0); private Standortwerte können über die lokale Installationskonfiguration eingebunden werden. Wetterdaten von Open-Meteo werden im Zehn-Minuten-Intervall abgefragt und beeinflussen Himmel, Dunst, nasse Wege sowie stilisierten Schnee. Regen/Schnee werden außerhalb der Wohnungsbegrenzung erzeugt.
+Der Sonnenstand wird aus Uhrzeit, Standort (aus der HA-Konfiguration) und Nordausrichtung berechnet. Wetterdaten von
+Open-Meteo steuern Himmel, Dunst, nasse Wege, Regen und Schnee.
 
-`ParkEnvironment`, `ParkAtmosphere`, `ResidentialFacade`, `CourtyardDetails` und `SiteLayout` erzeugen die Umgebung. Die Wohnungskoordinaten bleiben stabil, die Umgebung orientiert sich an lokalen Referenzen. Gebäudehöhen, Wege und Gelände sind Annäherungen; keine Vermessung und kein externer Karten-Streamingdienst.
+Die **Außenumgebung** (Park, Wege, Bäume, Nachbargebäude, Hof) ist prozedural erzeugt und orientiert sich an der Umgebung der
+Referenzwohnung. Sie wird an den Modellgrenzen und an den Rollos als Fassade ausgerichtet, bildet aber nicht die eigene
+Umgebung ab. Mit `?off=exterior` in der Adresse lässt sie sich zum Vergleich ausschalten.
+
+## Installationswerte: Beispiel-Entities umlenken
+
+Einige Funktionen verwenden im Quelltext feste **Beispiel-Entity-IDs**, weil sie keine eigene Zuordnung im Editor haben:
+
+| Funktion | Datei | Beispiele |
+| --- | --- | --- |
+| Hue-Sync-Anzeige | `src/services/hueSync.ts` | `switch.media_sync`, beteiligte Lampen |
+| Wasserleck | `src/services/waterLeak.ts` | `binary_sensor.laundry_water_leak`, `binary_sensor.kitchen_water_leak` |
+| TV-Medien | `src/services/tvMedia.ts` | `media_player.living_room_receiver`, `media_player.streaming_player`, … |
+| TV Dial | `src/services/tvDial.ts` | `automation.tv_dial_hdmi1` |
+
+Die eigenen Entities trägt man in `.private/installation.json` ein (wird nicht mit Git veröffentlicht):
+
+```json
+{
+  "entities": { "media_player.living_room_receiver": "media_player.avr" },
+  "location": { "label": "Zuhause", "latitude": 52.5, "longitude": 13.4 },
+  "author": "Name im Einleitungsdialog der Tagesdemo"
+}
+```
+
+`npm run addon:export` bzw. `npm run addon:sync` überträgt diese Werte mit der gemeinsamen Version in das Add-on; jeder
+Browser übernimmt sie von dort. Öffentliche Builds enthalten keine Installationswerte.
 
 ## Umgesetzte Optimierungen
 
-| Bereich | Umsetzung und praktische Wirkung |
+| Bereich | Umsetzung |
 | --- | --- |
-| GLB-Daten | `optimize-glb.mjs` entfernt ungenutzte Daten, teilt identische Binärblöcke, dedupliziert vollständige Vertexdatensätze und verkleinert geeignete Indizes auf 16 Bit. `verify-glb.mjs` prüft Dreiecksecken, Materialien, Bilder, Animationen und Metadaten. UV-Nähte bleiben erhalten. |
-| Sonnenschatten | `ShadowCasterBatch.ts` bündelt geeignete statische, opake und gleich transformierte Schattenwerfer. Originalmeshes bleiben für Bild und Picking erhalten. Bewegte/HA-Objekte sind ausgenommen; Änderungen lösen den Rückfall auf Originalmeshes aus. Zusätzliche Proxy-Geometrie kostet Speicher. |
-| Glasdurchgang | `TransmissionCulling.ts` filtert entsorgte, unsichtbare und außerhalb des Sichtvolumens liegende Meshes; Instanzfamilien werden zusammen erhalten. |
-| Außenobjekte | `ExteriorMeshPool.ts` verwendet gemeinsame Geometrie/Materialien für gleiche Formen bei unabhängigem Transform. |
-| Leuchten | Unveränderte Zustände schreiben weder Meshwerte noch Schattenkarten erneut. Pro empfangendem Mesh werden bis zu sechs relevante direkte Lichtquellen ausgewählt; beitragende Quellen bleiben verschattet. Emissive Oberflächen bleiben zusätzlich sichtbar. |
-| Marker | `MarkerProjection.ts` misst Canvas/Viewport einmal pro Frame, nutzt gemeinsame Projektionsmatrizen und vermeidet identische DOM-Style-Schreibzugriffe. |
-| Atmosphäre/Pfade | Zustandscaches vermeiden unnötige Farbberechnungen; Pfadinterpolation verwendet vorhandene Vektoren statt laufender Neuallokationen. |
-| Navigation | Einstieg stoppt am ersten geeigneten Startpunkt; unnötiges allgemeines Pointer-Picking entfällt in der Ich-Perspektive. Türinteraktion nutzt gezielte Prüfungen. |
-| HA-Verlauf | Verbindungsabhängiger 60-Sekunden-Cache, Zusammenfassung identischer gleichzeitiger Anfragen, Begrenzung auf 128 Ergebniseinträge und erneuter Versuch nach Fehlern. |
-| Diagramme | Wiederverwendbare Graphgeometrie reduziert wiederholte Arbeit bei großen Verlaufsreihen und erhält SVG-Koordinaten. |
-| Icons/Build | Generierte dynamische Lucide-Loader laden Icons nach Bedarf. `predev`/`prebuild` erzeugen die Liste neu. Babylon-/React-Chunks sind getrennt; große 3D-Chunks werden nicht pauschal vorgeladen. |
-| PWA | Kleine Installations-Caches, große 3D-Chunks erst bei Verwendung, eigener Icon-Cache. Offline-Caching ersetzt keine HA-Verbindung für Live-Zustände und Befehle. |
+| GLB-Daten | `tools/optimize-glb.mjs` entfernt ungenutzte Daten, teilt identische Binärblöcke, dedupliziert Vertexdaten und verkleinert geeignete Indizes auf 16 Bit, verlustfrei. `tools/verify-glb.mjs` prüft das Ergebnis. |
+| Sonnenschatten | `ShadowCasterBatch.ts` bündelt statische, opake Schattenwerfer. Originalmeshes bleiben für Bild und Auswahl erhalten; bewegte und HA-Objekte sind ausgenommen. |
+| Glasdurchgang | `TransmissionCulling.ts` lässt unsichtbare und außerhalb des Sichtvolumens liegende Meshes weg. |
+| Außenobjekte | `ExteriorMeshPool.ts` teilt Geometrie und Materialien gleicher Formen. |
+| Leuchten | Unveränderte Zustände schreiben weder Meshwerte noch Schattenkarten neu. Pro Mesh zählen bis zu sechs relevante Lichtquellen. Schattenkarten werden verteilt neu berechnet (höchstens 4 pro Bild, Tablet 2); dunkle Lampen warten. |
+| Marker | Gemeinsame Projektion pro Bild, budgetierte Verdeckungsprüfung, keine identischen DOM-Schreibzugriffe. |
+| Spiegel | Umgebung wird über sechs Bilder aufgenommen, eine Würfelseite pro Bild. |
+| Rendern | Ohne Bewegung ruht die Render-Schleife. Tablets erhalten eine eigene Leistungsstufe (`?device=tablet`). |
+| HA-Verlauf | 60-Sekunden-Cache, Zusammenfassung gleichzeitiger Anfragen, Begrenzung der Ergebnismenge. |
+| Build/PWA | Icons und große 3D-Chunks werden nach Bedarf geladen; Babylon- und React-Chunks sind getrennt. |
 
-### Bereits dokumentierte Messungen
+Die Bildrate hängt vor allem von Modellgröße, Anzahl leuchtender Lampen und Zielgerät ab. `?perf` zeigt Bilder pro Sekunde,
+CPU-Zeit und Draw Calls; die Tagesdemo misst am Ende einen Leistungswert.
 
-Die [Modellhistorie](docs/MODEL_HISTORY.md) hält frühere v89/v90-Vergleiche fest: GLB-Größe von 99.956.180 auf 90.867.400 Bytes (rund 9,1 % weniger); 7.437.987 Dreiecksecken bytegenau geprüft. Schattenproxies benötigen in diesem Modell rund 22,8 MB zusätzliche Geometriebuffer. Schattenbündelung und Transmission-Culling sparten in drei Perspektiven 475/420/461 Draw Calls (13,8/11,9/13,3 %) bei damals pixelgleichen Bildern.
-
-Diese Zahlen sind historische, modellabhängige Messungen, keine neue Messreihe dieses Dokumentationslaufs und keine garantierte FPS-Steigerung. Aktuelle Unit-Tests prüfen die funktionalen Eigenschaften mit Testdaten. Erneute visuelle Messungen erfordern die jeweiligen lokalen GLBs und einen Browser/GPU-Prüflauf.
-
-## Architektur und Wartung
+## Architektur
 
 | Aufgabe | Einstieg im Quellcode |
 | --- | --- |
-| Szenenaufbau und Laufzeitintegration | `src/pages/Dashboard/Dashboard.tsx`, `src/babylon/SceneManager.ts`, `ModelLoader.ts` |
+| Szenenaufbau und Laufzeit | `src/pages/Dashboard/Dashboard.tsx`, `src/babylon/SceneManager.ts`, `ModelLoader.ts` |
 | Import, Zuordnung, Persistenz | `src/services/floorplanImport.ts`, `floorplanMatching.ts`, `floorplanReassignment.ts`, `configApi.ts`, `storageApi.ts` |
+| Gemeinsame Version | `src/services/sharedStore.ts`, `3dash-addon/nginx.conf` |
 | Licht und Modellzustände | `src/babylon/FloorplanBindings.ts`, `FloorplanLighting.ts`, `src/services/lightClusters.ts`, `hueSync.ts` |
 | Türen, Geräte, Kamera | `src/babylon/DoorAnimation.ts`, `ApplianceAnimation.ts`, `RoomDoors.ts`, `WalkthroughCamera.ts` |
-| HA und Verläufe | `src/services/haWebSocket.ts`, `haHistoryApi.ts`, `src/utils/graphGeometry.ts` |
+| HA und Verläufe | `src/services/haWebSocket.ts`, `haHistoryApi.ts` |
 | Medien | `src/services/tvMedia.ts`, `src/babylon/TVMediaScreen.ts`, `LivingRoomTVDisplay.ts` |
+| Tagesdemo, Energiefluss | `src/services/dayDemo/`, `src/services/energyFlow.ts`, `src/babylon/EnergyFlowLayer.ts` |
 | Build und Hosting | `vite.config.ts`, `3dash-addon/Dockerfile`, `3dash-addon/nginx.conf` |
 
-Konfiguration und Einstellungen werden in `localStorage`, Binärassets in `IndexedDB` gespeichert. Wechsel von Origin oder Browser trennt diese Datenbestände. Vor Modellwechseln und Umzügen ZIP- sowie Zuordnungsbackup exportieren. Lokale IndexedDB-Sicherungsschlüssel aus früheren Modellarbeiten sind keine versionskontrollierten Backups.
+## Bekannte Grenzen
 
-## Historische Validierung am 27.09.2026
-
-Ausgeführt mit Node.js 26.10.0 / npm 12.0.2:
-
-| Prüfung | Ergebnis / Abdeckung |
-| --- | --- |
-| `npm run typecheck` | Erfolgreich, keine TypeScript-Fehler |
-| `npm run test:floorplan` | 28 erfolgreich: Import, Matching, persistente Zuordnung, Lichtgruppen, Hue Sync |
-| `npm run test:media` | 9 erfolgreich: Quellenwechsel, Status, Fortschritt und erlaubte Bildquellen |
-| `npm run test:lighting` | 27 erfolgreich: Türen, Geräte, Licht, Persistenz, Marker und Renderzustände |
-| `npm run test:performance` | 15 erfolgreich: Cache, Graphen, Icons, Instanzen, Schatten, Transmission und GLB |
-| `npm run test:walkthrough` | 3 erfolgreich: Türen, Moduswechsel, Kollisionen und Wiederherstellung der Kamera |
-
-Damit sind 82 automatisierte Tests erfolgreich. Unter Node 26 melden einzelne Testläufe eine experimentelle `localStorage`-Warnung; die Prüfungen bestehen trotzdem. Beide Produktionsbuilds (`npm run build` und `npm run build -- --mode addon`) sind ebenfalls erfolgreich. Vite meldet große Chunks und Browserslist veraltete Browserdaten; das sind verbleibende Build-Hinweise, keine Build-Fehler.
-
-Zusätzliche `tools/*.test.mjs` und `tools/*-qa.html` prüfen bestimmte Modellversionen oder visuelle Abläufe. Sie sind nicht alle Bestandteil der fünf npm-Testgruppen und benötigen teilweise Dateien aus `../blender/` oder `.qa/`. Die QA-Seiten werden über den Vite-Entwicklungsserver geöffnet, etwa `/HomeTwin3D/tools/tv-media-qa.html`; sie sind nicht Bestandteil des Produktionsbuilds. Manche Seiten bieten einen ausdrücklichen Importknopf, der lokale Browserdaten verändert.
-
-In diesem Lauf wurden weder echte Geräte geschaltet noch HA/Add-on-Deployment oder eine neue visuelle GPU-Prüfung durchgeführt. Modellhistorie und Reproduktionsskripte stehen in [docs/MODEL_HISTORY.md](docs/MODEL_HISTORY.md).
-
-## Bekannte Grenzen und nächste sinnvolle Arbeiten
-
-- Das eigenständige HomeTwin3D-Add-on vor einem produktiven Umzug testen; ein bestehendes 3Dash-Add-on wird nicht automatisch ersetzt.
-- Installationsspezifische Hue-/TV-Entities, Proxyziele und Modellkennungen bei Übernahme in andere Haushalte anpassen; sie werden nicht vollständig automatisch erkannt.
-- Individuelle Blender-Quellen und GLBs separat sichern und verteilen; ein Clone stellt sie nicht wieder her.
-- GPU-Kosten großer Modelle und der Schattenproxies auf den tatsächlichen Zielgeräten messen. Die dokumentierten Draw-Call-Gewinne ersetzen keine Prüfung auf schwächeren Tablets.
-- WebSocket-Verbindung, Medienproxy und Cache-Verhalten nach einer tatsächlichen Bereitstellung separat prüfen. Der erfolgreiche Build bestätigt keine laufende Installation.
+- HomeTwin3D ist aus einer konkreten Wohnung heraus entstanden. Hue Sync, Wasserleck, TV-Medien und TV Dial brauchen die
+  Installationswerte (oben), die Außenumgebung ist eine Beispielumgebung.
+- Die automatische Erkennung beim Blender-Export ist auf die Namen der Referenzwohnung abgestimmt; bei eigenen Modellen
+  Objekte selbst kennzeichnen (siehe [Blender-Workflow](BLENDER_WORKFLOW.md)).
+- Daten liegen pro Browser und Origin. Vor einem Wechsel von Adresse, Port oder Browser ZIP- und Zuordnungsbackup
+  exportieren oder die gemeinsame Version des Add-ons nutzen.
+- Die gemeinsame Version erkennt Konflikte zwischen Geräten, ist aber kein atomarer Serverspeicher: Exakt gleichzeitiges
+  Veröffentlichen von zwei Geräten ist nicht abgesichert.
+- Das Add-on hat keine HA-Anmeldung (kein Ingress). Wer es erreicht, kann die gemeinsame Version lesen; nicht ungeschützt ins
+  Internet stellen.
+- Große Modelle kosten auf Tablets spürbar Leistung. Auf dem Zielgerät mit `?perf` prüfen.

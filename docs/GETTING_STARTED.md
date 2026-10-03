@@ -103,7 +103,7 @@ Geräte und Warnungen im Detail: [Geräte und Warnungen](DEVICES_AND_ALERTS.md).
 Mit dem Add-on lassen sich Modell, Zuordnungen und Einstellungen einmal veröffentlichen
 (Einstellungen → System → *Gemeinsame Version*, mit PIN aus den Add-on-Optionen). Jedes Tablet und jeder
 Browser im LAN übernimmt sie beim Öffnen; nur die HA-Verbindung wird pro Gerät eingerichtet.
-Details: [Add-on-Dokumentation](../3dash-addon/DOCS.md#gemeinsame-version-für-alle-browser-ab-030).
+Details: [Add-on-Dokumentation](../3dash-addon/DOCS.md#gemeinsame-version-für-alle-browser).
 
 ## 8. Später am Modell weiterarbeiten
 

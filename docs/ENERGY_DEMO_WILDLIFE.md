@@ -1,7 +1,6 @@
 # Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter
 
-Stand: Add-on 0.5.50 (03.10.2026). Bedienung und Voraussetzungen der Funktionen, die seit 0.5.20 dazugekommen
-sind. Einrichtung des Boards insgesamt: [Erste Schritte](GETTING_STARTED.md).
+Bedienung und Voraussetzungen dieser Funktionen. Einrichtung des Boards insgesamt: [Erste Schritte](GETTING_STARTED.md).
 
 ## Energiefluss
 
@@ -45,7 +44,7 @@ bleiben unverändert.
 - **Energiekapitel:** Energiefluss *Jetzt* und *Woche*. Die Leistung folgt dem Geschehen der Demo (Waschmaschine mit
   Heizphasen, Trockner, Kaffeemaschine beim Brühen, Fernseher beim Videoabend, PC beim Spielen, Standby sonst);
   Lampengruppen folgen dem Licht der Demo. Die Wochenwerte sind typische Werte einer Wohnung.
-- **Einleitung:** Ein privater Installationswert `installation.author` erscheint als Autor im Einleitungsdialog.
+- **Einleitung:** Ein Dialog erklärt vor dem Start das Board; optional nennt er den Ersteller aus den Installationswerten (`author`).
 - **Benchmark:** Am Ende Bilder pro Sekunde (Durchschnitt, Minimum), 1-%-Tiefs, CPU-Zeit und Draw Calls je Kapitel.
 
 ## Tiere draußen
@@ -55,11 +54,10 @@ läuft um Bänke und Bäume, springt auf Bänke und Pfosten und liegt dort, vers
 bei Regen oder Schnee Schutz. Kleine Vögel fliegen über Hof und Wohnung, landen in Baumkronen oder auf dem
 Rasen und weichen Gebäuden aus; nachts und bei schlechtem Wetter bleiben sie sitzen.
 
-Alles wird im Code erzeugt (keine Asset-Dateien), Bewegung im Vertex-Shader: drei Draw Calls. Vögel fliegen nur auf Routen, die einmal beim Start gegen die echte
-Geometrie (Bäume, Gebäude, Wohnung) geprüft werden – ein Netz aus Himmelspunkten plus je Landeplatz ein Anflugpunkt
-außerhalb der Krone; das Ergebnis wird pro Browser zwischengespeichert. Im Flug gibt es keine Hindernisprüfung pro Bild. Der Render-Loop
-ruht weiter, solange sich nichts Sichtbares bewegt. Unter WebGPU (`?engine=webgpu`) gleiten die Tiere ohne
-Bein- und Flügelbewegung. Die Außenanlage selbst ist eine prozedurale Beispielumgebung.
+Die Tiere kosten wenig Leistung (im Code erzeugt, Bewegung im Shader). Vögel fliegen auf Routen, die einmal beim Start gegen
+Bäume, Gebäude und Wohnung geprüft werden. Unter WebGPU (`?engine=webgpu`) gleiten die Tiere ohne Bein- und Flügelbewegung.
+Hof, Bänke und Bäume gehören zur Beispielumgebung der Referenzwohnung (siehe
+[Funktionen, Grenzen und Technik](../PROJECT_STATUS.md#sonne-wetter-und-außenumgebung)).
 
 ## Markierungsfilter
 
@@ -67,13 +65,9 @@ Die schmale Leiste rechts unter der Werkzeugleiste blendet Markierungen nach Hau
 Licht, Rollos, Lüftung, Türen & Fenster, Geräte (Waschmaschine, Trockner, Kaffee, PC) und Medien (TV, Lautsprecher).
 Die Auswahl wird pro Browser gespeichert. Warnungen (Wasser, Batterie) bleiben immer sichtbar.
 
-## Leistung
+## Leistung prüfen
 
-Messung mit dem Benchmark der Tagesdemo (Desktop, Version 0.5.43): Score 2187 → 3514, 1-%-Tiefs 5,8 → 15,8 Bilder/s,
-CPU je Bild 13,7 → 9,1 ms. Wesentliche Maßnahmen:
-
-- Durchsichtiges Skizzenmodell ohne Tiefen-Vorlauf (Babylon prüfte sonst jedes Teilnetz zweimal pro Bild).
-- Schattenkarten der Lampen nach Tür-, Fenster- und Rollobewegungen verteilt (höchstens 4 pro Bild, Tablet 2);
-  dunkle Lampen warten, bis sie leuchten. Größtes Einzelbild: 45 000 → 9 000 Draw Calls (Tablet).
-- Spiegel nehmen ihre Umgebung über sechs Bilder auf, eine Würfelseite pro Bild.
-- Verdeckungsbäume der Markierungen hängen am Geometrie-Inhalt und überstehen das Umschalten der Texturen.
+Am Ende der Tagesdemo stehen Bilder pro Sekunde (Durchschnitt, Minimum, 1-%-Tiefs), CPU-Zeit und Draw Calls je Kapitel. So
+lässt sich vergleichen, wie das eigene Modell auf dem eigenen Tablet läuft. Was am meisten kostet: viele gleichzeitig
+leuchtende Lampen mit Schatten, sehr detaillierte Modelle und Spiegel. Für die laufende Anzeige `?perf` an die Adresse hängen;
+`?device=tablet` erzwingt die sparsamere Tablet-Stufe.

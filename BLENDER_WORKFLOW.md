@@ -5,8 +5,8 @@ einem KI-Agenten wie **Astra** oder **Claude Opus**, der Blender per Skript steu
 achten muss, damit Lampen, Rollos, Türen und Geräte nach dem Import richtig funktionieren.
 
 Den Einstieg ohne eigenes Modell (Demo, Tagesdemo) und die übrige Einrichtung beschreiben die
-[Ersten Schritte](docs/GETTING_STARTED.md). Die Versionsgeschichte der Referenzwohnung des Projekts steht getrennt in der
-[Modellhistorie](docs/MODEL_HISTORY.md).
+[Ersten Schritte](docs/GETTING_STARTED.md). Was sich beim Aufbau der Referenzwohnung des Projekts bewährt hat, fasst
+[Erfahrungen aus der Praxis](#8-erfahrungen-aus-der-praxis) zusammen.
 
 ## Überblick
 
@@ -60,7 +60,7 @@ HA-Position auf und zu. Das lokale X des Rollo-Objekts sollte entlang der Fenste
 **Türen.** Türen geschlossen exportieren. Für HA-Türen mit Türkontakt (Haustür, Balkon-/Fenstertüren) bewegt die App das
 Türblatt, wenn das Objekt `ha_door_geometry` trägt (siehe Abschnitt 2). Bewegliche Innentüren für den Laufmodus und Teile,
 die an Türblättern hängen (Haken, Kleidung), entstehen bisher nur über die Patch-Werkzeuge der
-[Modell-Pipeline](docs/MODEL_PIPELINE.md#bewegliche-teile-türen-geräte).
+[Modell-Pipeline](docs/MODEL_PIPELINE.md#5-schritt-b--glb-patch-toolsthema-vnnmjs).
 
 **Polygonbudget.** Das Modell läuft im Browser, oft auf Tablets. Subdivision- und Bevel-Modifier vervielfachen schnell die
 Dreiecke. Der Export reduziert nur Bevel-Segmente und Kurvenauflösung; Subdivision wird so angewendet, wie sie eingestellt
@@ -209,6 +209,53 @@ und nenne mir aus dem Bericht die Zahl der Entities und die Emitter der neuen La
 Modell, Fotos, Grundriss und Entity-Listen beschreiben die eigene Wohnung. Sie gehören nicht in ein öffentliches
 Repository oder in öffentliche Issues. Wer am Projekt mitarbeitet, beachtet die
 [Veröffentlichungsregeln](docs/PUBLICATION_PRIVACY.md).
+
+## 8. Erfahrungen aus der Praxis
+
+Die Referenzwohnung des Projekts ist über mehr als hundert Modellversionen gewachsen. Daraus folgen einige Regeln, die für
+jedes eigene Modell gelten.
+
+**Kennungen sind wichtiger als Namen.** Objekte dürfen umbenannt, verschoben und neu modelliert werden, solange ihre `ha_id`
+bleibt. Wird ein Gerät durch ein neues Modell ersetzt (Platzhalter → detailliertes Gerät), die alte `ha_id` auf das neue
+Objekt übertragen; dann bleibt die Zuordnung in der App erhalten. Eine neue Kennung bedeutet immer eine neue Zuordnung.
+
+**Doppelte Geräte vermeiden.** Wird eine Lampe ersetzt, auch die alte Leuchte samt Blender-Lichtquelle entfernen. Sonst
+leuchtet im Plan an der alten Stelle weiter ein Licht ohne sichtbares Gegenstück.
+
+**Modellgrenzen eng halten.** Die App leitet Mittelpunkt, Kamera, Sonnenschatten und die Ausrichtung der Außenumgebung aus den
+Grenzen des Modells ab. Eine überstehende Bodenplatte, vergessene Hilfsobjekte oder einzelne Ausreißer-Vertices weit außerhalb
+verschieben das alles. Bodenflächen an der Außenwand enden lassen und verirrte Meshreste löschen.
+
+**Rollos markieren die Fassade.** Die Außenumgebung richtet sich an der Linie der Rollos (`cover`) aus. Rollos deshalb an den
+echten Fenstern der Außenwand platzieren, nicht als freie Deko im Raum.
+
+**Was sich bewegt, braucht Platz.** Türen schwenken in der App über ihren vollen Öffnungswinkel. Vor dem Export prüfen, ob
+Möbel im Schwenkbereich stehen; sonst den Winkel (`swingDegrees` in `ha_door_geometry`) verkleinern oder das Möbel verschieben.
+
+**Was an Türen hängt, muss mit der Tür verbunden sein.** Klinken, Haken, Kleidung oder Schilder auf einem Türblatt bewegen
+sich nur mit, wenn sie im selben beweglichen Knoten liegen. Sonst bleiben sie beim Öffnen in der Luft stehen.
+
+**Der Export bündelt nach Raum und Material.** Statische Objekte mit gleichem Material werden zu großen gemeinsamen Meshes
+zusammengefasst. Das ist gut für die Leistung, erschwert aber spätere Einzelkorrekturen an der fertigen GLB. Smart-Home-Objekte
+bleiben eigenständig. Möbel, die man später einzeln ändern will, bekommen eigene Materialien.
+
+**Lieber am Original ändern als nachträglich die GLB flicken.** Solange die GLB direkt aus Blender kommt, ist ein neuer
+Export die einfachste und sicherste Änderung. Wer die GLB nachbearbeitet (Vereinfachung, Patches), muss jede spätere Änderung
+ebenfalls als Patch übertragen; das ist mächtig, aber aufwendig (siehe [Modell-Pipeline](docs/MODEL_PIPELINE.md)).
+
+**Vereinfachen, aber Ränder schützen.** Eine Netzvereinfachung kann die Dateigröße deutlich senken. Dabei die äußersten
+Vertices des Modells unverändert lassen, weil die App die Modellgrenzen exakt auswertet (siehe oben).
+
+**Materialien vor dem Export prüfen.** Prozedurale Farben gehen beim glTF-Export verloren, und unpassende Transparenz macht
+Glas zu dunklen Flächen. Der Export-Bericht nennt die betroffenen Materialien; im Zweifel einfache Principled-BSDF-Materialien
+mit Grundfarbe verwenden.
+
+**Nur Metadaten ändern, wenn sich die Geometrie nicht ändert.** Neue Zuordnungshilfen, Gerätetypen oder Zusatzsensoren
+betreffen nur das Manifest. Dafür muss das Modell nicht neu gebaut werden; ein Export mit unveränderter Geometrie oder das
+Zurückspielen der Zuordnungen genügt.
+
+**Vor jedem Austausch sichern und danach vergleichen.** Vor dem Upload die Zuordnungen sichern und danach prüfen, ob alle
+bisherigen Zuordnungen noch da sind. Neue Geräte zuerst ohne Entity anlegen und in der App zuordnen, statt IDs zu raten.
 
 ## Checkliste vor dem Upload
 

@@ -2,7 +2,7 @@
 
 ## Einstieg und Übergabe
 
-Vor Folgearbeiten [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) lesen. Dort stehen der veröffentlichte Stand 0.5.9, die Änderungen vom 01.10.2026, Prüfnachweise, Grenzen und der bestehende GitHub-/Hassio-Release-Ablauf. Die Übergabe ist ein datierter Snapshot: vor Änderungen aktuellen Branch, Arbeitsbaum, Remote und Add-on-Version prüfen. [PROJECT_STATUS.md](PROJECT_STATUS.md) und [CHANGELOG.md](CHANGELOG.md) ergänzen den Überblick.
+Vor Folgearbeiten [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) lesen. Dort stehen Einstiegspunkte im Code, der GitHub-/Add-on-Release-Ablauf und offene Grenzen. Vor Änderungen aktuellen Branch, Arbeitsbaum, Remote und Add-on-Version prüfen (andere Agenten veröffentlichen parallel). [PROJECT_STATUS.md](PROJECT_STATUS.md) und [CHANGELOG.md](CHANGELOG.md) ergänzen den Überblick.
 
 ## Vor jeder Veröffentlichung verpflichtend
 
@@ -24,3 +24,5 @@ Diese Regeln gelten auch für kleine Dokumentationsänderungen und Folgeaufträg
 Jede Änderung am Wohnungsmodell folgt [docs/MODEL_PIPELINE.md](docs/MODEL_PIPELINE.md): Änderung in Blender als neue Version speichern,
 dieselbe Änderung per Node-Skript auf den neuesten optimierten GLB übertragen (kein Voll-Export), im App-Loader prüfen und über
 eine Import-Seite mit Backup übernehmen.
+Lokale Fakten zur Referenzwohnung (Ablageort, Patch-Kette, Dev-Origin) und das Modellprotokoll stehen in `.private/MODEL_HISTORY.md`
+(nur auf dem Entwicklungsrechner, nicht in Git).

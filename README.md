@@ -8,7 +8,7 @@ HomeTwin3D verbindet einen eigenen 3D-Grundriss mit den Geräten und Zuständen 
 
 Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3Dash von Kdcius und seinen Mitwirkenden](https://github.com/Kdcius/3Dash_webapp). Die Apache-2.0-Lizenz und die ursprünglichen Autorenhinweise bleiben erhalten. Dieses Repository beginnt aus Datenschutzgründen mit einem bereinigten Quelltext-Snapshot ohne die frühere Git-Historie. Einzelheiten: [Herkunft und Danksagung](ORIGIN.md).
 
-> **Entwicklungsstand:** Add-on 0.5.49 · Webapp-Paket 0.2.1 · Stand 03.10.2026. HomeTwin3D wächst aus einer konkreten Wohnungsinstallation heraus. Einige Hue-/TV-Zuordnungen, Standortwerte und Modellwerkzeuge sind noch installationsspezifisch. Diese Stellen sind in der [technischen Dokumentation](PROJECT_STATUS.md) beschrieben. Die [Agentenübergabe](docs/AGENT_HANDOFF.md) dokumentiert den aktuellen Release, seine Prüfungen und Grenzen.
+> **Hinweis:** HomeTwin3D ist aus einer konkreten Wohnung heraus entstanden. Einige Funktionen (Hue-Sync-Anzeige, Wasserleck, TV-Medien, TV Dial) verwenden Beispiel-Entities, die man auf die eigenen umlenkt, und die Außenumgebung ist eine Beispielumgebung. Was das bedeutet, steht unter [Funktionen, Grenzen und Technik](PROJECT_STATUS.md). Die aktuelle Version zeigt der [Änderungsverlauf](CHANGELOG.md).
 
 ## Was HomeTwin3D kann
 
@@ -26,11 +26,11 @@ Das Projekt wird von **Raza55** unabhängig weiterentwickelt. Es entstand aus [3
 - **Tagesdemo und Benchmark:** Ein vollständiger Tag mit Kamerafahrten, Bedienung per Fingertipp auf die eigenen Popups und einer Leistungsmessung am Ende – auch mit dem eigenen Modell.
 - **Anpassbares Dashboard:** Status-, Skript- und Diagrammkarten, deutsche/englische Oberfläche, Themes, Demo-Modus, gemeinsame Version für alle Geräte und installierbare PWA.
 
-Die Darstellung verwendet Echtzeit-Näherungen. TV-Screenshots sind kein HDMI-Livestream; Tür-Kippstellungen können als Annahme dargestellt werden. Details und Grenzen stehen in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+Die Darstellung verwendet Echtzeit-Näherungen. TV-Screenshots sind kein HDMI-Livestream; Tür-Kippstellungen können als Annahme dargestellt werden. Details und Grenzen stehen in [Funktionen, Grenzen und Technik](PROJECT_STATUS.md).
 
 ## Beispielbilder
 
-Aufnahmen aus den lokalen QA-Simulationen vom 28.09.2026. Die Zustände sind simuliert; die Bilder zeigen das individuelle Beispielmodell, das nicht im Repository enthalten ist. Keine echten Desktop-Screenshots. [Bildnachweise und zugehörige Prüfseiten](docs/images/README.md).
+Aufnahmen aus den Testsimulationen mit simulierten Zuständen. Sie zeigen die Referenzwohnung des Projekts, die nicht im Repository enthalten ist. Keine echten Desktop-Screenshots. [Bildnachweise und zugehörige Prüfseiten](docs/images/README.md).
 
 **Grundriss mit simulierten Batteriewarnungen**
 
@@ -54,7 +54,7 @@ npm run dev
 
 Öffne **http://127.0.0.1:5187/HomeTwin3D/**. Der Entwicklungsserver verwendet fest Port 5187 und weicht bei einem belegten Port nicht automatisch aus. Modell und Gerätezuordnungen werden pro Browser und Adresse gespeichert: Ein anderer Port oder `localhost` statt `127.0.0.1` verwendet einen separaten Datenbestand. Starte bei einer neuen Installation mit dem Demo-Modus oder verbinde im Einrichtungsassistenten deine Home-Assistant-Instanz und importiere ein eigenes GLB.
 
-Das Repository enthält ein Simulationsmodell. Die persönliche Wohnung samt Blender-Quellen ist nicht enthalten. Einige historische Blender-Skripte setzen lokale Dateien und Pfade voraus; sie sind Beispiele der bisherigen Modellarbeit und keine universellen Installationsschritte.
+Das Repository enthält ein Simulationsmodell, aber keine echte Wohnung. Wie man das eigene Modell erstellt, beschreibt [Eigenes Modell mit Blender einbinden](BLENDER_WORKFLOW.md). Die versionierten Skripte unter `tools/` (z. B. `bedroom-v106.*`) gehören zur Referenzwohnung und dienen nur als Vorlagen.
 
 ## Selbst hosten
 
@@ -76,7 +76,7 @@ Ein Repository-Push installiert kein Add-on-Update. Der Docker-/Supervisor-Betri
 
 ### TV-Bilder und GitHub Pages
 
-Der Add-on-Nginx enthält einen HA-Medienproxy. Für lokale Entwicklung lässt sich dessen Ziel über `HA_MEDIA_PROXY_TARGET` in `.env.local` konfigurieren. Der aktuelle Standard ist installationsspezifisch; siehe [TV- und Proxy-Dokumentation](PROJECT_STATUS.md#tv-medien-und-proxy).
+Der Add-on-Nginx enthält einen HA-Medienproxy. Für lokale Entwicklung lässt sich dessen Ziel über `HA_MEDIA_PROXY_TARGET` in `.env.local` konfigurieren. Standard ist `http://homeassistant.local:8123`; siehe [TV und Medien](PROJECT_STATUS.md#tv-und-medien).
 
 Ein GitHub-Pages-Workflow liegt bei, wird aber erst manuell über **Actions → Deploy to GitHub Pages** ausgeführt. Zuvor muss Pages im Repository für GitHub Actions eingerichtet sein. Es wird keine bereits veröffentlichte Demo vorausgesetzt.
 
@@ -114,7 +114,7 @@ npm run build
 npm run build -- --mode addon
 ```
 
-Der Stand 0.5.49 besteht 186 JavaScript-/TypeScript-Tests sowie 5 Python-Tests des optionalen Screenshot-Helfers. Der CI-Workflow prüft diese Schritte bei Änderungen auf `main` und bei Pull Requests. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Modellabhängige Zusatztests und visuelle QA-Seiten sind in der [Modellhistorie](docs/MODEL_HISTORY.md) beschrieben; die aktuellen Prüfnachweise und Messbedingungen stehen in der [Agentenübergabe](docs/AGENT_HANDOFF.md).
+Der CI-Workflow führt diese Prüfungen sowie die Python-Tests des optionalen Screenshot-Helfers bei Änderungen auf `main` und bei Pull Requests aus. Die Tests laufen mit synthetischen Daten und benötigen keine echte HA-Installation. Zusätzlich gibt es visuelle Testseiten unter `tools/*-qa.html`, die Zustände simulieren, ohne Geräte zu schalten.
 
 Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant WebSocket API**.
 
@@ -129,15 +129,22 @@ Technik: **React 18 · TypeScript · Babylon.js 9.28 · Vite 6 · Home Assistant
 
 ## Dokumentation
 
+Für Nutzer:
+
 - [Erste Schritte: Installation, Demo, eigenes Blender-Modell, Zuordnen und Anpassen](docs/GETTING_STARTED.md)
-- [Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter](docs/ENERGY_DEMO_WILDLIFE.md)
-- [Agentenübergabe: aktueller Stand, Änderungen, Prüfungen und Folgearbeiten](docs/AGENT_HANDOFF.md)
-- [Projektstand, wichtige Funktionen und Performance-Optimierungen](PROJECT_STATUS.md)
-- [Neue Geräte, Warnungen, TV Dial und PC-Screenshots](docs/DEVICES_AND_ALERTS.md)
-- [Optionaler Windows-/MQTT-Screenshot-Helfer](tools/pc-screen/README.md)
 - [Eigenes Modell mit Blender einbinden (auch mit KI-Agenten)](BLENDER_WORKFLOW.md)
-- [Modellhistorie der Referenzwohnung](docs/MODEL_HISTORY.md)
+- [Add-on: Installation, gemeinsame Version, HTTPS](3dash-addon/DOCS.md)
+- [Geräte, Warnungen, TV Dial und PC-Bilder](docs/DEVICES_AND_ALERTS.md)
+- [Energiefluss, Tagesdemo, Tiere draußen und Markierungsfilter](docs/ENERGY_DEMO_WILDLIFE.md)
+- [Funktionen, Grenzen und Technik](PROJECT_STATUS.md)
+- [TV Dial einrichten](tools/tv-dial-integration.md) · [Windows-/MQTT-Screenshot-Helfer](tools/pc-screen/README.md)
 - [Änderungsverlauf](CHANGELOG.md)
+
+Für Mitwirkende:
+
+- [Hinweise für Mitwirkende und Agenten](docs/AGENT_HANDOFF.md)
+- [Fortgeschritten: optimiertes Modell schrittweise ändern](docs/MODEL_PIPELINE.md)
+- [Veröffentlichungsregeln](docs/PUBLICATION_PRIVACY.md)
 - [Herkunft, Ausgangscommits und Weiterentwicklung](ORIGIN.md)
 - [Historische Erweiterungen des früheren Forks](FORK_CHANGES.md) · [English](FORK_CHANGES.en.md)
 

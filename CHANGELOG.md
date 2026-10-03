@@ -1,8 +1,13 @@
 # Änderungsverlauf
 
-## 0.5.52 – Dritte Lüftungsbank am Südweg (03.10.2026)
+## 0.5.53 · Finger der Tagesdemo trifft die Symbole (03.10.2026)
 
-- Außenanlage: Eine dritte Lüftungsbank steht dort, wo der Weg hinter den beiden Bänken in die Kurve geht – auf derselben Wegseite, mit demselben Abstand zur Wegmitte und entlang der Kurve gedreht. Position und Drehung folgen aus dem Wegverlauf.
+- Der Finger der Tagesdemo zielt bei Lampen, Rollos und Fernseher auf das gezeichnete Symbol der Markierung, so wie beim PC schon zuvor. Bisher steuerte er die Glühbirne, die Mitte des Rollos oder eine geschätzte Stelle über dem Fernseher an und tippte deshalb oft neben das Symbol. Geräte ohne Symbol werden weiter an ihrer Position im Modell angetippt.
+- Während die Kamera weiterfährt, folgt der Finger dem Symbol bis zum Tippen bzw. über die ganze Dauer des langen Drucks.
+
+## 0.5.52 · Dritte Lüftungsbank am Südweg (03.10.2026)
+
+- Außenanlage: Eine dritte Lüftungsbank steht dort, wo der Weg hinter den beiden Bänken in die Kurve geht. Sie steht auf derselben Wegseite, mit demselben Abstand zur Wegmitte, und ist entlang der Kurve gedreht. Position und Drehung folgen aus dem Wegverlauf.
 - Die Hofkatze umgeht die neue Bank und nutzt sie als Sitzplatz; das Springen zwischen den beiden ausgerichteten Bänken bleibt unverändert.
 
 ## 0.5.51 – Katze: Kopf, Hals und Beine überarbeitet (03.10.2026)

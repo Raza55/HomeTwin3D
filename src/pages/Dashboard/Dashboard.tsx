@@ -1824,26 +1824,39 @@ export default function Dashboard() {
         // Visible and clear of the demo panel at the bottom.
         return p.z > 0 && p.z < 1 && x > 40 && x < innerWidth - 40 && y > 40 && y < innerHeight - 200 ? { x, y } : null;
       };
+      // Where the marker layer drew a marker this frame (screen coordinates), if it is shown.
+      // Markers are drawn in WebGL and their buttons are parked off screen, so the finger
+      // aims at the drawn symbol rather than at the device it belongs to.
+      const markerAt = (ids: Iterable<string>) => {
+        const wanted = new Set(ids);
+        const marker = getMarkerLayer(ctx.scene).markers().find(m => wanted.has(m.spec.id) && m.placement.visible);
+        return marker ? { x: marker.placement.x, y: marker.placement.y } : null;
+      };
       touch = new BoardTouch({
         point: control => {
           if (control.kind === 'hold') {
-            // The PC's marker as the marker layer placed it (screen coordinates).
             // (Several PCs: the one whose marker is in view, i.e. the one the camera frames.)
-            const ids = new Set((configRef.current?.model?.floorplan?.objects ?? []).filter(o => o.it?.kind === 'pc').map(o => o.id));
-            const marker = getMarkerLayer(ctx.scene).markers().find(m => ids.has(m.spec.id) && m.placement.visible);
-            return marker ? { x: marker.placement.x, y: marker.placement.y } : null;
+            return markerAt((configRef.current?.model?.floorplan?.objects ?? []).filter(o => o.it?.kind === 'pc').map(o => o.id));
           }
           if (control.kind === 'tv') {
-            // The TV marker sits just above the screen (markers are drawn in WebGL; their buttons are parked off screen).
+            const marker = markerAt(['tv-dial']);
+            if (marker) return marker;
+            // Fallback: the TV marker sits just above the screen.
             const plane = Object.values(displayMeshMapRef.current).find(entry => entry.config.kind === 'tv')?.plane;
             if (!plane) return null;
             const box = plane.getBoundingInfo().boundingBox;
             return toScreen(new Vector3(box.centerWorld.x, box.maximumWorld.y + .12, box.centerWorld.z));
           }
           if (control.kind === 'light') {
+            // A lamp group's marker is keyed by its first member; lamps without a marker are tapped on the bulb.
+            const group = quickLightCluster(configRef.current?.lights ?? [], control.entityId);
+            const marker = markerAt([control.entityId, ...group.slice(0, 1).map(l => l.entityId)]);
+            if (marker) return marker;
             const bulb = meshMapRef.current[control.entityId]?.bulb;
             return bulb ? toScreen(bulb.getAbsolutePosition()) : null;
           }
+          const marker = markerAt([control.entityId]);
+          if (marker) return marker;
           const blind = configRef.current?.blinds?.find(b => b.entityId === control.entityId);
           const panel = blind ? ctx.scene.getMeshByName(`blind_panel_${blind.id}`) ?? ctx.scene.getMeshByName(`blind_frame_${blind.id}`) : null;
           return panel ? toScreen(panel.getBoundingInfo().boundingBox.centerWorld) : null;

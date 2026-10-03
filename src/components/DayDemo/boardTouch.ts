@@ -125,11 +125,13 @@ export class BoardTouch {
     this.place(p.x + 140, p.y + 170, 0);
     await this.wait(30, signal);
     this.finger.classList.add('visible');
-    await this.moveTo(p.x, p.y, 750, signal);
+    const target = this.tracker(control, p);
+    await this.glide(target, 750, signal);
     this.finger.classList.add('press', 'hold');
-    await this.wait(1100, signal);
+    await this.follow(target, 1100, signal);
     this.finger.classList.remove('press', 'hold');
     this.finger.classList.remove('ripple'); void this.finger.offsetWidth; this.finger.classList.add('ripple');
+    p = target();
     this.deps.open(control, p.x, p.y);
     await this.wait(700, signal);
   }
@@ -148,13 +150,20 @@ export class BoardTouch {
 
   /** Finger glides in, taps the device, the popup opens. */
   private async openPopup(control: PopupControl, selector: string, signal: AbortSignal): Promise<HTMLElement> {
-    const p = this.deps.point(control) ?? { x: innerWidth / 2, y: innerHeight * .4 };
-    this.place(p.x + 140, p.y + 170, 0);
+    const start = this.deps.point(control) ?? { x: innerWidth / 2, y: innerHeight * .4 };
+    this.place(start.x + 140, start.y + 170, 0);
     await this.wait(30, signal);
     this.finger.classList.add('visible');
-    await this.moveTo(p.x, p.y, 750, signal);
-    await this.tap(signal);
+    // The camera keeps moving: the finger follows the marker until the tap.
+    const target = this.tracker(control, start);
+    await this.glide(target, 750, signal);
+    this.finger.classList.add('press');
+    await this.follow(target, 170, signal);
+    this.finger.classList.remove('press');
+    this.finger.classList.remove('ripple'); void this.finger.offsetWidth; this.finger.classList.add('ripple');
+    const p = target();
     this.deps.open(control, p.x, p.y);
+    await this.wait(200, signal);
     const popup = await this.find(selector, signal, 2000);
     await this.wait(650, signal);
     return popup;
@@ -200,6 +209,34 @@ export class BoardTouch {
     this.finger.classList.remove('press');
     this.finger.classList.remove('ripple'); void this.finger.offsetWidth; this.finger.classList.add('ripple');
     await this.wait(200, signal);
+  }
+
+  /** Current screen position of the control; keeps the last known one while it is out of view. */
+  private tracker(control: PopupControl, start: { x: number; y: number }): () => { x: number; y: number } {
+    let last = start;
+    return () => (last = this.deps.point(control) ?? last);
+  }
+
+  /** Glides to a moving target: eases from the start towards wherever the target is now. */
+  private async glide(target: () => { x: number; y: number }, ms: number, signal: AbortSignal): Promise<void> {
+    const from = this.position(), begin = performance.now();
+    for (;;) {
+      const t = Math.min(1, (performance.now() - begin) / ms), u = t * t * (3 - 2 * t), to = target();
+      this.place(from.x + (to.x - from.x) * u, from.y + (to.y - from.y) * u, 0);
+      if (t >= 1) return;
+      await this.wait(16, signal);
+    }
+  }
+
+  /** Stays on a moving target for `ms` (while pressing or holding). */
+  private async follow(target: () => { x: number; y: number }, ms: number, signal: AbortSignal): Promise<void> {
+    const end = performance.now() + ms;
+    do { const p = target(); this.place(p.x, p.y, 0); await this.wait(16, signal); } while (performance.now() < end);
+  }
+
+  private position(): { x: number; y: number } {
+    const match = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(this.finger.style.transform);
+    return match ? { x: Number(match[1]), y: Number(match[2]) } : { x: innerWidth / 2, y: innerHeight / 2 };
   }
 
   private place(x: number, y: number, ms: number): void {

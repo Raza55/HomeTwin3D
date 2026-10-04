@@ -8,6 +8,7 @@ import {applianceRunning,applianceRemaining} from '../babylon/ApplianceAnimation
 import {floorplanId} from '../babylon/FloorplanBindings';
 import './ApplianceMarkers.css';
 import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { getActiveHAConnection } from '../services/haWebSocket';
 
 export function applianceDetail(state?:HAState):string {
  if(!state||['unknown','unavailable'].includes(state.state))return '';
@@ -43,20 +44,23 @@ export default function ApplianceMarkers({scene,config,states,connected,onAssign
   const rest=connected?applianceRemaining(states[a.remainingEntityId??'']):'';
   const program=connected?applianceDetail(states[a.programEntityId??'']):'';
   const ready=connected&&states[o.entityId]?.state==='off';
-  const status=!o.entityId?'Noch nicht zugeordnet':!connected?'Nicht verbunden':running?'Läuft':ready?'Bereit / aus':'Kein Betriebssignal';
+  // Kept by HA until the door opens or the machine is switched off; the popup can acknowledge a helper.
+  const finished=connected&&!running&&!!a.finishedEntityId&&states[a.finishedEntityId]?.state==='on';
+  const status=!o.entityId?'Noch nicht zugeordnet':!connected?'Nicht verbunden':running?'Läuft':finished?'Fertig, bitte ausräumen':ready?'Bereit / aus':'Kein Betriebssignal';
   return <div key={o.id}>
-   <button className={`appliance-marker ${running?'is-running':ready?'is-ready':'is-unknown'} ${open===o.id?'is-open':''}`} ref={el=>{refs.current[o.id]=el;}} onClick={()=>setOpen(open===o.id?null:o.id)} aria-label={`${o.label} anzeigen`} aria-expanded={open===o.id} aria-haspopup="dialog" title={`${o.label} · ${status}`}>
-    <WashingMachine size={18}/>{!o.entityId&&<span className="appliance-plus">+</span>}
+   <button className={`appliance-marker ${running?'is-running':finished?'is-finished':ready?'is-ready':'is-unknown'} ${open===o.id?'is-open':''}`} ref={el=>{refs.current[o.id]=el;}} onClick={()=>setOpen(open===o.id?null:o.id)} aria-label={`${o.label} anzeigen`} aria-expanded={open===o.id} aria-haspopup="dialog" title={`${o.label} · ${status}`}>
+    <WashingMachine size={18}/>{!o.entityId&&<span className="appliance-plus">+</span>}{finished&&<span className="appliance-finished-label">Fertig</span>}
    </button>
    {open===o.id&&<section className="appliance-popup" ref={popup} role="dialog" aria-label={o.label}>
     <header><WashingMachine size={18}/><strong>{o.label}</strong><button aria-label="Zuordnung bearbeiten" title="Zuordnung bearbeiten" onClick={()=>{setOpen(null);onAssign(o.id);}}><Pencil size={15}/></button><button aria-label="Geräteinfo schließen" onClick={()=>setOpen(null)}><X size={17}/></button></header>
-    <div className={`appliance-status ${running?'is-running':''}`}><span/>{status}</div>
+    <div className={`appliance-status ${running?'is-running':finished?'is-finished':''}`}><span/>{status}</div>
     <dl><dt>Raum</dt><dd>{o.room||'–'}</dd>
      {a.remainingEntityId&&<><dt>Restzeit</dt><dd>{rest||'Nicht verfügbar'}</dd></>}
      {a.programEntityId&&<><dt>Waschprogramm</dt><dd>{program||'Nicht verfügbar'}</dd></>}
     </dl>
+    {finished&&a.finishedEntityId!.startsWith('input_boolean.')&&<button className="appliance-assign" onClick={()=>{void getActiveHAConnection()?.callService('input_boolean','turn_off',a.finishedEntityId!);setOpen(null);}}>Ausgeräumt, Anzeige beenden</button>}
     {!o.entityId&&<button className="appliance-assign" onClick={()=>{setOpen(null);onAssign(o.id);}}>Betriebssensor zuordnen</button>}
-    <details><summary>Entitäten</summary><p>{o.entityId||'Nicht zugeordnet'}</p>{a.remainingEntityId&&<p>{a.remainingEntityId}</p>}{a.programEntityId&&<p>{a.programEntityId}</p>}</details>
+    <details><summary>Entitäten</summary><p>{o.entityId||'Nicht zugeordnet'}</p>{a.remainingEntityId&&<p>{a.remainingEntityId}</p>}{a.programEntityId&&<p>{a.programEntityId}</p>}{a.finishedEntityId&&<p>{a.finishedEntityId}</p>}</details>
    </section>}
   </div>;
  })}</>;

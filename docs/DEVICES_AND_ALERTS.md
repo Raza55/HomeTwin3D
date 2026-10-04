@@ -42,6 +42,13 @@ Objekte mit `ha_appliance` (`washer` bzw. `dryer`) können eine Blender-Animatio
 zugeordneter Binärsensor oder Leistungssensor startet und pausiert sie; Zusatzsensoren liefern Programm und Restzeit. Die
 Animation schaltet das Gerät nicht.
 
+Optional zeigt eine **Fertig-Anzeige**, dass Wäsche wartet: Solange die zugeordnete Entity (Helfer oder Binärsensor) `on`
+meldet und das Gerät nicht läuft, wird der Marker rot, leuchtet langsam pulsierend und trägt den Hinweis „Fertig“. Wann
+„fertig“ beginnt und endet, legt eine HA-Automation fest, etwa: Ende eines gültigen Laufs setzt den Helfer, Öffnen der Tür,
+Abschalten (Leistung des Zwischensteckers fast null) oder ein neuer Start setzt ihn zurück. Ist ein `input_boolean`
+zugeordnet, lässt sich die Anzeige im Popup mit „Ausgeräumt“ beenden. Das hilft bei Geräten, die sich nach Programmende selbst
+abschalten und ein späteres Öffnen der Tür nicht mehr melden.
+
 ## PCs und Server
 
 Ein IT-Objekt (`ha_it`) fasst mehrere Geräte zusammen, jeweils mit Hauptschalter, Status-, Messwert- und Aktions-Entities

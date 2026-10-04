@@ -22,6 +22,7 @@ export function validateManifest(value: unknown): FloorplanManifest {
       || (o.appliance.powerThreshold !== undefined && (!finite(o.appliance.powerThreshold) || o.appliance.powerThreshold < 0))
       || (o.appliance.runningStates !== undefined && (!Array.isArray(o.appliance.runningStates) || o.appliance.runningStates.some(s => typeof s !== 'string'))))) throw new Error('Invalid appliance settings');
     if (o.appliance && [o.appliance.remainingEntityId,o.appliance.programEntityId].some(id=>id !== undefined && id !== '' && !/^(sensor|select)\.[a-z0-9_]+$/.test(id))) throw new Error('Invalid appliance detail entity');
+    if (o.appliance?.finishedEntityId && !/^(input_boolean|binary_sensor)\.[a-z0-9_]+$/.test(o.appliance.finishedEntityId)) throw new Error('Invalid appliance finished entity');
     if (o.door && (o.domain !== 'binary_sensor' || !['double', 'single', 'entrance'].includes(o.door.kind) || (o.door.tiltOnly !== undefined && typeof o.door.tiltOnly !== 'boolean') || o.appliance)) throw new Error('Ungültige Tür-Einstellungen.');
     if (o.doorLock && (o.domain !== 'lock' || typeof o.doorLock.doorId !== 'string' || !o.doorLock.doorId || o.door || o.appliance)) throw new Error('Invalid door lock mapping.');
     if (o.statusIndicator && (!['sensor', 'binary_sensor'].includes(o.domain) || o.statusIndicator.kind !== 'smoke'

@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.56 · Fertig-Anzeige für Waschmaschine und Trockner (04.10.2026)
+
+- Waschmaschine und Trockner können eine Fertig-Entity erhalten (Zuordnungsassistent, Abschnitt Betriebsanzeige). Meldet sie `on`, wird der Gerätemarker rot, leuchtet langsam pulsierend und zeigt „Fertig“. Die Anzeige verschwindet, sobald HA die Entity zurücksetzt (z. B. Tür geöffnet oder Gerät ausgeschaltet).
+- Ist ein Helfer (`input_boolean`) zugeordnet, beendet „Ausgeräumt, Anzeige beenden“ im Popup die Anzeige von Hand.
+
 ## 0.5.55 · Dritte Lüftungsbank näher an den Bänken (03.10.2026)
 
 - Außenanlage: Die dritte Lüftungsbank am Südweg steht 2 m weiter vorn entlang des Wegs, also näher an den beiden ausgerichteten Bänken (Mitte zu Mitte jetzt 10,4 m statt 12,4 m zur zweiten Bank). Wegseite, Abstand zur Wegmitte und Drehung entlang der Kurve bleiben gleich.

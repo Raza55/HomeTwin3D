@@ -115,3 +115,36 @@ test('WebSocket client: auth, request, subscription snapshot with unsubscribe', 
   await assert.rejects(ha.request({ type: 'calendar/event/create' }), /nope/);
   await assert.rejects(connectHA({ url: 'ws://x', token: 'bad', WebSocketImpl: FakeSocket }).request({ type: 'get_states' }), /rejected/);
 });
+
+test('iCalendar feed: read-only token, person filter, escaping and folding', async () => {
+  const { buildIcs } = await import('../3dash-addon/calendar-api.mjs');
+  const ha = fakeHA();
+  const handle = createApi({ ha, apiToken: 'secret-token', feedToken: 'feed-token-0123456789' });
+  await call(handle, 'POST', '/api/calendar/events', { body: [
+    { ref: 'a', summary: 'Klausur Mathematik', start: '2026-10-26T07:50', end: '2026-10-26T09:20', persons: ['Anna'], grade: 11, description: 'Raum 1, Stunden 1-2' },
+    { ref: 'b', summary: 'Zahnarzt', start: '2026-10-27T08:00', persons: ['Ben'], location: 'Praxis; Haus 2' },
+    { ref: 'c', summary: 'Wandertag', start: '2026-10-28' },
+  ] });
+  const feed = (query) => call(handle, 'GET', '/api/calendar/feed.ics', { headers: {}, query });
+  assert.equal((await feed({})).status, 401);
+  assert.equal((await feed({ token: 'wrong' })).status, 401);
+  const all = await feed({ token: 'feed-token-0123456789' });
+  assert.equal(all.status, 200);
+  assert.equal(all.contentType, 'text/calendar; charset=utf-8');
+  assert.equal(all.raw.match(/BEGIN:VEVENT/g).length, 3);
+  assert.match(all.raw, /DTSTART;VALUE=DATE:20261028\r\nDTEND;VALUE=DATE:20261029/);
+  assert.match(all.raw, /DESCRIPTION:Raum 1\\, Stunden 1-2\\nFür: Anna\\nNote: 11 Punkte/);
+  assert.match(all.raw, /LOCATION:Praxis\\; Haus 2/);
+  assert.doesNotMatch(all.raw, /Ref:/, 'API keys stay internal');
+  // The feed token cannot write
+  assert.equal((await call(handle, 'POST', '/api/calendar/events', { headers: { authorization: 'Bearer feed-token-0123456789' }, body: { summary: 'x', start: '2026-10-29' } })).status, 401);
+
+  const anna = await feed({ token: 'feed-token-0123456789', person: 'anna' });
+  assert.equal(anna.raw.match(/BEGIN:VEVENT/g).length, 1);
+  assert.match(anna.raw, /X-WR-CALNAME:anna/);
+  assert.equal((await feed({ token: 'feed-token-0123456789', calendar: 'calendar.other' })).status, 404);
+
+  const long = buildIcs([{ uid: 'u', start: '2026-10-28', end: '2026-10-29', summary: 'Ä'.repeat(60) }], { now: new Date(0) });
+  for (const line of long.split('\r\n')) assert.ok(Buffer.byteLength(line) <= 75, line);
+  assert.match(long, /SUMMARY:Ä+\r\n Ä+/);
+});

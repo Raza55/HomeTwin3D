@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.59 · Kalender als Abo für Google, Apple und Outlook (06.10.2026)
+
+- Mit der neuen Add-on-Option `calendar_feed_token` liefert das Add-on die Termine aus Home Assistant als iCalendar Abo (`/api/calendar/feed.ics`). In Google Kalender per URL abonniert, erscheinen sie dort und auf dem Handy. Optional nur die Termine einer Person (`&person=…`) oder eines Kalenders.
+- Der Feed-Schlüssel kann nur lesen. Personen und Noten stehen in der Beschreibung, interne API Schlüssel nicht.
+- Dokumentation: Freigabe nur dieses Pfads im Reverse Proxy und Anzeige der Google Kalender im Tablet über die HA Integration *Google Calendar*.
+
 ## 0.5.58 · Kalender für das Tablet und Kalender API (06.10.2026)
 
 - Ein Tipp auf Uhrzeit und Datum oben rechts öffnet einen Kalender mit Jahres, Monats und Wochenansicht, groß genug für die Bedienung mit dem Finger. Wischen blättert, die Tagesliste steht neben oder unter dem Raster. Ein Kalendersymbol am Datum zeigt die Zahl der heutigen Termine.

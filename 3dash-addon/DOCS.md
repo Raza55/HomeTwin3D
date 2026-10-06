@@ -91,6 +91,24 @@ und Beschreibung. Die Antwort nennt pro Termin `created`, `updated`, `unchanged`
 Der Schlüssel erlaubt Lesen und Schreiben aller Kalender. Die API daher nur im LAN/VPN oder hinter einem geschützten Proxy
 erreichbar machen und den Schlüssel wie ein Passwort behandeln.
 
+### Kalender abonnieren (Google, Apple, Outlook)
+
+Mit `calendar_feed_token` (mindestens 16 Zeichen, nur Lesen) liefert das Add-on die Termine als Abo im iCalendar Format:
+
+```text
+https://<eigene-adresse>/api/calendar/feed.ics?token=<feed-token>
+```
+
+Optional `&person=Anna` (nur Termine dieser Person), `&calendar=calendar.xyz` und `&name=…` (Name im Abo). Der Zeitraum reicht
+von 90 Tagen zurück bis gut ein Jahr voraus. In Google Kalender: *Weitere Kalender → Per URL*. Google ruft das Abo von seinen
+eigenen Servern ab und aktualisiert es nach eigenem Takt, meist innerhalb einiger Stunden; der Link muss dafür über HTTPS aus
+dem Internet erreichbar sein. Im Reverse Proxy dafür nur den Pfad `/api/calendar/feed.ics` freigeben, nicht das ganze Add-on.
+Der Feed-Schlüssel kann nichts ändern; wer den Link kennt, sieht aber die Termine.
+
+In die andere Richtung zeigt die HA Integration *Google Calendar* die Google Kalender als eigene Kalender an; der Tablet
+Kalender listet sie automatisch mit. Neue Termine lassen sich dort anlegen; bestehende Google Termine zeigt er nur an, weil
+HA sie nicht ändern kann.
+
 ## Bestehende Einrichtung übernehmen
 
 **Aus einem anderen Browser oder einer anderen Adresse:** In der bisherigen App eine ZIP-Sicherung exportieren, in der neuen

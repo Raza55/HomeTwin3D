@@ -189,9 +189,56 @@ function sameEvent(existing, event) {
     && norm(existing.rrule) === norm(event.rrule);
 }
 
+/* ── iCalendar feed (subscription in Google, Apple, Outlook) ── */
+
+function icsText(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+
+/** RFC 5545 line folding: at most 75 octets per line, continuation lines start with a space. */
+function foldLine(line) {
+  const out = [];
+  let current = '', bytes = 0;
+  for (const ch of line) {
+    const size = Buffer.byteLength(ch);
+    if (bytes + size > (out.length ? 74 : 75)) { out.push(current); current = ''; bytes = 0; }
+    current += ch;
+    bytes += size;
+  }
+  out.push(current);
+  return out.join('\r\n ');
+}
+
+function icsUtc(value) {
+  return new Date(value).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+export function buildIcs(events, { name = 'HomeTwin3D', now = new Date() } = {}) {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HomeTwin3D//Calendar API//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    `X-WR-CALNAME:${icsText(name)}`, 'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H'];
+  const stamp = icsUtc(now);
+  for (const e of events) {
+    const meta = splitDescription(e.description);
+    const description = [meta.notes, meta.persons.length ? `Für: ${meta.persons.join(', ')}` : '', meta.grade !== undefined ? `Note: ${meta.grade} Punkte` : '']
+      .filter(Boolean).join('\n');
+    // Recurring events arrive expanded; every occurrence gets its own stable UID
+    const uid = `${e.uid ?? `${e.start}-${e.summary}`}${e.recurrence_id ? `-${e.recurrence_id}` : ''}@hometwin3d`;
+    const allDay = isDate(e.start);
+    lines.push('BEGIN:VEVENT', `UID:${icsText(uid)}`, `DTSTAMP:${stamp}`,
+      allDay ? `DTSTART;VALUE=DATE:${e.start.replace(/-/g, '')}` : `DTSTART:${icsUtc(e.start)}`,
+      allDay ? `DTEND;VALUE=DATE:${e.end.replace(/-/g, '')}` : `DTEND:${icsUtc(e.end)}`,
+      `SUMMARY:${icsText(e.summary ?? '')}`);
+    if (description) lines.push(`DESCRIPTION:${icsText(description)}`);
+    if (e.location) lines.push(`LOCATION:${icsText(e.location)}`);
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.map(foldLine).join('\r\n') + '\r\n';
+}
+
 /* ── API ── */
 
-export function createApi({ ha, apiToken, defaultCalendar }) {
+export function createApi({ ha, apiToken, feedToken = '', defaultCalendar }) {
   const calendars = async () => {
     const states = await ha.request({ type: 'get_states' });
     return states.filter(s => s.entity_id.startsWith('calendar.')).map(s => ({
@@ -270,18 +317,44 @@ export function createApi({ ha, apiToken, defaultCalendar }) {
     return results;
   };
 
+  const matches = (given, token) => {
+    if (typeof given !== 'string' || !given || !token) return false;
+    const a = Buffer.from(given), b = Buffer.from(token);
+    return a.length === b.length && timingSafeEqual(a, b);
+  };
   const authorized = (req) => {
     const header = req.headers.authorization ?? '';
-    const given = header.startsWith('Bearer ') ? header.slice(7) : req.headers['x-hometwin-token'] ?? req.query.token;
-    if (typeof given !== 'string' || !given) return false;
-    const a = Buffer.from(given), b = Buffer.from(apiToken);
-    return a.length === b.length && timingSafeEqual(a, b);
+    return matches(header.startsWith('Bearer ') ? header.slice(7) : req.headers['x-hometwin-token'] ?? req.query.token, apiToken);
+  };
+
+  /** Read-only subscription feed: the token travels in the URL, since calendar apps cannot send headers. */
+  const feed = async (req) => {
+    if (!feedToken && !apiToken) return { status: 503, body: { error: 'Calendar feed disabled: set calendar_feed_token in the add-on options' } };
+    if (!matches(req.query.token, feedToken) && !matches(req.query.token, apiToken)) return { status: 401, body: { error: 'Missing or wrong token' } };
+    const all = await calendars();
+    const wanted = req.query.calendar ? req.query.calendar.split(',') : all.map(c => c.entityId);
+    const person = req.query.person?.toLowerCase();
+    const now = new Date();
+    const from = localDateTime(new Date(now.getTime() - 90 * DAY)), to = localDateTime(new Date(now.getTime() + 400 * DAY));
+    const events = [];
+    for (const calendar of wanted) {
+      if (!all.some(c => c.entityId === calendar)) return { status: 404, body: { error: `Unknown calendar ${calendar}` } };
+      for (const e of await listEvents(calendar, from, to)) {
+        if (person && !splitDescription(e.description).persons.some(p => p.toLowerCase() === person)) continue;
+        events.push(e);
+      }
+    }
+    const name = req.query.name ?? (person ? `${req.query.person}` : 'HomeTwin3D');
+    return { status: 200, contentType: 'text/calendar; charset=utf-8', raw: buildIcs(events, { name, now }) };
   };
 
   return async function handle(req) {
+    const route = req.path.replace(/\/+$/, '');
+    if (req.method === 'GET' && route === '/api/calendar/feed.ics') {
+      try { return await feed(req); } catch (err) { return { status: 502, body: { error: err.message } }; }
+    }
     if (!apiToken) return { status: 503, body: { error: 'Calendar API disabled: set calendar_api_token in the add-on options' } };
     if (!authorized(req)) return { status: 401, body: { error: 'Missing or wrong token' } };
-    const route = req.path.replace(/\/+$/, '');
     try {
       if (req.method === 'GET' && route === '/api/calendar') {
         return { status: 200, body: { ok: true, defaultCalendar: await fallbackCalendar(), calendars: await calendars() } };
@@ -316,7 +389,7 @@ export function createApi({ ha, apiToken, defaultCalendar }) {
         const [result] = await upsert([item]);
         return { status: result.status === 'deleted' ? 200 : result.status === 'not_found' ? 404 : 400, body: result };
       }
-      return { status: 404, body: { error: 'Unknown endpoint', endpoints: ['GET /api/calendar', 'GET /api/calendar/events', 'POST /api/calendar/events', 'GET /api/calendar/add', 'DELETE /api/calendar/events'] } };
+      return { status: 404, body: { error: 'Unknown endpoint', endpoints: ['GET /api/calendar', 'GET /api/calendar/events', 'GET /api/calendar/feed.ics', 'POST /api/calendar/events', 'GET /api/calendar/add', 'DELETE /api/calendar/events'] } };
     } catch (err) {
       return { status: err.message?.startsWith('Event') || err.message?.includes('missing') ? 400 : 502, body: { error: err.message } };
     }
@@ -339,8 +412,8 @@ export function startServer({ handle, port = 8100, host = '127.0.0.1' }) {
       return;
     }
     const result = await handle({ method: req.method, path: url.pathname, query: Object.fromEntries(url.searchParams), headers: req.headers, body });
-    res.writeHead(result.status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-    res.end(JSON.stringify(result.body, null, 2));
+    res.writeHead(result.status, { 'content-type': result.contentType ?? 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(result.raw ?? JSON.stringify(result.body, null, 2));
   });
   server.listen(port, host);
   return server;
@@ -352,7 +425,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     url: process.env.HA_URL ?? 'ws://supervisor/core/websocket',
     token: process.env.HA_TOKEN ?? process.env.SUPERVISOR_TOKEN,
   });
-  const handle = createApi({ ha, apiToken: process.env.CALENDAR_API_TOKEN ?? '', defaultCalendar: process.env.CALENDAR_API_DEFAULT || undefined });
+  const handle = createApi({ ha, apiToken: process.env.CALENDAR_API_TOKEN ?? '', feedToken: process.env.CALENDAR_FEED_TOKEN ?? '', defaultCalendar: process.env.CALENDAR_API_DEFAULT || undefined });
   startServer({ handle, port: Number(process.env.CALENDAR_API_PORT ?? 8100) });
   console.log('[calendar-api] listening on 127.0.0.1:' + (process.env.CALENDAR_API_PORT ?? 8100));
 }

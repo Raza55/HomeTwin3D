@@ -12,6 +12,11 @@ export interface HACallbacks {
 export interface HALike {
   callService(domain: string, service: string, entityId: string, data?: Record<string, unknown>): Promise<void>;
   request(msg: Record<string, unknown>): Promise<unknown>;
+  /**
+   * Subscribe to a WS command that pushes events (e.g. calendar/event/subscribe).
+   * Live connections renew it after every reconnect; the returned function ends it.
+   */
+  subscribe?(msg: Record<string, unknown>, onEvent: (event: unknown) => void): () => void;
   readonly isConnected: boolean;
   /** Tear down the current socket and reconnect immediately. */
   forceReconnect(): void;
@@ -74,6 +79,8 @@ export class HAConnection {
     reject: (err: Error) => void;
     timer: ReturnType<typeof setTimeout>;
   }>();
+  /** Active event subscriptions; `id` is the message id on the current socket. */
+  private subscriptions = new Set<{ msg: Record<string, unknown>; onEvent: (event: unknown) => void; id: number | null }>();
 
   constructor(options: HAConnectOptions, callbacks: HACallbacks) {
     this.options = options;
@@ -117,6 +124,8 @@ export class HAConnection {
         this.send({ id: this.msgId++, type: 'get_states' });
         // Start pinging so a silently-dropped (zombie) socket is detected
         this.startHeartbeat();
+        // A new socket knows nothing of the old one's subscriptions
+        for (const sub of this.subscriptions) this.sendSubscription(sub);
         return;
       }
 
@@ -130,6 +139,12 @@ export class HAConnection {
         // Socket is alive — cancel the pending zombie-reconnect
         if (this.pongTimer) { clearTimeout(this.pongTimer); this.pongTimer = null; }
         return;
+      }
+
+      if (msg.type === 'event' && msg.id != null) {
+        for (const sub of this.subscriptions) {
+          if (sub.id === msg.id) { sub.onEvent(msg.event); return; }
+        }
       }
 
       if (msg.type === 'event' && msg.event?.event_type === 'state_changed') {
@@ -229,6 +244,23 @@ export class HAConnection {
     });
   }
 
+  subscribe(msg: Record<string, unknown>, onEvent: (event: unknown) => void): () => void {
+    const sub = { msg, onEvent, id: null as number | null };
+    this.subscriptions.add(sub);
+    if (this.ws?.readyState === WebSocket.OPEN) this.sendSubscription(sub);
+    return () => {
+      if (!this.subscriptions.delete(sub)) return;
+      if (sub.id != null && this.ws?.readyState === WebSocket.OPEN) {
+        this.request({ type: 'unsubscribe_events', subscription: sub.id }).catch(() => { /* socket gone: nothing to end */ });
+      }
+    };
+  }
+
+  private sendSubscription(sub: { msg: Record<string, unknown>; id: number | null }): void {
+    sub.id = this.msgId++;
+    this.send({ ...sub.msg, id: sub.id });
+  }
+
   private send(msg: unknown): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
@@ -243,6 +275,7 @@ export class HAConnection {
     this.disposed = true;
     this.stopHeartbeat();
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.subscriptions.clear();
     this.failPendingResults(new Error('Connection disposed'));
     this.ws?.close();
     this.ws = null;

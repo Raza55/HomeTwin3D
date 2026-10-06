@@ -1,5 +1,15 @@
 # Änderungsverlauf
 
+## 0.5.58 · Kalender für das Tablet und Kalender API (06.10.2026)
+
+- Ein Tipp auf Uhrzeit und Datum oben rechts öffnet einen Kalender mit Jahres, Monats und Wochenansicht, groß genug für die Bedienung mit dem Finger. Wischen blättert, die Tagesliste steht neben oder unter dem Raster. Ein Kalendersymbol am Datum zeigt die Zahl der heutigen Termine.
+- Termine liegen in Kalendern von Home Assistant (zum Beispiel einem Lokalen Kalender) und sind damit auf allen Geräten gleich; Änderungen anderer Geräte erscheinen sofort.
+- Feiertage und Schulferien: Beim ersten Öffnen werden die Bundesländer gewählt, auch mehrere; später über das Zahnrad. Feiertage werden berechnet, Schulferien kommen von der OpenHolidays API (Rheinland Pfalz auch offline).
+- Neue Termine: Sätze wie „Zahnarzt morgen 15 Uhr“ werden erkannt, auch per Spracheingabe. Beim Tippen schlägt der Kalender frühere Termine mit ihrer üblichen Zeit, Dauer und ihrem Ort vor. Wiederholungen wöchentlich, monatlich oder jährlich.
+- Personen: Termine lassen sich einer oder mehreren Personen zuordnen; Kürzel am Termin, Filter im Kopf.
+- Klausuren erhalten eine Notenauswahl von 0 bis 15 Punkten, ein Tipp speichert.
+- Kalender API im Add-on: Termine per JSON anlegen, ändern und löschen, mit eigenem Schlüssel (`ref`) ohne Doppelungen. Aus, bis `calendar_api_token` gesetzt ist. Das Add-on erhält dafür Zugriff auf die HA API. Beschreibung in der Add-on-Dokumentation.
+
 ## 0.5.57 · Energieansicht der Tagesdemo zeigt den spielenden PC (06.10.2026)
 
 - In den Energiekapiteln der Tagesdemo steht der PC jetzt für den Rechner, auf dem in der Gaming Session gespielt wird (der PC mit Bildschirm). Bisher nahm die Demo das erste Objekt im Modell, dessen Name nach PC aussah; Verbrauch und Raum konnten so zu einem anderen Rechner gehören.

@@ -98,6 +98,29 @@
   margin-top: 2px;
 }
 
+.hud-clock-button {
+  pointer-events: auto;
+  display: block;
+  padding: 2px 0 2px 4px;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.hud-clock-button:active { opacity: 0.7; }
+.hud-clock-button .date { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.hud-calendar-icon { color: var(--accent); flex: none; }
+.hud-calendar-badge {
+  min-width: 15px; height: 15px; padding: 0 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: 9px; letter-spacing: 0; font-weight: 600;
+}
+
 .hud-status-lines {
   display: flex;
   flex-direction: column;
@@ -223,6 +246,9 @@
   .time-display .date {
     font-size: 5px;
   }
+
+  .hud-calendar-icon { width: 7px; height: 7px; }
+  .hud-calendar-badge { min-width: 10px; height: 10px; font-size: 6px; padding: 0 2px; }
 
   .hud-status-lines {
     gap: 2px;

@@ -28,10 +28,15 @@ RUN npm run build -- --mode addon
 # Stage 2: serve with nginx on the HA base image of the target architecture.
 FROM ghcr.io/home-assistant/${BUILD_ARCH}-base:3.20
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx nodejs
 
 COPY --from=builder /app/dist /var/www/html
 COPY nginx.conf /etc/nginx/http.d/default.conf
 RUN touch /etc/nginx/hometwin-pin.map
 COPY run.sh /etc/services.d/nginx/run
 RUN chmod +x /etc/services.d/nginx/run
+
+# Calendar API (JSON over HTTP, see DOCS.md), reached through nginx at /api/calendar/
+COPY calendar-api.mjs /opt/hometwin/calendar-api.mjs
+COPY calendar-api-run.sh /etc/services.d/calendar-api/run
+RUN chmod +x /etc/services.d/calendar-api/run

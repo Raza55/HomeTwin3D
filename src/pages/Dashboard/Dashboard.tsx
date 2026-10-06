@@ -111,6 +111,7 @@ const VisualMatchingGuide = lazy(() => import('../../components/VisualMatchingGu
 const SettingsModal = lazy(() => import('../../components/SettingsModal'));
 const DebugPanel = lazy(() => import('../../components/DebugPanel'));
 const EnergyFlowView = lazy(() => import('../../components/EnergyFlow/EnergyFlowView'));
+const CalendarView = lazy(() => import('../../components/Calendar/CalendarView'));
 const GuidedTour = lazy(() => import('../../components/GuidedTour/GuidedTour'));
 
 const LONG_PRESS_MS = 500;
@@ -299,6 +300,7 @@ export default function Dashboard() {
   const [debugOpen, setDebugOpen] = useState(false);
   const [homeViewSetting, setHomeViewSetting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [settingsMounted, setSettingsMounted] = useState(false);
   useEffect(() => { if (settingsOpen) setSettingsMounted(true); }, [settingsOpen]);
   const [showTour, setShowTour] = useState(
@@ -2416,6 +2418,7 @@ export default function Dashboard() {
 
         <HUD
           onSettings={() => setSettingsOpen(true)}
+          onCalendar={dayDemoController ? undefined : () => setCalendarOpen(true)}
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}
           longitude={(configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude)}
           northOffset={northOffset}
@@ -2430,6 +2433,8 @@ export default function Dashboard() {
           cloudCoverFactor={cloudCoverFactor}
           currentWeather={currentWeather}
         />
+
+        {calendarOpen && <Suspense fallback={null}><CalendarView onClose={() => setCalendarOpen(false)} /></Suspense>}
 
         {dayDemoController && <div className={`day-demo-veil${demoVeil ? ' on' : ''}`} aria-hidden />}
         {dayDemoController && (

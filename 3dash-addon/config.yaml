@@ -1,6 +1,6 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.5.57"
+version: "0.5.58"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
@@ -20,9 +20,13 @@ webui: "http://[HOST]:[PORT:8099]"
 # "addon_configs" Samba share (initial import) and included in HA backups.
 map:
   - addon_config:rw
+# Calendar API: reads and writes HA calendars through the Supervisor (calendar-api.mjs).
+homeassistant_api: true
 init: false
 startup: "application"
 boot: "auto"
 options: {}
 schema:
   write_pin: "password?"
+  calendar_api_token: "password?"
+  calendar_api_default: "str?"

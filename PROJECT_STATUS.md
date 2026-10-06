@@ -106,6 +106,14 @@ Die **Außenumgebung** (Park, Wege, Bäume, Nachbargebäude, Hof) ist prozedural
 Referenzwohnung. Sie wird an den Modellgrenzen und an den Rollos als Fassade ausgerichtet, bildet aber nicht die eigene
 Umgebung ab. Mit `?off=exterior` in der Adresse lässt sie sich zum Vergleich ausschalten.
 
+### Kalender
+
+Ein Tipp auf das Datum öffnet einen Kalender (Jahr, Monat, Woche) über dem Modell. Termine kommen per WebSocket Abo aus den
+Kalendern von Home Assistant und werden dort angelegt, geändert und gelöscht. Feiertage werden für die gewählten Bundesländer
+berechnet, Schulferien von der OpenHolidays API geladen und im Browser zwischengespeichert. Freitext und Sprache werden in
+Tag, Uhrzeit und Dauer zerlegt; Vorschläge entstehen aus früheren Terminen. Personen, Klausurnoten und ein API Schlüssel
+stehen als Zeilen in der Terminbeschreibung. Das Add-on bietet dazu eine Kalender API für JSON (siehe Add-on-Dokumentation).
+
 ## Installationswerte: Beispiel-Entities umlenken
 
 Einige Funktionen verwenden im Quelltext feste **Beispiel-Entity-IDs**, weil sie keine eigene Zuordnung im Editor haben:

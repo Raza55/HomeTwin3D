@@ -1,0 +1,37 @@
+/** Per-browser calendar preferences (the events themselves live in Home Assistant). */
+export interface CalendarPrefs {
+  /** States whose public and school holidays are shown (chosen on first use). */
+  regions: string[];
+  /** The first-use question about the states was answered. */
+  setupDone: boolean;
+  showPublicHolidays: boolean;
+  showSchoolHolidays: boolean;
+  /** Calendar new appointments go to. */
+  defaultCalendar?: string;
+  hiddenCalendars: string[];
+  view: 'year' | 'month' | 'week';
+  /** People added on this device (others come from the events' "Für:" lines). */
+  persons: string[];
+  /** Show only events for these people (empty: everyone). */
+  personFilter: string[];
+}
+
+const KEY = 'calendar.prefs';
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [] };
+
+export function loadCalendarPrefs(): CalendarPrefs {
+  try {
+    const stored = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<CalendarPrefs> & { region?: string };
+    // Earlier versions had a single state
+    if (!stored.regions && stored.region) { stored.regions = [stored.region]; stored.setupDone = true; }
+    delete stored.region;
+    return { ...DEFAULTS, ...stored };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+export function saveCalendarPrefs(prefs: CalendarPrefs): void {
+  try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch { /* defaults next time */ }
+  window.dispatchEvent(new Event('calendar-prefs-changed'));
+}

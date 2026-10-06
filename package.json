@@ -31,7 +31,8 @@
     "privacy:check": "node tools/check-public-data.mjs",
     "privacy:install": "node tools/install-public-hook.mjs",
     "test:shared": "node tools/run-shared-tests.mjs",
-    "test:privacy": "node --test tools/public-data.test.mjs"
+    "test:privacy": "node --test tools/public-data.test.mjs",
+    "test:calendar": "node --test tools/calendar.test.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.28.0",

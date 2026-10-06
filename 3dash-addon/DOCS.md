@@ -45,6 +45,52 @@ und die HA-Verbindung bleiben pro Browser; der HA-Token wird nie übertragen.
 Die Daten liegen im Konfigurationsordner des Add-ons: auf dem Host `addon_configs/<slug>/shared`, erreichbar über die
 Samba-Freigabe **addon_configs** und in HA-Backups enthalten.
 
+## Kalender und API
+
+Ein Tipp auf Uhrzeit und Datum öffnet den Kalender (Jahr, Monat, Woche). Termine liegen in Kalendern von Home Assistant,
+am einfachsten in einem *Lokalen Kalender* (Einstellungen → Geräte und Dienste → Integration hinzufügen). Feiertage und
+Schulferien kommen für die beim ersten Öffnen gewählten Bundesländer dazu. Zusätzliche Angaben stehen als Zeilen am Ende der
+Terminbeschreibung und sind damit auf allen Geräten gleich:
+
+```text
+Für: Anna, Ben
+Note: 11 Punkte
+Ref: eigener-schluessel
+```
+
+`Für` ordnet Termine Personen zu (Filter im Kalender), `Note` ist die Punktzahl einer Klausur, `Ref` ein eigener Schlüssel
+für die API.
+
+Die API legt Termine per JSON an, ändert und löscht sie, etwa aus Skripten oder Kurzbefehlen. Sie ist aus, bis in den
+Add-on-Optionen `calendar_api_token` gesetzt ist (mindestens 16 Zeichen). `calendar_api_default` bestimmt den Kalender, wenn
+eine Anfrage keinen nennt; sonst gilt der erste beschreibbare. Jede Anfrage braucht den Schlüssel im Header
+`Authorization: Bearer <token>`.
+
+| Anfrage | Zweck |
+| --- | --- |
+| `GET /api/calendar` | Kalender und Standardkalender |
+| `GET /api/calendar/events?start=2026-10-01&end=2026-12-31` | Termine eines Zeitraums, optional `calendar`, `ref` |
+| `POST /api/calendar/events` | Termine anlegen oder ändern (einzeln, als Liste oder `{ "calendar": …, "events": [...] }`) |
+| `DELETE /api/calendar/events?ref=…` | Termin löschen (oder `uid=…`) |
+| `GET /api/calendar/add?token=…&summary=…&start=…` | Ein Termin nur per Adresse, für Werkzeuge ohne eigene Header |
+
+```bash
+curl -X POST http://<ha-host>:8099/api/calendar/events \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"ref": "klausur-m1-1", "summary": "Klausur Mathematik", "start": "2026-10-26T07:50", "end": "2026-10-26T09:20", "persons": ["Anna"]}'
+```
+
+Felder eines Termins: `summary` und `start` sind Pflicht. `start` als Datum (`2026-10-26`) ergibt einen ganztägigen Termin,
+dann ist `end` der letzte Tag; sonst Datum und Uhrzeit, `end` oder `durationMinutes` (Standard 60). Optional: `description`,
+`location`, `persons`, `grade` (0 bis 15), `rrule` (z. B. `FREQ=WEEKLY`), `calendar`, `ref`, `uid`, `delete: true`.
+
+Mit `ref` wird ein erneut gesendeter Termin aktualisiert statt doppelt angelegt; ohne Änderung meldet die Antwort
+`unchanged`. Eine auf dem Tablet eingetragene Note bleibt erhalten, wenn die Anfrage keine `grade` enthält; ebenso Personen
+und Beschreibung. Die Antwort nennt pro Termin `created`, `updated`, `unchanged`, `deleted`, `not_found` oder `error`.
+
+Der Schlüssel erlaubt Lesen und Schreiben aller Kalender. Die API daher nur im LAN/VPN oder hinter einem geschützten Proxy
+erreichbar machen und den Schlüssel wie ein Passwort behandeln.
+
 ## Bestehende Einrichtung übernehmen
 
 **Aus einem anderen Browser oder einer anderen Adresse:** In der bisherigen App eine ZIP-Sicherung exportieren, in der neuen

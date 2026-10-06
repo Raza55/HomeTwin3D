@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  CalendarDays,
   Cloud,
   CloudOff,
   CloudRain,
@@ -21,11 +22,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSetting } from '../services/settingsStore';
 import { isRaining, isSnowing, type WeatherData } from '../services/weatherApi';
+import { useTodayHint } from './Calendar/useTodayHint';
 import './HUD.css';
 
 interface Props {
   /** Opens the settings (gear next to the logo; the editor is started from there). */
   onSettings?: () => void;
+  /** Opens the calendar (tap on the date). */
+  onCalendar?: () => void;
   latitude: number;
   longitude: number;
   northOffset: number;
@@ -73,6 +77,7 @@ function weatherVisualFor(weather?: WeatherData | null): { icon: LucideIcon; var
 
 export default function HUD({
   onSettings,
+  onCalendar,
   latitude,
   longitude,
   northOffset,
@@ -95,6 +100,7 @@ export default function HUD({
   const [clock, setClock] = useState('--:--');
   const [date, setDate] = useState('---');
   const [currentMinutes, setCurrentMinutes] = useState(720);
+  const todayHint = useTodayHint(!!onCalendar && hudVisible);
 
   useEffect(() => {
     const handler = () => setHudVisible(getSetting('appearance').hudVisible);
@@ -249,10 +255,22 @@ export default function HUD({
             {!weatherStatus.temperature && !weatherStatus.clouds && <span className="hud-status-label">{weatherStatus.title}</span>}
           </div>
         </div>
-        <div className="hud-clock">
-          <div className="time">{clock}</div>
-          <div className="date">{date}</div>
-        </div>
+        {onCalendar ? (
+          <button type="button" className="hud-clock hud-clock-button" onClick={onCalendar}
+            aria-label={`${t('calendar.open')}${todayHint.label ? ` · ${todayHint.label}` : ''}`} title={todayHint.label || t('calendar.open')}>
+            <div className="time">{clock}</div>
+            <div className="date">
+              <CalendarDays className="hud-calendar-icon" size={10} strokeWidth={2} aria-hidden="true" />
+              {date}
+              {todayHint.count > 0 && <span className="hud-calendar-badge">{todayHint.count}</span>}
+            </div>
+          </button>
+        ) : (
+          <div className="hud-clock">
+            <div className="time">{clock}</div>
+            <div className="date">{date}</div>
+          </div>
+        )}
       </div>
     </div>
   );

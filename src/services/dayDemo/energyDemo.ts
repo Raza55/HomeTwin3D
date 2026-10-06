@@ -63,7 +63,9 @@ export interface DemoEnergy {
 }
 
 export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; room: RoomRole }[], lang: Lang,
-  activity: (kind: string) => 'off' | 'on' | 'busy' = () => 'on'): DemoEnergy {
+  activity: (kind: string) => 'off' | 'on' | 'busy' = () => 'on',
+  /** Object to use for a device kind, e.g. the PC the demo plays on (else the first object named like it). */
+  preferred: Partial<Record<string, string>> = {}): DemoEnergy {
   const objects = config.model?.floorplan?.objects ?? [];
   // HA areas of the floorplan objects; objects without one get an area named after their room.
   const areaOf = (o: { haAreaId?: string; room?: string }) => o.haAreaId || (o.room ? `demo_${o.room.toLowerCase().replace(/[^a-z0-9äöüß]+/g, '_')}` : undefined);
@@ -74,7 +76,7 @@ export function buildDemoEnergy(config: AppConfig, lights: { entityId: string; r
   const items: { id: string; power: string; device: string; name: string; area?: string; week: number; watts: number; kind?: string; lamps?: string[] }[] = [];
   for (const d of DEVICES) {
     // Only what the model contains (found by its label, as the energy view places it).
-    const object = objects.find(o => deviceKinds(`${o.label} ${o.id}`).has(d.kind));
+    const object = objects.find(o => o.id === preferred[d.kind]) ?? objects.find(o => deviceKinds(`${o.label} ${o.id}`).has(d.kind));
     if (!object) continue;
     items.push({ id: sensor(`${d.kind}_energy`), power: sensor(`${d.kind}_power`), device: `demo-${d.kind}`, name: d[lang], area: areaOf(object), week: d.week, watts: d.watts, kind: d.kind });
   }

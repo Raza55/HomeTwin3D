@@ -1868,7 +1868,10 @@ export default function Dashboard() {
       (window as unknown as { __hometwinDayDemo?: DayDemoController }).__hometwinDayDemo = controller;
       // Energy chapters: the demo answers the energy view's requests with typical values of a flat;
       // lamp groups follow the demo's lights.
-      const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de', kind => controller!.engine.deviceActivity(kind));
+      // The energy chapter's PC is the one the gaming chapter shows (it has a screen), not any PC-like object.
+      const gamingPc = cast.pcs.find(pc => pc.device.screenMaterials?.length) ?? cast.pcs[0];
+      const energyDemo = buildDemoEnergy(config, cast.lights, language.startsWith('en') ? 'en' : 'de', kind => controller!.engine.deviceActivity(kind),
+        gamingPc ? { pc: gamingPc.objectId } : {});
       ha.requestHandler = message => energyDemo.request(message);
       // The board's TV Dial is usable in the demo (its automation counts as active; requests go nowhere).
       ha.setState(TV_DIAL_AUTOMATION, 'on', { friendly_name: 'TV Dial', current: 0 });

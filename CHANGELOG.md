@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.57 · Energieansicht der Tagesdemo zeigt den spielenden PC (06.10.2026)
+
+- In den Energiekapiteln der Tagesdemo steht der PC jetzt für den Rechner, auf dem in der Gaming Session gespielt wird (der PC mit Bildschirm). Bisher nahm die Demo das erste Objekt im Modell, dessen Name nach PC aussah; Verbrauch und Raum konnten so zu einem anderen Rechner gehören.
+
 ## 0.5.56 · Fertig-Anzeige für Waschmaschine und Trockner (04.10.2026)
 
 - Waschmaschine und Trockner können eine Fertig-Entity erhalten (Zuordnungsassistent, Abschnitt Betriebsanzeige). Meldet sie `on`, wird der Gerätemarker rot, leuchtet langsam pulsierend und zeigt „Fertig“. Die Anzeige verschwindet, sobald HA die Entity zurücksetzt (z. B. Tür geöffnet oder Gerät ausgeschaltet).

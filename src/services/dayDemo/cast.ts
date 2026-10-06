@@ -30,7 +30,7 @@ export interface CastLight {
   dim: boolean; temp: boolean; color: boolean;
 }
 export interface CastCoffee { entityId: string; ids: NonNullable<FloorplanObject['coffee']>; objectId?: string }
-export interface CastPC { device: ITDevice; room: RoomRole }
+export interface CastPC { device: ITDevice; room: RoomRole; /** Floorplan object that hosts the PC. */ objectId: string }
 export interface CastDoor { entityId: string; kind: 'entrance' | 'balcony' | 'window' | 'other'; label: string; objectId?: string }
 export interface CastAppliance {
   entityId: string; kind: 'washer' | 'dryer'; runningState?: string; power: boolean; remainingEntityId?: string; objectId?: string;
@@ -136,7 +136,7 @@ export function buildCast(config: AppConfig, extraDisplays: DisplayConfig[] = []
 
   for (const o of objects) {
     if (o.it) for (const device of o.it.devices) {
-      if (device.kind === 'pc' && device.statusEntityId) pcs.push({ device, room: objectRoom(o) });
+      if (device.kind === 'pc' && device.statusEntityId) pcs.push({ device, room: objectRoom(o), objectId: o.id });
     }
     if (o.coffee && o.entityId) coffee.push({ entityId: o.entityId, ids: o.coffee, objectId: o.id });
     if (o.echo && o.entityId) echos.push({ entityId: o.entityId, label: o.label, room: objectRoom(o) });

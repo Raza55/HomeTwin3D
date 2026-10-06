@@ -14,6 +14,9 @@
   --cal-holiday: var(--red);
   --cal-school: color-mix(in srgb, var(--green) 14%, transparent);
   --cal-school-text: var(--green);
+  /* Whole-cell fills: public holidays and (optionally) exam days, over the school holiday tint */
+  --cal-holiday-fill: color-mix(in srgb, var(--red) 18%, transparent);
+  --cal-exam-fill: color-mix(in srgb, var(--exam-color, #f97316) 26%, transparent);
   --cal-radius: 12px;
 }
 
@@ -92,7 +95,16 @@
   container-type: inline-size;
 }
 .cal-day.other { opacity: 0.45; }
-.cal-day.school { background: linear-gradient(var(--cal-school), var(--cal-school)), var(--surface); }
+.cal-day, .cal-week-day, .cal-week-allday-cell, .cal-mini-day {
+  --day-fill: transparent;
+  --day-school: transparent;
+}
+.cal-day { background: linear-gradient(var(--day-fill), var(--day-fill)), linear-gradient(var(--day-school), var(--day-school)), var(--surface); }
+.cal-week-day, .cal-week-allday-cell, .cal-mini-day { background: linear-gradient(var(--day-fill), var(--day-fill)), linear-gradient(var(--day-school), var(--day-school)); }
+.cal-overlay .school { --day-school: var(--cal-school); }
+.cal-overlay .holiday { --day-fill: var(--cal-holiday-fill); }
+.cal-overlay .exam-day { --day-fill: var(--cal-exam-fill); }
+.cal-day.exam-day { border-color: color-mix(in srgb, var(--exam-color) 55%, var(--border)); }
 .cal-day.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .cal-day-top { display: flex; align-items: center; flex-wrap: wrap; column-gap: 5px; min-width: 0; }
 .cal-day-num { font-size: 17px; font-weight: 500; min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex: none; }
@@ -170,7 +182,6 @@
 }
 .cal-mini-day.other { visibility: hidden; }
 .cal-mini-day.weekend { color: var(--muted); }
-.cal-mini-day.school { background: var(--cal-school); }
 .cal-mini-day.holiday { color: var(--cal-holiday); font-weight: 700; }
 .cal-mini-day.busy::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
 .cal-mini-day.selected { box-shadow: inset 0 0 0 1.5px var(--accent); }
@@ -186,12 +197,10 @@
 .cal-week-wd { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .cal-week-num { font-size: 20px; font-weight: 500; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
 .cal-week-day.holiday .cal-week-num { color: var(--cal-holiday); }
-.cal-week-day.school { background: var(--cal-school); }
 .cal-week-day.selected .cal-week-num { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cal-week-day.today .cal-week-num { background: var(--accent); color: #fff; }
 .cal-week-allday { border-bottom: 1px solid var(--border); max-height: 28%; overflow-y: auto; }
 .cal-week-allday-cell { display: flex; flex-direction: column; gap: 2px; padding: 3px; min-height: 34px; border-left: 1px solid var(--border); min-width: 0; }
-.cal-week-allday-cell.school { background: var(--cal-school); }
 .cal-week-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .cal-week-grid {
   position: relative;
@@ -268,6 +277,19 @@
 .cal-setup { width: min(720px, 100%); }
 .cal-setup h3 { margin: 0; font-size: 20px; }
 .cal-setup p { margin: 0; }
+
+/* ── Highlighted exams ── */
+.cal-chip.exam { background: color-mix(in srgb, var(--event-color) 34%, transparent); font-weight: 700; }
+.cal-chip.exam .cal-chip-time { color: inherit; opacity: 0.8; }
+.cal-agenda-item.exam { border-left-width: 7px; background: color-mix(in srgb, var(--event-color) 18%, var(--surface)); border-color: color-mix(in srgb, var(--event-color) 55%, var(--border)); }
+.cal-week-event.exam { background: color-mix(in srgb, var(--event-color) 42%, var(--surface)); box-shadow: inset 0 0 0 1px var(--event-color); }
+.cal-mini-day.exam-day { font-weight: 700; }
+.cal-mini-day.exam-day::after { background: var(--exam-color); }
+.cal-color-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px 32px; }
+.cal-color { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); padding: 0; cursor: pointer; }
+.cal-color.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.cal-color-custom { position: relative; overflow: hidden; background: conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444); }
+.cal-color-custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 
 /* ── People: filter row and badges ── */
 .cal-persons { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 8px; }

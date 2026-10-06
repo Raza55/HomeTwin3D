@@ -19,6 +19,7 @@ interface Props {
 
 type View = CalendarPrefs['view'];
 const HOUR_PX = 56;
+const EXAM_COLORS = ['#f97316', '#ef4444', '#eab308', '#22c55e', '#a855f7', '#ec4899'];
 const PERSON_COLORS = ['#f59e0b', '#8b5cf6', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
 const MAX_CHIPS = 3;
 
@@ -138,7 +139,8 @@ export default function CalendarView({ onClose }: Props) {
       return `${t('calendar.weekShort')} ${isoWeek(focus)} · ${fmt.dayShort.format(ws)} – ${fmt.dayShort.format(we)} ${we.getFullYear()}`;
     })();
 
-  const colorOf = (e: CalEvent) => calendarColor(calendarIds, e.calendar);
+  const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && isExam(e.summary), [prefs.highlightExams]);
+  const colorOf = (e: CalEvent) => (examMarked(e) ? prefs.examColor : calendarColor(calendarIds, e.calendar));
   const timeLabel = (e: CalEvent) => e.allDay ? t('calendar.allDay') : `${hhmm(minutesOfDay(e.start))}–${hhmm(minutesOfDay(e.end))}`;
   const editable = (e: CalEvent) => !!e.uid && !!calendars.find(c => c.entityId === e.calendar)?.canUpdate;
   const gradeBadge = (e: CalEvent) => {
@@ -170,7 +172,7 @@ export default function CalendarView({ onClose }: Props) {
       <ul className="cal-agenda-list">
         {(byDay.get(ymd(focus)) ?? []).map(e => (
           <li key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}>
-            <button type="button" className="cal-agenda-item" onClick={() => openEvent(e)} style={{ ['--event-color' as string]: colorOf(e) }}>
+            <button type="button" className={`cal-agenda-item${examMarked(e) ? ' exam' : ''}`} onClick={() => openEvent(e)} style={{ ['--event-color' as string]: colorOf(e) }}>
               <span className="cal-agenda-time">{timeLabel(e)}</span>
               <span className="cal-agenda-title">
                 {e.summary}
@@ -187,7 +189,7 @@ export default function CalendarView({ onClose }: Props) {
   );
 
   return (
-    <div className="cal-overlay" role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
+    <div className="cal-overlay" style={{ ['--exam-color' as string]: prefs.examColor }} role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
       <header className="cal-header">
         <button type="button" className="cal-icon-btn" onClick={onClose} aria-label={t('calendar.close')}><X size={22} /></button>
         <div className="cal-nav">
@@ -227,7 +229,7 @@ export default function CalendarView({ onClose }: Props) {
       <div className={`cal-body cal-body-${view}`} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = null; }}>
         <main className="cal-main">
           {view === 'year' && (
-            <YearView year={year} today={today} focus={focus} byDay={byDay} marksOf={marksOf} fmt={fmt} weekdayLabels={weekdayLabels}
+            <YearView examMarked={examMarked} year={year} today={today} focus={focus} byDay={byDay} marksOf={marksOf} fmt={fmt} weekdayLabels={weekdayLabels}
               onMonth={d => { setFocus(d); updatePrefs({ view: 'month' }); }}
               onDay={d => { setFocus(d); updatePrefs({ view: 'month' }); }} />
           )}
@@ -246,6 +248,7 @@ export default function CalendarView({ onClose }: Props) {
                     key === ymd(focus) && 'selected',
                     marks.holiday && 'holiday',
                     marks.school && 'school',
+                    list.some(examMarked) && 'exam-day',
                     (day.getDay() === 0 || day.getDay() === 6) && 'weekend',
                   ].filter(Boolean).join(' ');
                   return (
@@ -261,7 +264,7 @@ export default function CalendarView({ onClose }: Props) {
                       <div className="cal-day-events">
                         {list.slice(0, MAX_CHIPS).map(e => (
                           <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}
-                            className={`cal-chip${e.allDay ? ' all-day' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }}
+                            className={`cal-chip${e.allDay ? ' all-day' : ''}${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }}
                             onClick={ev => { ev.stopPropagation(); setFocus(day); openEvent(e); }}>
                             {!e.allDay && <span className="cal-chip-time">{hhmm(minutesOfDay(e.start))}</span>}
                             <span className="cal-chip-title">{e.summary}</span>
@@ -277,7 +280,7 @@ export default function CalendarView({ onClose }: Props) {
             </div>
           )}
           {view === 'week' && (
-            <WeekView gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
+            <WeekView examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
               canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} />
           )}
         </main>
@@ -292,6 +295,19 @@ export default function CalendarView({ onClose }: Props) {
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />
+          <div className="cal-settings-title">{t('calendar.exams')}</div>
+          <label className="cal-check"><input type="checkbox" checked={prefs.highlightExams} onChange={e => updatePrefs({ highlightExams: e.target.checked })} /> {t('calendar.highlightExams')}</label>
+          {prefs.highlightExams && (
+            <div className="cal-color-row" role="group" aria-label={t('calendar.examColor')}>
+              {EXAM_COLORS.map(c => (
+                <button type="button" key={c} className={`cal-color${prefs.examColor === c ? ' active' : ''}`} style={{ background: c }}
+                  aria-label={c} aria-pressed={prefs.examColor === c} onClick={() => updatePrefs({ examColor: c })} />
+              ))}
+              <label className="cal-color cal-color-custom" title={t('calendar.examColor')}>
+                <input type="color" value={prefs.examColor} onChange={e => updatePrefs({ examColor: e.target.value })} />
+              </label>
+            </div>
+          )}
           {calendars.length > 0 && <div className="cal-settings-title">{t('calendar.calendars')}</div>}
           {calendars.map(c => (
             <label key={c.entityId} className="cal-check">
@@ -367,7 +383,8 @@ interface Formats {
   dayShort: Intl.DateTimeFormat;
 }
 
-function YearView({ year, today, focus, byDay, marksOf, fmt, weekdayLabels, onMonth, onDay }: {
+function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekdayLabels, onMonth, onDay }: {
+  examMarked: (e: CalEvent) => boolean;
   year: number; today: Date; focus: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks;
   fmt: Formats; weekdayLabels: string[]; onMonth: (d: Date) => void; onDay: (d: Date) => void;
 }) {
@@ -384,14 +401,16 @@ function YearView({ year, today, focus, byDay, marksOf, fmt, weekdayLabels, onMo
               const key = ymd(day);
               if (day.getMonth() !== month) return <span key={key} className="cal-mini-day other" />;
               const marks = marksOf(key);
-              const count = byDay.get(key)?.length ?? 0;
-              const cls = ['cal-mini-day',
+              const list = byDay.get(key) ?? [];
+              const count = list.length;
+              const exam = list.find(examMarked);
+              const cls = ['cal-mini-day', exam && 'exam-day',
                 key === ymd(today) && 'today', key === ymd(focus) && 'selected',
                 marks.holiday && 'holiday', marks.school && 'school', count > 0 && 'busy',
                 (day.getDay() === 0 || day.getDay() === 6) && 'weekend'].filter(Boolean).join(' ');
               return (
                 <button key={key} type="button" className={cls} onClick={() => onDay(day)}
-                  title={[marks.holiday, marks.school?.name, count ? `${count}` : ''].filter(Boolean).join(' · ') || undefined}>
+                  title={[marks.holiday, marks.school?.name, exam?.summary, count ? `${count}` : ''].filter(Boolean).join(' · ') || undefined}>
                   {day.getDate()}
                 </button>
               );
@@ -403,7 +422,8 @@ function YearView({ year, today, focus, byDay, marksOf, fmt, weekdayLabels, onMo
   );
 }
 
-function WeekView({ gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+function WeekView({ examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+  examMarked: (e: CalEvent) => boolean;
   gradeBadge: (e: CalEvent) => JSX.Element;
   focus: Date; today: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks; fmt: Formats;
   colorOf: (e: CalEvent) => string; canCreate: boolean; onSelect: (d: Date) => void;
@@ -430,7 +450,7 @@ function WeekView({ gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canC
           const marks = marksOf(key);
           return (
             <button key={key} type="button" onClick={() => onSelect(day)}
-              className={['cal-week-day', key === ymd(today) && 'today', key === ymd(focus) && 'selected', marks.holiday && 'holiday', marks.school && 'school'].filter(Boolean).join(' ')}>
+              className={['cal-week-day', key === ymd(today) && 'today', key === ymd(focus) && 'selected', marks.holiday && 'holiday', marks.school && 'school', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')}>
               <span className="cal-week-wd">{fmt.weekdayShort.format(day).replace('.', '')}</span>
               <span className="cal-week-num">{day.getDate()}</span>
             </button>
@@ -444,11 +464,11 @@ function WeekView({ gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canC
           const marks = marksOf(key);
           const allDay = (byDay.get(key) ?? []).filter(e => e.allDay);
           return (
-            <div key={key} className={`cal-week-allday-cell${marks.school ? ' school' : ''}`} onDoubleClick={() => canCreate && onCreate(day, undefined, true)}>
+            <div key={key} className={['cal-week-allday-cell', marks.school && 'school', marks.holiday && 'holiday', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')} onDoubleClick={() => canCreate && onCreate(day, undefined, true)}>
               {marks.holiday && <span className="cal-mark cal-mark-holiday">{marks.holiday}</span>}
               {marks.school && (marks.school.start === key || day.getDay() === 1) && <span className="cal-mark cal-mark-school">{marks.school.name}</span>}
               {allDay.map(e => (
-                <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className="cal-chip all-day" style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>
+                <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className={`cal-chip all-day${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>
                   <span className="cal-chip-title">{e.summary}</span>
                 </button>
               ))}
@@ -478,7 +498,7 @@ function WeekView({ gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canC
                   const from = Math.max(0, (e.start.getTime() - dayStart) / 60000);
                   const to = Math.min(1440, (e.end.getTime() - dayStart) / 60000);
                   return (
-                    <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`} className="cal-week-event"
+                    <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`} className={`cal-week-event${examMarked(e) ? ' exam' : ''}`}
                       style={{ top: from / 60 * HOUR_PX, height: Math.max(22, (to - from) / 60 * HOUR_PX - 2), left: `calc(${lane / lanes * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)`, ['--event-color' as string]: colorOf(e) }}
                       onClick={() => onOpen(e)}>
                       <span className="cal-week-event-time">{hhmm(minutesOfDay(e.start))}</span>

@@ -1000,7 +1000,10 @@
     "calendar.addPerson": "+ Person",
     "calendar.personName": "Name",
     "calendar.personFilter": "Personen",
-    "calendar.everyone": "Alle"
+    "calendar.everyone": "Alle",
+    "calendar.exams": "Klausuren",
+    "calendar.highlightExams": "Klausuren farbig hervorheben",
+    "calendar.examColor": "Farbe für Klausuren"
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -2003,6 +2006,9 @@
     "calendar.addPerson": "+ Person",
     "calendar.personName": "Name",
     "calendar.personFilter": "People",
-    "calendar.everyone": "Everyone"
+    "calendar.everyone": "Everyone",
+    "calendar.exams": "Exams",
+    "calendar.highlightExams": "Highlight exams in colour",
+    "calendar.examColor": "Colour for exams"
   }
 }

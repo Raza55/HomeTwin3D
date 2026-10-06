@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.60 · Klausuren und Feiertage im Kalender farbig (06.10.2026)
+
+- Tage mit Klausur werden im Kalender als ganze Zelle eingefärbt, die Klausur selbst kräftiger dargestellt (Monat, Woche, Tagesliste, Jahresübersicht). Schalter und Farbe in den Kalendereinstellungen unter *Klausuren*, Standard Orange.
+- Feiertage färben ebenfalls die ganze Zelle (rot); Schulferien bleiben grün hinterlegt, eine Klausur oder ein Feiertag in den Ferien bleibt erkennbar.
+
 ## 0.5.59 · Kalender als Abo für Google, Apple und Outlook (06.10.2026)
 
 - Mit der neuen Add-on-Option `calendar_feed_token` liefert das Add-on die Termine aus Home Assistant als iCalendar Abo (`/api/calendar/feed.ics`). In Google Kalender per URL abonniert, erscheinen sie dort und auf dem Handy. Optional nur die Termine einer Person (`&person=…`) oder eines Kalenders.

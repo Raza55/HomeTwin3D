@@ -14,10 +14,13 @@ export interface CalendarPrefs {
   persons: string[];
   /** Show only events for these people (empty: everyone). */
   personFilter: string[];
+  /** Exams (titles with "Klausur", "Klassenarbeit", ...) in their own color. */
+  highlightExams: boolean;
+  examColor: string;
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [] };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316' };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

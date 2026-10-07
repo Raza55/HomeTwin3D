@@ -53,7 +53,7 @@ test('create, send again unchanged, change, grade kept, delete by ref', async ()
   assert.equal(r.body.results[0].status, 'updated');
   assert.equal(ha.events.length, 2);
   assert.equal(ha.events[0].dtstart, '2026-10-27T07:50:00');
-  assert.deepEqual(splitDescription(ha.events[0].description), { notes: 'Stunden 1-2', ref: 'exam-m1-1', grade: 12, persons: [] });
+  assert.deepEqual(splitDescription(ha.events[0].description), { notes: 'Stunden 1-2', ref: 'exam-m1-1', grade: 12, persons: [], timetable: false, symbol: undefined });
 
   r = await call(handle, 'POST', '/api/calendar/events', { body: { ...exam, start: '2026-10-27T07:50', end: '2026-10-27T09:20', persons: ['Anna'] } });
   assert.equal(ha.events[0].description, 'Stunden 1-2\nFür: Anna\nNote: 12 Punkte\nRef: exam-m1-1');
@@ -124,6 +124,7 @@ test('iCalendar feed: read-only token, person filter, escaping and folding', asy
     { ref: 'a', summary: 'Klausur Mathematik', start: '2026-10-26T07:50', end: '2026-10-26T09:20', persons: ['Anna'], grade: 11, description: 'Raum 1, Stunden 1-2' },
     { ref: 'b', summary: 'Zahnarzt', start: '2026-10-27T08:00', persons: ['Ben'], location: 'Praxis; Haus 2' },
     { ref: 'c', summary: 'Wandertag', start: '2026-10-28' },
+    { ref: 'd', summary: 'Anna: M1', start: '2026-10-26T09:35', persons: ['Anna'], timetable: true, rrule: 'FREQ=WEEKLY;COUNT=3' },
   ] });
   const feed = (query) => call(handle, 'GET', '/api/calendar/feed.ics', { headers: {}, query });
   assert.equal((await feed({})).status, 401);
@@ -131,7 +132,9 @@ test('iCalendar feed: read-only token, person filter, escaping and folding', asy
   const all = await feed({ token: 'feed-token-0123456789' });
   assert.equal(all.status, 200);
   assert.equal(all.contentType, 'text/calendar; charset=utf-8');
-  assert.equal(all.raw.match(/BEGIN:VEVENT/g).length, 3);
+  assert.equal(all.raw.match(/BEGIN:VEVENT/g).length, 3, 'timetable lessons stay out of the feed');
+  assert.equal((await feed({ token: 'feed-token-0123456789', timetable: '1' })).raw.match(/BEGIN:VEVENT/g).length, 4);
+  assert.equal(ha.events[3].description, 'Art: Stundenplan\nFür: Anna\nRef: d');
   assert.match(all.raw, /DTSTART;VALUE=DATE:20261028\r\nDTEND;VALUE=DATE:20261029/);
   assert.match(all.raw, /DESCRIPTION:Raum 1\\, Stunden 1-2\\nFür: Anna\\nNote: 11 Punkte/);
   assert.match(all.raw, /LOCATION:Praxis\\; Haus 2/);

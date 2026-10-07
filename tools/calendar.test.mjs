@@ -89,7 +89,7 @@ test('event data lines: people, grade and API key', async () => {
   assert.equal(m.isExam('Klausur Mathematik'), true);
   assert.equal(m.isExam('Zahnarzt'), false);
   const desc = 'Kurs M1, Stunden 1-2\nFür: Anna, Ben\nNote: 11 Punkte\nRef: exam-m1-1';
-  assert.deepEqual(m.readMeta(desc), { notes: 'Kurs M1, Stunden 1-2', persons: ['Anna', 'Ben'], grade: 11, ref: 'exam-m1-1' });
+  assert.deepEqual(m.readMeta(desc), { notes: 'Kurs M1, Stunden 1-2', persons: ['Anna', 'Ben'], grade: 11, ref: 'exam-m1-1', timetable: false, symbol: undefined });
   assert.equal(m.writeMeta(m.readMeta(desc)), desc);
   assert.equal(m.writeMeta({ notes: '', persons: [], grade: 1 }), 'Note: 1 Punkt');
   assert.deepEqual(m.readMeta('', 'Anna: Klausur Latein', ['Anna', 'Ben']).persons, ['Anna'], 'title prefix of a known person');
@@ -98,4 +98,53 @@ test('event data lines: people, grade and API key', async () => {
   assert.deepEqual([15, 13, 12, 10, 9, 7, 6, 4, 3, 1, 0].map(m.pointsToGrade), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6]);
   assert.equal(m.personInitials('Anna', ['Anna', 'Ben']), 'A');
   assert.equal(m.personInitials('Robin', ['Robin', 'Rosa']), 'Ro');
+});
+
+test('timetable lessons: only on school days, not while away or writing an exam', async () => {
+  const { schoolLessons, lessonTitle } = await import('../src/services/calendar/timetable.ts');
+  const { readMeta, writeMeta } = await import('../src/services/calendar/eventMeta.ts');
+  const ev = (summary, start, end, description = '', allDay = false) => ({ calendar: 'calendar.family', summary, description, start: new Date(start), end: new Date(end), allDay });
+  const persons = (e) => readMeta(e.description, e.summary, ['Anna', 'Ben']).persons;
+  const lesson = (summary, from, to) => ev(summary, `2026-11-02T${from}`, `2026-11-02T${to}`, 'Raum 1\nArt: Stundenplan\nFür: Anna');
+  const monday = new Date(2026, 10, 2);
+  const lessons = [lesson('Anna: M1', '07:50', '09:20'), lesson('Anna: E1', '09:35', '11:05')];
+  assert.equal(readMeta(lessons[0].description).timetable, true);
+  assert.equal(writeMeta(readMeta(lessons[0].description)), 'Raum 1\nArt: Stundenplan\nFür: Anna');
+  assert.deepEqual(schoolLessons(monday, lessons, [], {}, persons).map(l => l.summary), ['Anna: M1', 'Anna: E1']);
+  assert.equal(schoolLessons(monday, lessons, [], { holiday: 'Feiertag' }, persons).length, 0);
+  assert.equal(schoolLessons(monday, lessons, [], { school: {} }, persons).length, 0);
+  assert.equal(schoolLessons(new Date(2026, 10, 1), lessons, [], {}, persons).length, 0, 'Sunday');
+  assert.equal(schoolLessons(monday, lessons, [ev('Schule: beweglicher Ferientag (unterrichtsfrei)', '2026-11-02T00:00', '2026-11-03T00:00', '', true)], {}, persons).length, 0);
+  // Exam of the same person replaces the lesson at that time; someone else's exam does not
+  const exam = ev('Klausur Mathematik', '2026-11-02T07:50', '2026-11-02T09:20', 'Für: Anna');
+  assert.deepEqual(schoolLessons(monday, lessons, [exam], {}, persons).map(l => l.summary), ['Anna: E1']);
+  assert.equal(schoolLessons(monday, lessons, [{ ...exam, description: 'Für: Ben' }], {}, persons).length, 2);
+  // Away: internship (all day) or a multi-day trip
+  assert.equal(schoolLessons(monday, lessons, [ev('Anna: Berufspraktikum', '2026-11-02T00:00', '2026-11-14T00:00', '', true)], {}, persons).length, 0);
+  assert.deepEqual(schoolLessons(monday, lessons, [ev('Reflitage', '2026-10-30T12:10', '2026-11-02T09:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: E1']);
+  // A one-day all-day reminder does not cancel school
+  assert.equal(schoolLessons(monday, lessons, [ev('Anna: Frist Kurswahl', '2026-11-02T00:00', '2026-11-03T00:00', '', true)], {}, persons).length, 2);
+  assert.equal(lessonTitle('Anna: M1', ['Anna']), 'M1');
+  assert.equal(lessonTitle('Schule: M1', ['Anna']), 'Schule: M1');
+});
+
+test('event symbols: recognised from the title or chosen', async () => {
+  const { eventKind, kindFromTitle } = await import('../src/services/calendar/eventKinds.ts');
+  const { readMeta, writeMeta } = await import('../src/services/calendar/eventMeta.ts');
+  const cases = {
+    'Anna: Klausur Mathematik (M1)': 'exam', 'Zahnarzt': 'doctor', 'RA Arzt': 'doctor', 'Kinderarzt U10': 'doctor',
+    'Oma Geburtstag': 'birthday', 'Schule: Zeugniskonferenzen (unterrichtsfrei)': 'free', 'Schule: beweglicher Ferientag (unterrichtsfrei)': 'free',
+    'Schule: Zeugnisausgabe': 'certificate', 'Anna: Frist Abwahl Kurse': 'deadline', 'Anna: Berufspraktikum (Jg. 10)': 'work',
+    'Schule: Elternsprechtag': 'parents', 'Schule: SEB-Sitzung': 'parents', 'Anna: Wettbewerb Mathe ohne Grenzen': 'sport',
+    'Anna: Reflitage': 'trip', 'Schule: Wandertag': 'trip', 'White Horse Theatre (MSS 10-12)': 'culture', 'Schule: Bandfestival': 'culture',
+    "Schule: Girls' and Boys' Day / Aktion Tagwerk": 'work', 'Friseur': 'haircut', 'Schule: Homeschooling (Teamtag)': 'school',
+    'Einkaufen': 'shopping', 'Tag der Information': undefined,
+  };
+  for (const [title, kind] of Object.entries(cases)) assert.equal(kindFromTitle(title), kind, title);
+  assert.equal(eventKind('Zahnarzt', 'party'), 'party');
+  assert.equal(eventKind('Zahnarzt', 'none'), undefined);
+  assert.equal(eventKind('Zahnarzt', 'unknown'), 'doctor');
+  assert.equal(readMeta('Notiz\nSymbol: doctor').symbol, 'doctor');
+  assert.equal(readMeta('Notiz\nSymbol: doctor').notes, 'Notiz');
+  assert.equal(writeMeta({ notes: 'Notiz', persons: ['Anna'], symbol: 'doctor' }), 'Notiz\nSymbol: doctor\nFür: Anna');
 });

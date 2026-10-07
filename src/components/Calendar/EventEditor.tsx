@@ -4,7 +4,9 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, hhmm, minutesOfDay, parseYmd, startOfDay, ymd } from '../../services/calendar/dates';
 import type { CalEvent, CalendarBackend, CalendarInfo, EventDraft, RecurrenceScope } from '../../services/calendar/haCalendar';
 import { rememberSample, suggest, type Profile, type Suggestion } from '../../services/calendar/learning';
+import { EVENT_KINDS, eventKind, kindFromTitle } from '../../services/calendar/eventKinds';
 import { gradeTone, isExam, pointsToGrade, readMeta, writeMeta } from '../../services/calendar/eventMeta';
+import EventIcon, { KIND_ICONS } from './EventIcon';
 import { hasSchedule, parseQuickText, type QuickParse } from '../../services/calendar/quickParse';
 
 export interface EditorRequest {
@@ -69,6 +71,8 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const [description, setDescription] = useState(initialMeta.notes);
   const [grade, setGrade] = useState(initialMeta.grade);
   const [persons, setPersons] = useState<string[]>(existing ? initialMeta.persons : defaultPersons);
+  const [timetable, setTimetable] = useState(!!initialMeta.timetable);
+  const [symbol, setSymbol] = useState<string | undefined>(initialMeta.symbol);
   const [personChoices, setPersonChoices] = useState(() => [...new Set([...knownPersons, ...initialMeta.persons])]);
   const [newPerson, setNewPerson] = useState<string | null>(null);
   const [more, setMore] = useState(!!(existing?.location || initialMeta.notes));
@@ -152,7 +156,10 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
     rec.start();
   };
 
-  const metaDescription = (points: number | undefined) => writeMeta({ notes: description, persons, grade: points, ref: initialMeta.ref });
+  const metaDescription = (points: number | undefined) => writeMeta({ notes: description, persons, grade: points, ref: initialMeta.ref, timetable, symbol });
+
+  // An unchanged frequency keeps the original rule (COUNT/UNTIL/BYDAY of a series)
+  const rrule = repeat ? (existing?.rrule?.includes(`FREQ=${repeat}`) ? existing.rrule : `FREQ=${repeat}`) : undefined;
 
   const buildDraft = (points = grade): EventDraft | null => {
     let p: QuickParse | null = null;
@@ -165,12 +172,12 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
     const start = parseYmd(day);
     if (isAllDay) {
       const last = p?.date ? start : parseYmd(endDate < day ? day : endDate);
-      return { summary, start, end: addDays(last, 1), allDay: true, location, description: metaDescription(points), rrule: repeat ? `FREQ=${repeat}` : undefined };
+      return { summary, start, end: addDays(last, 1), allDay: true, location, description: metaDescription(points), rrule };
     }
     const minutes = p?.startMinutes ?? startMin;
     start.setHours(Math.floor(minutes / 60), minutes % 60);
     const end = new Date(start.getTime() + (p?.durationMinutes ?? duration) * 60000);
-    return { summary, start, end, allDay: false, location, description: metaDescription(points), rrule: repeat ? `FREQ=${repeat}` : undefined };
+    return { summary, start, end, allDay: false, location, description: metaDescription(points), rrule };
   };
 
   const save = async (scope?: RecurrenceScope, points = grade) => {
@@ -247,7 +254,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           </button>
         )}
 
-        {isExam(title) && (
+        {eventKind(title, symbol) === 'exam' && (
           <div className="cal-grade">
             <div className="cal-grade-head">
               <span className="cal-row-label">{t('calendar.grade')}</span>
@@ -328,6 +335,29 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
               {(['', 'WEEKLY', 'MONTHLY', 'YEARLY'] as Repeat[]).map(r => (
                 <button type="button" key={r || 'none'} className={repeat === r ? 'active' : ''} onClick={() => setRepeat(r)}>{t(`calendar.repeat.${r || 'none'}`)}</button>
               ))}
+              <button type="button" className={timetable ? 'active' : ''} aria-pressed={timetable} title={t('calendar.timetableHint')}
+                onClick={() => { setTimetable(v => !v); if (!timetable && !repeat) setRepeat('WEEKLY'); }}>
+                {t('calendar.timetable')}
+              </button>
+            </div>
+          </div>
+
+          <div className="cal-row">
+            <span className="cal-row-label">{t('calendar.symbol')}</span>
+            <div className="cal-chips cal-symbols">
+              <button type="button" className={!symbol ? 'active' : ''} onClick={() => setSymbol(undefined)} title={t('calendar.symbolAuto')}>
+                <EventIcon kind={kindFromTitle(title)} size={16} /> {t('calendar.symbolAuto')}
+              </button>
+              {EVENT_KINDS.map(({ key }) => {
+                const Icon = KIND_ICONS[key];
+                return (
+                  <button type="button" key={key} className={symbol === key ? 'active' : ''} aria-pressed={symbol === key}
+                    title={t(`calendar.kind.${key}`)} aria-label={t(`calendar.kind.${key}`)} onClick={() => setSymbol(key)}>
+                    <Icon size={18} aria-hidden="true" />
+                  </button>
+                );
+              })}
+              <button type="button" className={symbol === 'none' ? 'active' : ''} onClick={() => setSymbol('none')}>{t('calendar.symbolNone')}</button>
             </div>
           </div>
 

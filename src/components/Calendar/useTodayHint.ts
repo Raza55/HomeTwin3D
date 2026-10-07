@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, hhmm, minutesOfDay, startOfDay, ymd } from '../../services/calendar/dates';
+import { readMeta } from '../../services/calendar/eventMeta';
 import { makeMarks } from '../../services/calendar/marks';
 import { loadCalendarPrefs } from '../../services/calendar/prefs';
 import { useCalendarData } from './useCalendarData';
@@ -15,7 +16,8 @@ export function useTodayHint(enabled: boolean): { count: number; label: string }
   }, []);
   const end = useMemo(() => addDays(day, 1), [day]);
   const prefs = loadCalendarPrefs();
-  const { events } = useCalendarData(day, end, prefs.hiddenCalendars, enabled);
+  const { events: everything } = useCalendarData(day, end, prefs.hiddenCalendars, enabled);
+  const events = useMemo(() => everything.filter(e => !readMeta(e.description).timetable), [everything]);
   return useMemo(() => {
     if (!enabled) return { count: 0, label: '' };
     const holiday = makeMarks([day.getFullYear()], prefs.regions, prefs.showPublicHolidays, {}, false)(ymd(day)).holiday;

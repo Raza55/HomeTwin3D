@@ -16,7 +16,9 @@ const DAY = 86400000;
 const REF_LINE = /^Ref: (\S+)\s*$/m;
 const PERSONS_LINE = /^Für: (.+?)\s*$/m;
 const GRADE_LINE = /^Note: (\d{1,2}) Punkte?\s*$/m;
-const META_LINES = /^(?:Für: .+|Note: \d{1,2} Punkte?|Ref: \S+)\s*$/gm;
+const TIMETABLE_LINE = /^Art: Stundenplan\s*$/m;
+const SYMBOL_LINE = /^Symbol: ([a-z]+)\s*$/m;
+const META_LINES = /^(?:Für: .+|Note: \d{1,2} Punkte?|Ref: \S+|Art: .+|Symbol: [a-z]+)\s*$/gm;
 
 /* ── Home Assistant WebSocket ── */
 
@@ -108,11 +110,13 @@ export function splitDescription(description) {
     ref: text.match(REF_LINE)?.[1],
     grade: grade ? Number(grade[1]) : undefined,
     persons: text.match(PERSONS_LINE)?.[1].split(',').map(p => p.trim()).filter(Boolean) ?? [],
+    timetable: TIMETABLE_LINE.test(text),
+    symbol: text.match(SYMBOL_LINE)?.[1],
   };
 }
 
-export function joinDescription({ notes, persons = [], grade, ref }) {
-  return [notes?.trim(), persons.length ? `Für: ${persons.join(', ')}` : '', grade !== undefined ? `Note: ${grade} ${grade === 1 ? 'Punkt' : 'Punkte'}` : '', ref ? `Ref: ${ref}` : '']
+export function joinDescription({ notes, persons = [], grade, ref, timetable = false, symbol }) {
+  return [notes?.trim(), timetable ? 'Art: Stundenplan' : '', symbol ? `Symbol: ${symbol}` : '', persons.length ? `Für: ${persons.join(', ')}` : '', grade !== undefined ? `Note: ${grade} ${grade === 1 ? 'Punkt' : 'Punkte'}` : '', ref ? `Ref: ${ref}` : '']
     .filter(Boolean).join('\n');
 }
 
@@ -121,7 +125,7 @@ function publicEvent(calendar, e) {
   return {
     calendar, uid: e.uid ?? undefined, recurrenceId: e.recurrence_id ?? undefined, rrule: e.rrule ?? undefined,
     summary: e.summary, start: e.start, end: e.end, allDay: !!e.all_day,
-    description: meta.notes || undefined, location: e.location || undefined, ref: meta.ref, grade: meta.grade, persons: meta.persons,
+    description: meta.notes || undefined, location: e.location || undefined, ref: meta.ref, grade: meta.grade, persons: meta.persons, timetable: meta.timetable, symbol: meta.symbol,
   };
 }
 
@@ -172,6 +176,8 @@ export function normalizeInput(raw, defaultCalendar) {
   }
   return {
     calendar, ref, uid: raw.uid, summary, dtstart, dtend, allDay, persons,
+    timetable: raw.timetable === undefined ? undefined : !!raw.timetable,
+    symbol: raw.symbol === undefined ? undefined : (/^[a-z]{1,20}$/.test(String(raw.symbol)) ? String(raw.symbol) : (() => { throw new Error('symbol: lowercase key, e.g. "doctor"'); })()),
     description: raw.description === undefined ? undefined : String(raw.description),
     location: raw.location === undefined ? undefined : String(raw.location),
     rrule: raw.rrule ? String(raw.rrule).replace(/^RRULE:/, '') : undefined,
@@ -285,10 +291,12 @@ export function createApi({ ha, apiToken, feedToken = '', defaultCalendar }) {
           results.push({ ...base, uid: match.uid, status: 'deleted' });
           continue;
         }
-        const old = match ? splitDescription(match.description) : { notes: '', grade: undefined, persons: [] };
+        const old = match ? splitDescription(match.description) : { notes: '', grade: undefined, persons: [], timetable: false };
         const description = joinDescription({
           notes: item.description ?? old.notes,
           persons: item.persons ?? old.persons,
+          timetable: item.timetable ?? old.timetable,
+          symbol: item.symbol ?? old.symbol,
           grade: item.grade === null ? undefined : item.grade ?? old.grade,
           ref: item.ref ?? old.ref,
         });
@@ -340,7 +348,10 @@ export function createApi({ ha, apiToken, feedToken = '', defaultCalendar }) {
     for (const calendar of wanted) {
       if (!all.some(c => c.entityId === calendar)) return { status: 404, body: { error: `Unknown calendar ${calendar}` } };
       for (const e of await listEvents(calendar, from, to)) {
-        if (person && !splitDescription(e.description).persons.some(p => p.toLowerCase() === person)) continue;
+        const meta = splitDescription(e.description);
+        if (person && !meta.persons.some(p => p.toLowerCase() === person)) continue;
+        // Timetable lessons only on request: in a phone calendar they would bury the appointments
+        if (meta.timetable && req.query.timetable !== '1') continue;
         events.push(e);
       }
     }

@@ -23,6 +23,7 @@ export default function RegionPicker({ prefs, onChange, compact }: Props) {
           </button>
         ))}
       </div>
+      {prefs.regions.length > 1 && <p className="cal-muted cal-settings-note">{t('calendar.homeRegion', { name: GERMAN_REGIONS.find(([c]) => c === prefs.regions[0])?.[1] ?? prefs.regions[0] })}</p>}
       <label className="cal-check"><input type="checkbox" checked={prefs.showPublicHolidays} onChange={e => onChange({ showPublicHolidays: e.target.checked })} /> {t('calendar.publicHolidays')}</label>
       <label className="cal-check"><input type="checkbox" checked={prefs.showSchoolHolidays} onChange={e => onChange({ showSchoolHolidays: e.target.checked })} /> {t('calendar.schoolHolidays')}</label>
     </div>

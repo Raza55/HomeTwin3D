@@ -8,7 +8,9 @@ export function regionShort(code: string): string {
 
 export interface DayMarks {
   holiday?: string;
-  school?: SchoolHoliday;
+  /** States the public holiday(s) of the day apply to. */
+  holidayRegions?: string[];
+  school?: SchoolHoliday & { regions: string[] };
 }
 
 /**
@@ -28,7 +30,10 @@ export function makeMarks(years: number[], regions: string[], showPublic: boolea
   }
   return (date: string): DayMarks => {
     const names = holidays.get(date);
-    const marks: DayMarks = names ? { holiday: [...names].map(([name, where]) => label(name, where)).join(' · ') } : {};
+    const marks: DayMarks = names ? {
+      holiday: [...names].map(([name, where]) => label(name, where)).join(' · '),
+      holidayRegions: [...new Set([...names.values()].flat())],
+    } : {};
     if (!showSchool) return marks;
     const hits = regions.flatMap(region => {
       const h = schoolHolidayOn(school[region] ?? [], date);
@@ -37,7 +42,7 @@ export function makeMarks(years: number[], regions: string[], showPublic: boolea
     if (hits.length) {
       const byName = new Map<string, string[]>();
       for (const { region, h } of hits) byName.set(h.name, [...(byName.get(h.name) ?? []), region]);
-      marks.school = { ...hits[0].h, name: [...byName].map(([name, where]) => label(name, where)).join(' · ') };
+      marks.school = { ...hits[0].h, name: [...byName].map(([name, where]) => label(name, where)).join(' · '), regions: hits.map(h => h.region) };
     }
     return marks;
   };

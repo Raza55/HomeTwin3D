@@ -7,6 +7,9 @@ import { gradeTone, isExam, personInitials, readMeta } from '../../services/cale
 import { buildProfiles, loadLocalSamples } from '../../services/calendar/learning';
 import { loadCalendarPrefs, saveCalendarPrefs, type CalendarPrefs } from '../../services/calendar/prefs';
 import { refreshSchoolHolidays, schoolHolidays } from '../../services/calendar/schoolHolidays';
+import { eventKind } from '../../services/calendar/eventKinds';
+import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
+import EventIcon from './EventIcon';
 import { calendarColor, indexByDay, layoutDay, makeMarks, type DayMarks } from './calendarModel';
 import EventEditor, { type EditorRequest } from './EventEditor';
 import RegionPicker from './RegionPicker';
@@ -57,19 +60,25 @@ export default function CalendarView({ onClose }: Props) {
   const year = focus.getFullYear();
   const rangeStart = useMemo(() => addDays(new Date(year, 0, 1), -14), [year]);
   const rangeEnd = useMemo(() => addDays(new Date(year + 1, 0, 1), 14), [year]);
-  const { backend, calendars, events: allEvents, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
+  const { backend, calendars, events: everything, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
+  // Timetable lessons are no appointments: they only appear in the day list on school days
+  const allEvents = useMemo(() => everything.filter(e => !readMeta(e.description).timetable), [everything]);
+  const allLessons = useMemo(() => everything.filter(e => readMeta(e.description).timetable), [everything]);
   // People: named in events ("Für: ...") plus those added on this device
   const persons = useMemo(() => {
     const names = new Set(prefs.persons);
-    for (const e of allEvents) for (const p of readMeta(e.description).persons) names.add(p);
+    for (const e of everything) for (const p of readMeta(e.description).persons) names.add(p);
     return [...names].sort((a, b) => a.localeCompare(b));
-  }, [allEvents, prefs.persons]);
+  }, [everything, prefs.persons]);
   const personsOf = useCallback((e: CalEvent) => readMeta(e.description, e.summary, persons).persons, [persons]);
   const activeFilter = useMemo(() => prefs.personFilter.filter(p => persons.includes(p)), [prefs.personFilter, persons]);
   // With a person filter, events for nobody in particular (whole family, school days) stay visible
   const events = useMemo(() => activeFilter.length
     ? allEvents.filter(e => { const ps = personsOf(e); return !ps.length || ps.some(p => activeFilter.includes(p)); })
     : allEvents, [allEvents, activeFilter, personsOf]);
+  const lessonsByDay = useMemo(() => indexByDay(activeFilter.length
+    ? allLessons.filter(e => personsOf(e).some(p => activeFilter.includes(p)))
+    : allLessons), [allLessons, activeFilter, personsOf]);
   const personColor = useCallback((name: string) => PERSON_COLORS[Math.max(0, persons.indexOf(name)) % PERSON_COLORS.length], [persons]);
   const calendarIds = useMemo(() => calendars.map(c => c.entityId), [calendars]);
   const writable = useMemo(() => calendars.filter(c => c.canCreate), [calendars]);
@@ -83,6 +92,11 @@ export default function CalendarView({ onClose }: Props) {
   const marksOf = useMemo(
     () => makeMarks([year - 1, year, year + 1], prefs.regions, prefs.showPublicHolidays, school, prefs.showSchoolHolidays),
     [year, prefs.regions, prefs.showPublicHolidays, prefs.showSchoolHolidays, school],
+  );
+  // School days for the timetable: holidays of the home state (the first one chosen), whatever is displayed
+  const schoolDayMarksOf = useMemo(
+    () => makeMarks([year - 1, year, year + 1], prefs.regions.slice(0, 1), true, school, true),
+    [year, prefs.regions, school],
   );
   const profiles = useMemo(() => buildProfiles([
     ...loadLocalSamples(),
@@ -139,12 +153,13 @@ export default function CalendarView({ onClose }: Props) {
       return `${t('calendar.weekShort')} ${isoWeek(focus)} · ${fmt.dayShort.format(ws)} – ${fmt.dayShort.format(we)} ${we.getFullYear()}`;
     })();
 
-  const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && isExam(e.summary), [prefs.highlightExams]);
+  const kindOf = useCallback((e: CalEvent) => eventKind(e.summary, readMeta(e.description).symbol), []);
+  const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && kindOf(e) === 'exam', [prefs.highlightExams, kindOf]);
   const colorOf = (e: CalEvent) => (examMarked(e) ? prefs.examColor : calendarColor(calendarIds, e.calendar));
   const timeLabel = (e: CalEvent) => e.allDay ? t('calendar.allDay') : `${hhmm(minutesOfDay(e.start))}–${hhmm(minutesOfDay(e.end))}`;
   const editable = (e: CalEvent) => !!e.uid && !!calendars.find(c => c.entityId === e.calendar)?.canUpdate;
   const gradeBadge = (e: CalEvent) => {
-    const points = isExam(e.summary) ? readMeta(e.description).grade : undefined;
+    const points = kindOf(e) === 'exam' ? readMeta(e.description).grade : undefined;
     const ps = personsOf(e);
     return (
       <>
@@ -169,12 +184,31 @@ export default function CalendarView({ onClose }: Props) {
         )}
       </div>
       <DayMarksList marks={marksOf(ymd(focus))} />
+      {prefs.showTimetable && (() => {
+        const lessons = schoolLessons(focus, lessonsByDay.get(ymd(focus)) ?? [], allEvents, schoolDayMarksOf(ymd(focus)), personsOf);
+        if (!lessons.length) return null;
+        const who = [...new Set(lessons.flatMap(personsOf))];
+        return (
+          <section className="cal-timetable" aria-label={t('calendar.timetable')}>
+            <div className="cal-timetable-title">{t('calendar.timetable')}{who.length ? ` · ${who.join(', ')}` : ''}</div>
+            {lessons.map(l => (
+              <button type="button" key={`${l.uid}|${l.recurrenceId}|${l.start.getTime()}`} className="cal-lesson" onClick={() => openEvent(l)}
+                style={{ ['--event-color' as string]: personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)' }}>
+                <span className="cal-lesson-time">{hhmm(minutesOfDay(l.start))}–{hhmm(minutesOfDay(l.end))}</span>
+                <span className="cal-lesson-title">{lessonTitle(l.summary, persons)}</span>
+                {readMeta(l.description).notes && <span className="cal-lesson-notes">{readMeta(l.description).notes}</span>}
+              </button>
+            ))}
+          </section>
+        );
+      })()}
       <ul className="cal-agenda-list">
         {(byDay.get(ymd(focus)) ?? []).map(e => (
           <li key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}>
             <button type="button" className={`cal-agenda-item${examMarked(e) ? ' exam' : ''}`} onClick={() => openEvent(e)} style={{ ['--event-color' as string]: colorOf(e) }}>
               <span className="cal-agenda-time">{timeLabel(e)}</span>
               <span className="cal-agenda-title">
+                <EventIcon kind={kindOf(e)} size={16} />
                 {e.summary}
                 {gradeBadge(e)}
                 {(e.rrule || e.recurrenceId) && <Repeat size={13} className="cal-inline-icon" aria-label={t('calendar.repeats')} />}
@@ -267,6 +301,7 @@ export default function CalendarView({ onClose }: Props) {
                             className={`cal-chip${e.allDay ? ' all-day' : ''}${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }}
                             onClick={ev => { ev.stopPropagation(); setFocus(day); openEvent(e); }}>
                             {!e.allDay && <span className="cal-chip-time">{hhmm(minutesOfDay(e.start))}</span>}
+                            <EventIcon kind={kindOf(e)} size={12} />
                             <span className="cal-chip-title">{e.summary}</span>
                             {gradeBadge(e)}
                           </button>
@@ -280,7 +315,7 @@ export default function CalendarView({ onClose }: Props) {
             </div>
           )}
           {view === 'week' && (
-            <WeekView examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
+            <WeekView kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
               canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} />
           )}
         </main>
@@ -295,6 +330,7 @@ export default function CalendarView({ onClose }: Props) {
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />
+          <label className="cal-check"><input type="checkbox" checked={prefs.showTimetable} onChange={e => updatePrefs({ showTimetable: e.target.checked })} /> {t('calendar.showTimetable')}</label>
           <div className="cal-settings-title">{t('calendar.exams')}</div>
           <label className="cal-check"><input type="checkbox" checked={prefs.highlightExams} onChange={e => updatePrefs({ highlightExams: e.target.checked })} /> {t('calendar.highlightExams')}</label>
           {prefs.highlightExams && (
@@ -422,8 +458,9 @@ function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekday
   );
 }
 
-function WeekView({ examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+function WeekView({ kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
   examMarked: (e: CalEvent) => boolean;
+  kindOf: (e: CalEvent) => ReturnType<typeof eventKind>;
   gradeBadge: (e: CalEvent) => JSX.Element;
   focus: Date; today: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks; fmt: Formats;
   colorOf: (e: CalEvent) => string; canCreate: boolean; onSelect: (d: Date) => void;
@@ -469,6 +506,7 @@ function WeekView({ examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, c
               {marks.school && (marks.school.start === key || day.getDay() === 1) && <span className="cal-mark cal-mark-school">{marks.school.name}</span>}
               {allDay.map(e => (
                 <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className={`cal-chip all-day${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>
+                  <EventIcon kind={kindOf(e)} size={12} />
                   <span className="cal-chip-title">{e.summary}</span>
                 </button>
               ))}
@@ -502,7 +540,7 @@ function WeekView({ examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, c
                       style={{ top: from / 60 * HOUR_PX, height: Math.max(22, (to - from) / 60 * HOUR_PX - 2), left: `calc(${lane / lanes * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)`, ['--event-color' as string]: colorOf(e) }}
                       onClick={() => onOpen(e)}>
                       <span className="cal-week-event-time">{hhmm(minutesOfDay(e.start))}</span>
-                      <span className="cal-week-event-title">{e.summary} {gradeBadge(e)}</span>
+                      <span className="cal-week-event-title"><EventIcon kind={kindOf(e)} size={12} /> {e.summary} {gradeBadge(e)}</span>
                       {e.location && to - from >= 60 && <span className="cal-week-event-loc">{e.location}</span>}
                     </button>
                   );

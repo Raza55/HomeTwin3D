@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.61 · Stundenplan und Symbole im Kalender (07.10.2026)
+
+- Stundenplan: Wöchentliche Termine mit der Zeile `Art: Stundenplan` (im Termin-Dialog per Knopf *Stundenplan*) erscheinen nicht als Termine, sondern nur in der Tagesliste, und nur an Schultagen. Sie fallen weg an Wochenenden, Feiertagen, in den Ferien und an unterrichtsfreien Tagen, solange die Person auf Fahrt oder im Praktikum ist und während ihrer Klausuren. Maßgeblich ist das zuerst gewählte Bundesland. Schalter in den Kalendereinstellungen; im Abo und in der Zahl am Datum zählen sie nicht.
+- Symbole: Termine zeigen ein Symbol nach ihrer Art (Klausur, Arzt, Geburtstag, Elternabend, Sport, Fahrt, Theater, Praktikum, Zeugnis, Frist, unterrichtsfrei und weitere), erkannt am Titel oder im Dialog gewählt (`Symbol:`).
+- Eine Wiederholung behält beim Bearbeiten ihre Regel (Anzahl, Enddatum).
+
 ## 0.5.60 · Klausuren und Feiertage im Kalender farbig (06.10.2026)
 
 - Tage mit Klausur werden im Kalender als ganze Zelle eingefärbt, die Klausur selbst kräftiger dargestellt (Monat, Woche, Tagesliste, Jahresübersicht). Schalter und Farbe in den Kalendereinstellungen unter *Klausuren*, Standard Orange.

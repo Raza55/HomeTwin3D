@@ -17,10 +17,12 @@ export interface CalendarPrefs {
   /** Exams (titles with "Klausur", "Klassenarbeit", ...) in their own color. */
   highlightExams: boolean;
   examColor: string;
+  /** Timetable lessons in the day list on school days. */
+  showTimetable: boolean;
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316' };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

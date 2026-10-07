@@ -19,10 +19,12 @@ export interface CalendarPrefs {
   examColor: string;
   /** Timetable lessons in the day list on school days. */
   showTimetable: boolean;
+  /** Week view: yesterday plus six days, seven days from today, or the calendar week. */
+  weekStart: 'yesterday' | 'today' | 'monday';
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday' };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

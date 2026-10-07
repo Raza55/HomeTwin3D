@@ -32,6 +32,18 @@ export function startOfWeek(date: Date): Date {
   return addDays(startOfDay(date), -((date.getDay() + 6) % 7));
 }
 
+/**
+ * First day of the week view. 'monday': the calendar week. 'today': seven days from today;
+ * 'yesterday': yesterday as context plus six days. Both move in whole weeks, so tapping a day
+ * inside the window does not shift it.
+ */
+export function weekViewStart(focus: Date, today: Date, mode: 'yesterday' | 'today' | 'monday'): Date {
+  if (mode === 'monday') return startOfWeek(focus);
+  const start = addDays(startOfDay(today), mode === 'yesterday' ? -1 : 0);
+  const days = Math.round((startOfDay(focus).getTime() - start.getTime()) / 86400000);
+  return addDays(start, Math.floor(days / 7) * 7);
+}
+
 /** ISO 8601 week number (KW). */
 export function isoWeek(date: Date): number {
   const thursday = addDays(startOfDay(date), 3 - ((date.getDay() + 6) % 7));

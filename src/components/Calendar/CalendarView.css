@@ -209,7 +209,12 @@
 }
 .cal-hour-label { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cal-week-col { position: relative; border-left: 1px solid var(--border); cursor: copy; }
+.cal-week-col.weekend { background: color-mix(in srgb, var(--muted) 7%, transparent); }
 .cal-week-col.today { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.cal-week-day.weekend .cal-week-wd, .cal-week-day.weekend .cal-week-num { color: var(--muted); }
+/* Past days stay readable as context but step back */
+.cal-week-day.past, .cal-week-col.past > * { opacity: 0.55; }
+.cal-week-col.past { background: color-mix(in srgb, var(--muted) 10%, transparent); }
 .cal-week-event {
   position: absolute;
   display: flex; flex-direction: column; align-items: flex-start; overflow: hidden;

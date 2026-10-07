@@ -1029,7 +1029,11 @@
     "calendar.kind.food": "Essen",
     "calendar.kind.party": "Feier",
     "calendar.kind.car": "Auto",
-    "calendar.kind.school": "Schule"
+    "calendar.kind.school": "Schule",
+    "calendar.weekView": "Wochenansicht",
+    "calendar.weekStart.today": "Ab heute (7 Tage)",
+    "calendar.weekStart.monday": "Montag bis Sonntag",
+    "calendar.weekStart.yesterday": "Ab gestern"
   },
   "en-GB": {
     "language.de-DE": "German",
@@ -2061,6 +2065,10 @@
     "calendar.kind.food": "Meal",
     "calendar.kind.party": "Party",
     "calendar.kind.car": "Car",
-    "calendar.kind.school": "School"
+    "calendar.kind.school": "School",
+    "calendar.weekView": "Week view",
+    "calendar.weekStart.today": "From today (7 days)",
+    "calendar.weekStart.monday": "Monday to Sunday",
+    "calendar.weekStart.yesterday": "From yesterday"
   }
 }

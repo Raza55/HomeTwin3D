@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.63 · Wochenansicht mit Blick nach vorn (07.10.2026)
+
+- Die Wochenansicht zeigt standardmäßig gestern als Kontext, heute und fünf Tage voraus, statt der Kalenderwoche. Am Samstag sieht man so schon die nächste Schulwoche. Blättern springt um sieben Tage, ein angetippter Tag verschiebt die Spalten nicht.
+- Vergangene Tage sind abgedunkelt, Wochenenden grau; der Kopf nennt beide Kalenderwochen.
+- In den Kalendereinstellungen wählbar: *Ab gestern*, *Ab heute (7 Tage)* oder *Montag bis Sonntag*.
+
 ## 0.5.62 · Stundenplan auch in der Wochenansicht (07.10.2026)
 
 - Die Stunden des Stundenplans stehen jetzt auch in der Wochenansicht, als gestrichelte Blöcke hinter den Terminen in der Farbe der Person. Ein Tipp öffnet die Stunde zum Bearbeiten.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Settings2, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, ymd } from '../../services/calendar/dates';
+import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, weekViewStart, ymd } from '../../services/calendar/dates';
 import type { CalEvent } from '../../services/calendar/haCalendar';
 import { gradeTone, isExam, personInitials, readMeta } from '../../services/calendar/eventMeta';
 import { buildProfiles, loadLocalSamples } from '../../services/calendar/learning';
@@ -152,8 +152,9 @@ export default function CalendarView({ onClose }: Props) {
   const title = view === 'year' ? String(year)
     : view === 'month' ? fmt.month.format(focus)
     : (() => {
-      const ws = startOfWeek(focus), we = addDays(ws, 6);
-      return `${t('calendar.weekShort')} ${isoWeek(focus)} · ${fmt.dayShort.format(ws)} – ${fmt.dayShort.format(we)} ${we.getFullYear()}`;
+      const ws = weekViewStart(focus, today, prefs.weekStart), we = addDays(ws, 6);
+      const weeks = isoWeek(ws) === isoWeek(we) ? `${isoWeek(ws)}` : `${isoWeek(ws)}–${isoWeek(we)}`;
+      return `${t('calendar.weekShort')} ${weeks} · ${fmt.dayShort.format(ws)} – ${fmt.dayShort.format(we)} ${we.getFullYear()}`;
     })();
 
   const kindOf = useCallback((e: CalEvent) => eventKind(e.summary, readMeta(e.description).symbol), []);
@@ -318,7 +319,7 @@ export default function CalendarView({ onClose }: Props) {
             </div>
           )}
           {view === 'week' && (
-            <WeekView lessonsFor={lessonsFor} lessonColor={l => (personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)')} lessonLabel={l => lessonTitle(l.summary, persons)} kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
+            <WeekView weekStart={weekViewStart(focus, today, prefs.weekStart)} lessonsFor={lessonsFor} lessonColor={l => (personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)')} lessonLabel={l => lessonTitle(l.summary, persons)} kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
               canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} />
           )}
         </main>
@@ -334,6 +335,13 @@ export default function CalendarView({ onClose }: Props) {
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />
           <label className="cal-check"><input type="checkbox" checked={prefs.showTimetable} onChange={e => updatePrefs({ showTimetable: e.target.checked })} /> {t('calendar.showTimetable')}</label>
+          <div className="cal-settings-title">{t('calendar.weekView')}</div>
+          <div className="cal-chips">
+            {(['yesterday', 'today', 'monday'] as const).map(mode => (
+              <button type="button" key={mode} className={prefs.weekStart === mode ? 'active' : ''} aria-pressed={prefs.weekStart === mode}
+                onClick={() => updatePrefs({ weekStart: mode })}>{t(`calendar.weekStart.${mode}`)}</button>
+            ))}
+          </div>
           <div className="cal-settings-title">{t('calendar.exams')}</div>
           <label className="cal-check"><input type="checkbox" checked={prefs.highlightExams} onChange={e => updatePrefs({ highlightExams: e.target.checked })} /> {t('calendar.highlightExams')}</label>
           {prefs.highlightExams && (
@@ -461,19 +469,21 @@ function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekday
   );
 }
 
-function WeekView({ lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
   examMarked: (e: CalEvent) => boolean;
   kindOf: (e: CalEvent) => ReturnType<typeof eventKind>;
   lessonsFor: (day: Date) => CalEvent[];
   lessonColor: (lesson: CalEvent) => string;
   lessonLabel: (lesson: CalEvent) => string;
   gradeBadge: (e: CalEvent) => JSX.Element;
+  weekStart: Date;
   focus: Date; today: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks; fmt: Formats;
   colorOf: (e: CalEvent) => string; canCreate: boolean; onSelect: (d: Date) => void;
   onCreate: (d: Date, startMinutes?: number, allDay?: boolean) => void; onOpen: (e: CalEvent) => void; allDayLabel: string;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(focus), i)), [focus]);
+  const startMs = weekStart.getTime();
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(new Date(startMs), i)), [startMs]);
   const [nowMin, setNowMin] = useState(() => minutesOfDay(new Date()));
   useEffect(() => {
     const id = setInterval(() => setNowMin(minutesOfDay(new Date())), 60000);
@@ -493,7 +503,7 @@ function WeekView({ lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gr
           const marks = marksOf(key);
           return (
             <button key={key} type="button" onClick={() => onSelect(day)}
-              className={['cal-week-day', key === ymd(today) && 'today', key === ymd(focus) && 'selected', marks.holiday && 'holiday', marks.school && 'school', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')}>
+              className={['cal-week-day', key === ymd(today) && 'today', day < today && 'past', (day.getDay() === 0 || day.getDay() === 6) && 'weekend', key === ymd(focus) && 'selected', marks.holiday && 'holiday', marks.school && 'school', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')}>
               <span className="cal-week-wd">{fmt.weekdayShort.format(day).replace('.', '')}</span>
               <span className="cal-week-num">{day.getDate()}</span>
             </button>
@@ -509,7 +519,7 @@ function WeekView({ lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gr
           return (
             <div key={key} className={['cal-week-allday-cell', marks.school && 'school', marks.holiday && 'holiday', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')} onDoubleClick={() => canCreate && onCreate(day, undefined, true)}>
               {marks.holiday && <span className="cal-mark cal-mark-holiday">{marks.holiday}</span>}
-              {marks.school && (marks.school.start === key || day.getDay() === 1) && <span className="cal-mark cal-mark-school">{marks.school.name}</span>}
+              {marks.school && (marks.school.start === key || day.getDay() === 1 || day === days[0]) && <span className="cal-mark cal-mark-school">{marks.school.name}</span>}
               {allDay.map(e => (
                 <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className={`cal-chip all-day${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>
                   <EventIcon kind={kindOf(e)} size={12} />
@@ -530,7 +540,7 @@ function WeekView({ lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gr
             const dayStart = day.getTime();
             const timed = (byDay.get(key) ?? []).filter(e => !e.allDay);
             return (
-              <div key={key} className={`cal-week-col${key === ymd(today) ? ' today' : ''}`}
+              <div key={key} className={`cal-week-col${key === ymd(today) ? ' today' : ''}${day < today ? ' past' : ''}${day.getDay() === 0 || day.getDay() === 6 ? ' weekend' : ''}`}
                 onClick={e => {
                   if (!canCreate || e.target !== e.currentTarget) return;
                   const y = e.clientY - e.currentTarget.getBoundingClientRect().top;

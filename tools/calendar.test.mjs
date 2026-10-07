@@ -152,3 +152,15 @@ test('event symbols: recognised from the title or chosen', async () => {
   assert.equal(readMeta('Notiz\nSymbol: doctor').notes, 'Notiz');
   assert.equal(writeMeta({ notes: 'Notiz', persons: ['Anna'], symbol: 'doctor' }), 'Notiz\nSymbol: doctor\nFür: Anna');
 });
+
+test('week view start: yesterday, today or Monday, moving in whole weeks', async () => {
+  const { weekViewStart, ymd } = await import('../src/services/calendar/dates.ts');
+  const today = new Date(2026, 9, 24); // Saturday
+  assert.equal(ymd(weekViewStart(today, today, 'yesterday')), '2026-10-23');
+  assert.equal(ymd(weekViewStart(today, today, 'today')), '2026-10-24');
+  assert.equal(ymd(weekViewStart(today, today, 'monday')), '2026-10-19');
+  // A tapped day inside the window keeps it; the next window starts a week later
+  assert.equal(ymd(weekViewStart(new Date(2026, 9, 28), today, 'today')), '2026-10-24');
+  assert.equal(ymd(weekViewStart(new Date(2026, 9, 31), today, 'today')), '2026-10-31');
+  assert.equal(ymd(weekViewStart(new Date(2026, 9, 20), today, 'yesterday')), '2026-10-16');
+});

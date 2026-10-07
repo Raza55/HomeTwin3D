@@ -1,9 +1,8 @@
 /**
  * Timetable: weekly recurring calendar events marked "Art: Stundenplan". They are not shown as
- * appointments, only as the lessons of a school day in the day list, and only when there is school.
+ * appointments, only as the lessons of a school day (day list, week view), and only when there is school.
  */
 import type { CalEvent } from './haCalendar';
-import { isExam } from './eventMeta.ts';
 
 const NO_SCHOOL = /unterrichtsfrei|ferientag/i;
 const AWAY = /praktikum|fahrt|reflitage|refli-tage|austausch|exkursion/i;
@@ -15,8 +14,9 @@ function overlaps(a: { start: Date; end: Date }, b: { start: Date; end: Date }):
 
 /**
  * Lessons of one day: none on weekends, public or school holidays and days marked "unterrichtsfrei";
- * a lesson also gives way while its person is away (trips, internships, multi-day events) or
- * writes an exam at that time (the exam is listed as an appointment).
+ * a lesson also gives way while its person is away (trips, internships, multi-day events) or has
+ * an appointment of their own at that time (exam, doctor, ...): appointments override lessons.
+ * Appointments of other people or of nobody in particular (school events) do not.
  */
 export function schoolLessons(
   day: Date,
@@ -37,7 +37,7 @@ export function schoolLessons(
         const theirs = !who.length || personsOf(e).some(p => who.includes(p));
         if (!theirs) return false;
         const multiDay = e.end.getTime() - e.start.getTime() > DAY;
-        return multiDay || (e.allDay && AWAY.test(e.summary)) || (!e.allDay && isExam(e.summary));
+        return multiDay || (e.allDay && AWAY.test(e.summary)) || !e.allDay;
       });
     })
     .sort((a, b) => a.start.getTime() - b.start.getTime());

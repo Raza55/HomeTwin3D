@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.62 · Stundenplan auch in der Wochenansicht (07.10.2026)
+
+- Die Stunden des Stundenplans stehen jetzt auch in der Wochenansicht, als gestrichelte Blöcke hinter den Terminen in der Farbe der Person. Ein Tipp öffnet die Stunde zum Bearbeiten.
+- Termine haben Vorrang: Jeder eigene Termin der Person (nicht nur eine Klausur) blendet die Stunden aus, mit denen er sich überschneidet, in der Woche wie in der Tagesliste. Termine anderer Personen und allgemeine Schultermine tun das nicht.
+
 ## 0.5.61 · Stundenplan und Symbole im Kalender (07.10.2026)
 
 - Stundenplan: Wöchentliche Termine mit der Zeile `Art: Stundenplan` (im Termin-Dialog per Knopf *Stundenplan*) erscheinen nicht als Termine, sondern nur in der Tagesliste, und nur an Schultagen. Sie fallen weg an Wochenenden, Feiertagen, in den Ferien und an unterrichtsfreien Tagen, solange die Person auf Fahrt oder im Praktikum ist und während ihrer Klausuren. Maßgeblich ist das zuerst gewählte Bundesland. Schalter in den Kalendereinstellungen; im Abo und in der Zahl am Datum zählen sie nicht.

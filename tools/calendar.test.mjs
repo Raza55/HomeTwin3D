@@ -122,6 +122,10 @@ test('timetable lessons: only on school days, not while away or writing an exam'
   // Away: internship (all day) or a multi-day trip
   assert.equal(schoolLessons(monday, lessons, [ev('Anna: Berufspraktikum', '2026-11-02T00:00', '2026-11-14T00:00', '', true)], {}, persons).length, 0);
   assert.deepEqual(schoolLessons(monday, lessons, [ev('Reflitage', '2026-10-30T12:10', '2026-11-02T09:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: E1']);
+  // Any appointment of the same person overrides the lesson; others' and general school events do not
+  assert.deepEqual(schoolLessons(monday, lessons, [ev('Kieferorthopäde', '2026-11-02T10:00', '2026-11-02T10:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: M1']);
+  assert.equal(schoolLessons(monday, lessons, [ev('Zahnarzt', '2026-11-02T08:00', '2026-11-02T09:00', 'Für: Ben')], {}, persons).length, 2);
+  assert.equal(schoolLessons(monday, lessons, [ev('Schule: Tag der Information', '2026-11-02T08:00', '2026-11-02T12:00')], {}, persons).length, 2);
   // A one-day all-day reminder does not cancel school
   assert.equal(schoolLessons(monday, lessons, [ev('Anna: Frist Kurswahl', '2026-11-02T00:00', '2026-11-03T00:00', '', true)], {}, persons).length, 2);
   assert.equal(lessonTitle('Anna: M1', ['Anna']), 'M1');

@@ -98,6 +98,9 @@ export default function CalendarView({ onClose }: Props) {
     () => makeMarks([year - 1, year, year + 1], prefs.regions.slice(0, 1), true, school, true),
     [year, prefs.regions, school],
   );
+  const lessonsFor = useCallback((day: Date) => (prefs.showTimetable
+    ? schoolLessons(day, lessonsByDay.get(ymd(day)) ?? [], allEvents, schoolDayMarksOf(ymd(day)), personsOf)
+    : []), [prefs.showTimetable, lessonsByDay, allEvents, schoolDayMarksOf, personsOf]);
   const profiles = useMemo(() => buildProfiles([
     ...loadLocalSamples(),
     ...events.map(e => ({ summary: e.summary, start: e.allDay ? ymd(e.start) : e.start.toISOString(), end: e.allDay ? ymd(e.end) : e.end.toISOString(), allDay: e.allDay, calendar: e.calendar, location: e.location })),
@@ -185,7 +188,7 @@ export default function CalendarView({ onClose }: Props) {
       </div>
       <DayMarksList marks={marksOf(ymd(focus))} />
       {prefs.showTimetable && (() => {
-        const lessons = schoolLessons(focus, lessonsByDay.get(ymd(focus)) ?? [], allEvents, schoolDayMarksOf(ymd(focus)), personsOf);
+        const lessons = lessonsFor(focus);
         if (!lessons.length) return null;
         const who = [...new Set(lessons.flatMap(personsOf))];
         return (
@@ -315,7 +318,7 @@ export default function CalendarView({ onClose }: Props) {
             </div>
           )}
           {view === 'week' && (
-            <WeekView kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
+            <WeekView lessonsFor={lessonsFor} lessonColor={l => (personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)')} lessonLabel={l => lessonTitle(l.summary, persons)} kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
               canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} />
           )}
         </main>
@@ -458,9 +461,12 @@ function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekday
   );
 }
 
-function WeekView({ kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+function WeekView({ lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
   examMarked: (e: CalEvent) => boolean;
   kindOf: (e: CalEvent) => ReturnType<typeof eventKind>;
+  lessonsFor: (day: Date) => CalEvent[];
+  lessonColor: (lesson: CalEvent) => string;
+  lessonLabel: (lesson: CalEvent) => string;
   gradeBadge: (e: CalEvent) => JSX.Element;
   focus: Date; today: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks; fmt: Formats;
   colorOf: (e: CalEvent) => string; canCreate: boolean; onSelect: (d: Date) => void;
@@ -531,6 +537,19 @@ function WeekView({ kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf
                   onSelect(day);
                   onCreate(day, Math.min(23 * 60 + 30, Math.floor(y / HOUR_PX * 2) * 30));
                 }}>
+                {/* Timetable behind the appointments; lessons overlapping an appointment of the same person are already left out */}
+                {lessonsFor(day).map(l => {
+                  const from = Math.max(0, (l.start.getTime() - dayStart) / 60000);
+                  const to = Math.min(1440, (l.end.getTime() - dayStart) / 60000);
+                  return (
+                    <button type="button" key={`lesson|${l.uid}|${l.start.getTime()}`} className="cal-week-lesson"
+                      style={{ top: from / 60 * HOUR_PX, height: Math.max(18, (to - from) / 60 * HOUR_PX - 2), ['--event-color' as string]: lessonColor(l) }}
+                      onClick={() => onOpen(l)} title={`${hhmm(minutesOfDay(l.start))}–${hhmm(minutesOfDay(l.end))} ${lessonLabel(l)}`}>
+                      <span className="cal-week-lesson-title">{lessonLabel(l)}</span>
+                      {to - from >= 60 && <span className="cal-week-lesson-notes">{readMeta(l.description).notes}</span>}
+                    </button>
+                  );
+                })}
                 {layoutDay(timed).map(({ event: e, lane, lanes }) => {
                   // Clip events that start the day before or end the next day
                   const from = Math.max(0, (e.start.getTime() - dayStart) / 60000);

@@ -6,6 +6,8 @@ export interface CalendarPrefs {
   setupDone: boolean;
   showPublicHolidays: boolean;
   showSchoolHolidays: boolean;
+  /** Clock changes, seasons, moon phases and customs. */
+  showYearDates: boolean;
   /** Calendar new appointments go to. */
   defaultCalendar?: string;
   hiddenCalendars: string[];
@@ -24,7 +26,7 @@ export interface CalendarPrefs {
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday' };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, showYearDates: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday' };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

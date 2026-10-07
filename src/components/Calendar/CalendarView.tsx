@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Settings2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock3, Circle, MapPin, Moon, Plus, Repeat, Settings2, Sparkles, Sun, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, weekViewStart, ymd } from '../../services/calendar/dates';
 import type { CalEvent } from '../../services/calendar/haCalendar';
@@ -10,6 +10,7 @@ import { refreshSchoolHolidays, schoolHolidays } from '../../services/calendar/s
 import { eventKind } from '../../services/calendar/eventKinds';
 import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
 import EventIcon from './EventIcon';
+import MonthArt from './MonthArt';
 import { calendarColor, indexByDay, layoutDay, makeMarks, type DayMarks } from './calendarModel';
 import EventEditor, { type EditorRequest } from './EventEditor';
 import RegionPicker from './RegionPicker';
@@ -90,7 +91,7 @@ export default function CalendarView({ onClose }: Props) {
     [prefs.regions, schoolVersion],
   );
   const marksOf = useMemo(
-    () => makeMarks([year - 1, year, year + 1], prefs.regions, prefs.showPublicHolidays, school, prefs.showSchoolHolidays),
+    () => makeMarks([year - 1, year, year + 1], prefs.regions, prefs.showPublicHolidays, school, prefs.showSchoolHolidays, prefs.showYearDates, language.startsWith('en') ? 'en' : 'de'),
     [year, prefs.regions, prefs.showPublicHolidays, prefs.showSchoolHolidays, school],
   );
   // School days for the timetable: holidays of the home state (the first one chosen), whatever is displayed
@@ -176,6 +177,7 @@ export default function CalendarView({ onClose }: Props) {
 
   const dayPanel = (
     <aside className="cal-agenda" aria-label={fmt.dayLong.format(focus)}>
+      <MonthArt month={focus.getMonth()} label={fmt.monthName.format(focus)} />
       <div className="cal-agenda-head">
         <div>
           <div className="cal-agenda-date">{fmt.dayLong.format(focus)}</div>
@@ -296,8 +298,10 @@ export default function CalendarView({ onClose }: Props) {
                       onKeyDown={e => { if (e.key === 'Enter') setFocus(day); }}>
                       <div className="cal-day-top">
                         <span className="cal-day-num">{day.getDate()}</span>
+                        {key === ymd(today) && <span className="cal-today-tag">{t('calendar.today')}</span>}
                         {marks.holiday && <span className="cal-day-holiday" title={marks.holiday}>{marks.holiday}</span>}
                       </div>
+                      {marks.special && <SpecialLine items={marks.special} />}
                       {schoolStart && !marks.holiday && <span className="cal-day-school" title={marks.school!.name}>{marks.school!.name}</span>}
                       <div className="cal-day-events">
                         {list.slice(0, MAX_CHIPS).map(e => (
@@ -320,7 +324,7 @@ export default function CalendarView({ onClose }: Props) {
           )}
           {view === 'week' && (
             <WeekView weekStart={weekViewStart(focus, today, prefs.weekStart)} lessonsFor={lessonsFor} lessonColor={l => (personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)')} lessonLabel={l => lessonTitle(l.summary, persons)} kindOf={kindOf} examMarked={examMarked} gradeBadge={gradeBadge} focus={focus} today={today} byDay={byDay} marksOf={marksOf} fmt={fmt} colorOf={colorOf}
-              canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} />
+              canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} todayLabel={t('calendar.today')} />
           )}
         </main>
         {view !== 'year' && dayPanel}
@@ -409,12 +413,34 @@ export default function CalendarView({ onClose }: Props) {
   );
 }
 
+/** Symbol of a year date: clock change, season, moon phase or custom. */
+function SpecialIcon({ item, size }: { item: NonNullable<DayMarks['special']>[number]; size: number }) {
+  if (item.kind === 'clock') return <Clock3 size={size} aria-hidden="true" />;
+  if (item.kind === 'season') return <Sun size={size} aria-hidden="true" />;
+  if (item.kind === 'moon') return item.phase === 'full' ? <Circle size={size} fill="currentColor" aria-hidden="true" /> : <Moon size={size} aria-hidden="true" />;
+  return <Sparkles size={size} aria-hidden="true" />;
+}
+
+/** Month cell: year dates as one compact line (symbol and name, more on the day). */
+function SpecialLine({ items }: { items: NonNullable<DayMarks['special']> }) {
+  const names = items.map(x => x.name).join(' · ');
+  return (
+    <span className="cal-day-special" title={names}>
+      {items.map(item => <SpecialIcon key={item.name} item={item} size={11} />)}
+      <span className="cal-day-special-text">{names}</span>
+    </span>
+  );
+}
+
 function DayMarksList({ marks }: { marks: DayMarks }) {
   const { language, t } = useLanguage();
-  if (!marks.holiday && !marks.school) return null;
+  if (!marks.holiday && !marks.school && !marks.special) return null;
   return (
     <div className="cal-marks">
       {marks.holiday && <span className="cal-mark cal-mark-holiday">{marks.holiday}</span>}
+      {marks.special?.map(item => (
+        <span key={item.name} className="cal-mark cal-mark-special"><SpecialIcon item={item} size={13} /> {item.name}</span>
+      ))}
       {marks.school && (
         <span className="cal-mark cal-mark-school">
           {marks.school.name} · {t('calendar.until')} {parseYmd(marks.school.end).toLocaleDateString(language, { day: 'numeric', month: 'numeric' })}
@@ -457,7 +483,7 @@ function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekday
                 (day.getDay() === 0 || day.getDay() === 6) && 'weekend'].filter(Boolean).join(' ');
               return (
                 <button key={key} type="button" className={cls} onClick={() => onDay(day)}
-                  title={[marks.holiday, marks.school?.name, exam?.summary, count ? `${count}` : ''].filter(Boolean).join(' · ') || undefined}>
+                  title={[marks.holiday, ...(marks.special ?? []).map(x => x.name), marks.school?.name, exam?.summary, count ? `${count}` : ''].filter(Boolean).join(' · ') || undefined}>
                   {day.getDate()}
                 </button>
               );
@@ -469,7 +495,7 @@ function YearView({ examMarked, year, today, focus, byDay, marksOf, fmt, weekday
   );
 }
 
-function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel }: {
+function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, examMarked, gradeBadge, focus, today, byDay, marksOf, fmt, colorOf, canCreate, onSelect, onCreate, onOpen, allDayLabel, todayLabel }: {
   examMarked: (e: CalEvent) => boolean;
   kindOf: (e: CalEvent) => ReturnType<typeof eventKind>;
   lessonsFor: (day: Date) => CalEvent[];
@@ -479,7 +505,7 @@ function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, exa
   weekStart: Date;
   focus: Date; today: Date; byDay: Map<string, CalEvent[]>; marksOf: (d: string) => DayMarks; fmt: Formats;
   colorOf: (e: CalEvent) => string; canCreate: boolean; onSelect: (d: Date) => void;
-  onCreate: (d: Date, startMinutes?: number, allDay?: boolean) => void; onOpen: (e: CalEvent) => void; allDayLabel: string;
+  onCreate: (d: Date, startMinutes?: number, allDay?: boolean) => void; onOpen: (e: CalEvent) => void; allDayLabel: string; todayLabel: string;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const startMs = weekStart.getTime();
@@ -506,6 +532,7 @@ function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, exa
               className={['cal-week-day', key === ymd(today) && 'today', day < today && 'past', (day.getDay() === 0 || day.getDay() === 6) && 'weekend', key === ymd(focus) && 'selected', marks.holiday && 'holiday', marks.school && 'school', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')}>
               <span className="cal-week-wd">{fmt.weekdayShort.format(day).replace('.', '')}</span>
               <span className="cal-week-num">{day.getDate()}</span>
+              {key === ymd(today) && <span className="cal-today-tag">{todayLabel}</span>}
             </button>
           );
         })}
@@ -519,6 +546,7 @@ function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, exa
           return (
             <div key={key} className={['cal-week-allday-cell', marks.school && 'school', marks.holiday && 'holiday', (byDay.get(key) ?? []).some(examMarked) && 'exam-day'].filter(Boolean).join(' ')} onDoubleClick={() => canCreate && onCreate(day, undefined, true)}>
               {marks.holiday && <span className="cal-mark cal-mark-holiday">{marks.holiday}</span>}
+              {marks.special?.map(item => <span key={item.name} className="cal-mark cal-mark-special" title={item.name}><SpecialIcon item={item} size={12} /> {item.name}</span>)}
               {marks.school && (marks.school.start === key || day.getDay() === 1 || day === days[0]) && <span className="cal-mark cal-mark-school">{marks.school.name}</span>}
               {allDay.map(e => (
                 <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className={`cal-chip all-day${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>

@@ -5,6 +5,7 @@ import { schoolHolidayOn, mergeHolidays } from '../src/services/calendar/schoolH
 import { parseQuickText } from '../src/services/calendar/quickParse.ts';
 import { buildProfiles, suggest } from '../src/services/calendar/learning.ts';
 import { isoWeek, monthGrid, ymd, isoLocal } from '../src/services/calendar/dates.ts';
+import { moonPhases, seasonStarts, yearDates } from '../src/services/calendar/yearDates.ts';
 
 // Tuesday, 6 October 2026, 10:00
 const now = new Date(2026, 9, 6, 10, 0);
@@ -163,4 +164,25 @@ test('week view start: yesterday, today or Monday, moving in whole weeks', async
   assert.equal(ymd(weekViewStart(new Date(2026, 9, 28), today, 'today')), '2026-10-24');
   assert.equal(ymd(weekViewStart(new Date(2026, 9, 31), today, 'today')), '2026-10-31');
   assert.equal(ymd(weekViewStart(new Date(2026, 9, 20), today, 'yesterday')), '2026-10-16');
+});
+
+test('year dates: clock changes, seasons, moon phases and customs', () => {
+  const on = (year, name) => yearDates(year).filter(d => d.de.startsWith(name)).map(d => d.date);
+  assert.deepEqual(on(2026, 'Zeitumstellung'), ['2026-03-29', '2026-10-25']);
+  assert.deepEqual(on(2027, 'Zeitumstellung'), ['2027-03-28', '2027-10-31']);
+  // Equinoxes and solstices 2026 (UTC): 20.3. 14:46, 21.6. 08:24, 23.9. 00:05, 21.12. 20:50, within a few minutes
+  const expected = [Date.UTC(2026, 2, 20, 14, 46), Date.UTC(2026, 5, 21, 8, 24), Date.UTC(2026, 8, 23, 0, 5), Date.UTC(2026, 11, 21, 20, 50)];
+  seasonStarts(2026).forEach((d, i) => assert.ok(Math.abs(d.getTime() - expected[i]) < 5 * 60_000, `season ${i}: ${d.toISOString()}`));
+  // Full moon 26.10.2026 about 04:12 UTC, new moon 10.10.2026 about 15:50 UTC
+  const october = moonPhases(2026).filter(m => m.date.getUTCMonth() === 9);
+  assert.deepEqual(october.map(m => `${m.phase} ${m.date.getUTCDate()}`), ['new 10', 'full 26']);
+  assert.ok(Math.abs(october[1].date.getTime() - Date.UTC(2026, 9, 26, 4, 12)) < 10 * 60_000);
+  assert.equal(moonPhases(2026).filter(m => m.phase === 'full').length, 13);
+  assert.deepEqual(on(2026, 'Rosenmontag'), ['2026-02-16']);
+  assert.deepEqual(on(2027, 'Rosenmontag'), ['2027-02-08']);
+  assert.deepEqual(on(2026, 'Muttertag'), ['2026-05-10']);
+  assert.deepEqual(on(2026, 'Erntedank'), ['2026-10-04']);
+  assert.deepEqual(yearDates(2026).filter(d => d.de.endsWith('Advent')).map(d => d.date), ['2026-11-29', '2026-12-06', '2026-12-13', '2026-12-20']);
+  // 24 December on a Sunday is itself the fourth Advent (2028)
+  assert.deepEqual(on(2028, '4. Advent'), ['2028-12-24']);
 });

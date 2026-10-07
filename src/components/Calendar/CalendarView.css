@@ -18,6 +18,8 @@
   --cal-holiday-fill: color-mix(in srgb, var(--red) 18%, transparent);
   --cal-exam-fill: color-mix(in srgb, var(--exam-color, #f97316) 26%, transparent);
   --cal-radius: 12px;
+  /* Year dates (clock change, seasons, moon, customs): their own colour, apart from holidays */
+  --cal-special: #8b5cf6;
 }
 
 .cal-overlay button { font: inherit; color: inherit; cursor: pointer; }
@@ -110,9 +112,20 @@
 .cal-day-num { font-size: 17px; font-weight: 500; min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex: none; }
 .cal-day.weekend .cal-day-num { color: var(--muted); }
 .cal-day.holiday .cal-day-num { color: var(--cal-holiday); }
-.cal-day.today .cal-day-num { background: var(--accent); color: #fff; }
+.cal-day.today .cal-day-num { background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+/* Today stands out as a whole cell: accent frame, light accent tint and a "today" label */
+.cal-day.today {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 13%, transparent)),
+    linear-gradient(var(--day-fill), var(--day-fill)), linear-gradient(var(--day-school), var(--day-school)), var(--surface);
+}
+.cal-today-tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
 .cal-day-holiday { font-size: 11px; color: var(--cal-holiday); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 60px; }
 .cal-day-school { font-size: 10.5px; color: var(--cal-school-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-day-special { display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 10.5px; color: var(--cal-special); }
+.cal-day-special svg { flex: none; }
+.cal-day-special-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .cal-day-events { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden; }
 
 .cal-chip {
@@ -142,6 +155,14 @@
   border-radius: var(--cal-radius);
   border: 1px solid var(--border);
   background: var(--surface);
+}
+/* Month picture at the top of the day panel, like the sheet of a wall calendar */
+.cal-month-art { position: relative; flex: none; margin: 0 0 12px; height: 118px; border-radius: var(--cal-radius); overflow: hidden; border: 1px solid var(--border); }
+.cal-month-art svg { display: block; width: 100%; height: 100%; }
+.cal-month-art figcaption {
+  position: absolute; left: 12px; top: 8px;
+  color: #fff; font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .55), 0 0 12px rgba(0, 0, 0, .35);
 }
 .cal-agenda-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .cal-agenda-date { font-size: 18px; font-weight: 600; }
@@ -185,7 +206,7 @@
 .cal-mini-day.holiday { color: var(--cal-holiday); font-weight: 700; }
 .cal-mini-day.busy::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
 .cal-mini-day.selected { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.cal-mini-day.today { background: var(--accent); color: #fff; }
+.cal-mini-day.today { background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent); }
 .cal-mini-day.today.busy::after { background: #fff; }
 
 /* ── Week ── */
@@ -198,7 +219,13 @@
 .cal-week-num { font-size: 20px; font-weight: 500; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
 .cal-week-day.holiday .cal-week-num { color: var(--cal-holiday); }
 .cal-week-day.selected .cal-week-num { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.cal-week-day.today .cal-week-num { background: var(--accent); color: #fff; }
+.cal-week-day.today .cal-week-num { background: var(--accent); color: #fff; font-weight: 700; box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+.cal-week-day.today {
+  background: linear-gradient(color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent) 14%, transparent)),
+    linear-gradient(var(--day-fill), var(--day-fill)), linear-gradient(var(--day-school), var(--day-school));
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+.cal-week-day.today .cal-week-wd { color: var(--accent); font-weight: 700; }
 .cal-week-allday { border-bottom: 1px solid var(--border); max-height: 28%; overflow-y: auto; }
 .cal-week-allday-cell { display: flex; flex-direction: column; gap: 2px; padding: 3px; min-height: 34px; border-left: 1px solid var(--border); min-width: 0; }
 .cal-week-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -210,7 +237,7 @@
 .cal-hour-label { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cal-week-col { position: relative; border-left: 1px solid var(--border); cursor: copy; }
 .cal-week-col.weekend { background: color-mix(in srgb, var(--muted) 7%, transparent); }
-.cal-week-col.today { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.cal-week-col.today { background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent), inset -2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
 .cal-week-day.weekend .cal-week-wd, .cal-week-day.weekend .cal-week-num { color: var(--muted); }
 /* Past days stay readable as context but step back */
 .cal-week-day.past, .cal-week-col.past > * { opacity: 0.55; }
@@ -461,3 +488,14 @@
   .cal-row { grid-template-columns: 1fr; gap: 4px; }
   .cal-segment button { padding: 0 12px; }
 }
+
+/* Year dates in the day list and the week's all-day row: dashed, apart from holidays */
+.cal-mark-special {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--cal-special);
+  border: 1px dashed color-mix(in srgb, var(--cal-special) 60%, transparent);
+  background: color-mix(in srgb, var(--cal-special) 9%, transparent);
+}
+.cal-mark-special svg { flex: none; }
+.cal-marks .cal-mark-special { white-space: normal; text-align: left; }
+.cal-week-allday-cell .cal-mark-special { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.64 · Kalender: Heute deutlicher, Monatsbilder und Jahresdaten (07.10.2026)
+
+- Heute ist im Monat als ganze Zelle hervorgehoben (Akzentrahmen, leichte Fläche, Hinweis „Heute“), in der Woche mit Kopf, Unterstreichung und kräftiger getönter Spalte, im Jahr mit zusätzlichem Ring.
+- Oben in der Tagesspalte steht ein gezeichnetes Bild zum gewählten Monat, wie auf einem Wandkalender (Winter mit Schnee, Frühlingsblumen, Sommer am See, Herbstwald, Winternacht). Reine SVG Grafik ohne Bilddateien, in hellem und dunklem Theme gleich.
+- Neue Jahresdaten, getrennt von Feiertagen gestrichelt und violett dargestellt: Zeitumstellung, Beginn der Jahreszeiten mit Uhrzeit, Voll und Neumond sowie Bräuche (Valentinstag, Weiberfastnacht, Rosenmontag, Aschermittwoch, Muttertag, Vatertag, Erntedank, Halloween, Sankt Martin, Adventssonntage, Nikolaus, Heiligabend, Silvester). Alles wird berechnet, ohne Internet. In den Kalender Einstellungen abschaltbar.
+
 ## 0.5.63 · Wochenansicht mit Blick nach vorn (07.10.2026)
 
 - Die Wochenansicht zeigt standardmäßig gestern als Kontext, heute und fünf Tage voraus, statt der Kalenderwoche. Am Samstag sieht man so schon die nächste Schulwoche. Blättern springt um sieben Tage, ein angetippter Tag verschiebt die Spalten nicht.

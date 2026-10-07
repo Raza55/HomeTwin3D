@@ -1,5 +1,6 @@
 import { publicHolidays } from './holidays.ts';
 import { schoolHolidayOn, type SchoolHoliday } from './schoolHolidays.ts';
+import { yearDates, type YearDateKind } from './yearDates.ts';
 
 /** 'DE-RP' → 'RP' */
 export function regionShort(code: string): string {
@@ -11,13 +12,16 @@ export interface DayMarks {
   /** States the public holiday(s) of the day apply to. */
   holidayRegions?: string[];
   school?: SchoolHoliday & { regions: string[] };
+  /** Clock changes, seasons, moon phases and customs of the day (shown apart from holidays). */
+  special?: { kind: YearDateKind; name: string; phase?: 'full' | 'new' }[];
 }
 
 /**
  * Public and school holidays of the chosen states per day. With several states, a holiday
  * that does not apply to all of them names the states it applies to: "Fronleichnam (RP)".
  */
-export function makeMarks(years: number[], regions: string[], showPublic: boolean, school: Record<string, SchoolHoliday[]>, showSchool: boolean) {
+export function makeMarks(years: number[], regions: string[], showPublic: boolean, school: Record<string, SchoolHoliday[]>, showSchool: boolean,
+  showYearDates = false, lang: 'de' | 'en' = 'de') {
   const label = (name: string, where: string[]) =>
     regions.length > 1 && where.length < regions.length ? `${name} (${where.map(regionShort).join(', ')})` : name;
   const holidays = new Map<string, Map<string, string[]>>();
@@ -28,12 +32,20 @@ export function makeMarks(years: number[], regions: string[], showPublic: boolea
       holidays.set(h.date, names);
     }
   }
+  const special = new Map<string, NonNullable<DayMarks['special']>>();
+  if (showYearDates) {
+    for (const year of years) for (const d of yearDates(year)) {
+      special.set(d.date, [...(special.get(d.date) ?? []), { kind: d.kind, name: d[lang], ...(d.phase ? { phase: d.phase } : {}) }]);
+    }
+  }
   return (date: string): DayMarks => {
     const names = holidays.get(date);
     const marks: DayMarks = names ? {
       holiday: [...names].map(([name, where]) => label(name, where)).join(' · '),
       holidayRegions: [...new Set([...names.values()].flat())],
     } : {};
+    const extra = special.get(date);
+    if (extra) marks.special = extra;
     if (!showSchool) return marks;
     const hits = regions.flatMap(region => {
       const h = schoolHolidayOn(school[region] ?? [], date);

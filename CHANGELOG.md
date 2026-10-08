@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.68 · Weniger Rechenarbeit für Marker und Saugroboter (08.10.2026)
+
+- Leistung: Markierungen verwenden unveränderte Sortierung, Texturkoordinaten und Farbwerte weiter; ihre Positionen und Trefferprüfung bleiben pro Bild aktuell. Die Saugroboteranimation verwendet Rechenobjekte erneut, statt pro Bild und Modellteil neue anzulegen. Darstellung, Bewegung und Bedienung bleiben erhalten.
+
 ## 0.5.67 · Saugroboter im Board steuern (08.10.2026)
 
 - Über dem Saugroboter steht ein eigener Marker, der mit ihm mitfährt. Ein Tipp darauf oder auf den Roboter selbst öffnet die Steuerung; der Roboter startet dabei nicht mehr sofort.

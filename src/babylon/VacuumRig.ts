@@ -4,7 +4,7 @@ import type { VacuumPose } from '../services/vacuumPosition';
 import { floorplanId } from './FloorplanBindings';
 import { invalidateShadowsNear } from './ShadowRange';
 
-interface Part { mesh: AbstractMesh; position: Vector3; rotation: Quaternion }
+interface Part { mesh: AbstractMesh; offset: Vector3; rotation: Quaternion; animatedRotation: Quaternion }
 
 /**
  * Moves the modelled robot (all meshes carrying its floorplan ID) over the floor.
@@ -20,14 +20,22 @@ export class VacuumRig {
   private start = 0;
   private duration = 0;
   private observer: Observer<Scene> | null = null;
+  private turn = Quaternion.Identity();
+  private up = Vector3.Up();
+  private center = Vector3.Zero();
+  private moved = Vector3.Zero();
 
   constructor(private scene: Scene, object: FloorplanObject, private requestRender: () => void) {
+    this.rest = { x: object.position.x, z: object.position.z, yaw: (object.vacuum?.restYawDeg ?? 0) * Math.PI / 180 };
+    const restCenter = new Vector3(-this.rest.x, 0, this.rest.z);
     for (const mesh of scene.meshes) {
       if (!mesh.getTotalVertices() || floorplanId(mesh) !== object.id) continue;
-      this.parts.push({ mesh, position: mesh.position.clone(), rotation: mesh.rotationQuaternion?.clone() ?? Quaternion.FromEulerVector(mesh.rotation) });
+      this.parts.push({ mesh, offset: mesh.position.subtract(restCenter),
+        rotation: mesh.rotationQuaternion?.clone() ?? Quaternion.FromEulerVector(mesh.rotation), animatedRotation: Quaternion.Identity() });
     }
-    this.rest = { x: object.position.x, z: object.position.z, yaw: (object.vacuum?.restYawDeg ?? 0) * Math.PI / 180 };
-    this.current = this.from = this.to = { ...this.rest };
+    this.current = { ...this.rest };
+    this.from = { ...this.rest };
+    this.to = { ...this.rest };
   }
 
   get empty(): boolean { return !this.parts.length; }
@@ -50,7 +58,10 @@ export class VacuumRig {
   private tick(): void {
     const t = this.duration ? Math.min(1, (performance.now() - this.start) / this.duration) : 1;
     const { from, to } = this;
-    this.apply({ x: from.x + (to.x - from.x) * t, z: from.z + (to.z - from.z) * t, yaw: from.yaw + (to.yaw - from.yaw) * t });
+    this.current.x = from.x + (to.x - from.x) * t;
+    this.current.z = from.z + (to.z - from.z) * t;
+    this.current.yaw = from.yaw + (to.yaw - from.yaw) * t;
+    this.apply(this.current);
     if (t < 1) { this.requestRender(); return; }
     this.scene.onBeforeRenderObservable.remove(this.observer);
     this.observer = null;
@@ -58,18 +69,18 @@ export class VacuumRig {
   }
 
   private apply(pose: VacuumPose): void {
-    this.current = pose;
+    Object.assign(this.current, pose);
     // A model-space turn by ψ is a local turn by ψ about Y as well: the mirror flips both the axis sense and the handedness.
-    const turn = Quaternion.RotationAxis(Vector3.Up(), pose.yaw - this.rest.yaw);
-    const restCenter = new Vector3(-this.rest.x, 0, this.rest.z);
-    const center = new Vector3(-pose.x, 0, pose.z);
+    Quaternion.RotationAxisToRef(this.up, pose.yaw - this.rest.yaw, this.turn);
+    this.center.set(-pose.x, 0, pose.z);
     for (const part of this.parts) {
       if (part.mesh.isDisposed()) continue;
-      const moved = Vector3.Zero();
-      part.position.subtract(restCenter).rotateByQuaternionToRef(turn, moved);
+      part.offset.rotateByQuaternionToRef(this.turn, this.moved);
       part.mesh.unfreezeWorldMatrix();
-      part.mesh.position.copyFrom(center.add(moved));
-      part.mesh.rotationQuaternion = turn.multiply(part.rotation);
+      this.center.addToRef(this.moved, part.mesh.position);
+      this.turn.multiplyToRef(part.rotation, part.animatedRotation);
+      // Keep Babylon's setter side effects (Euler reset and dirty flag).
+      part.mesh.rotationQuaternion = part.animatedRotation;
       part.mesh.computeWorldMatrix(true);
     }
   }

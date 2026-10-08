@@ -17,3 +17,5 @@ await build({ entryPoints: [fileURLToPath(new URL('./screen-visibility.test.ts',
 await import('../.qa/screen-visibility.test.mjs');
 await build({ entryPoints: [fileURLToPath(new URL('./render-batch.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', define: { 'import.meta.env.DEV': 'false' }, outfile: fileURLToPath(new URL('../.qa/render-batch.test.mjs', import.meta.url)) });
 await import('../.qa/render-batch.test.mjs');
+await build({ entryPoints: [fileURLToPath(new URL('./vacuum-rig.test.ts', import.meta.url))], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: fileURLToPath(new URL('../.qa/vacuum-rig.test.mjs', import.meta.url)) });
+await import('../.qa/vacuum-rig.test.mjs');

@@ -320,6 +320,12 @@ class MarkerOverlay {
   private uvs = new Float32Array(0);
   private colors = new Float32Array(0);
   private visible: Marker[] = [];
+  private visibleSource: Marker[] = [];
+  private visibleZIndices: number[] = [];
+  private uvSlots: Marker['slot'][] = [];
+  private uvSizes: Marker['used'][] = [];
+  private uvAtlasSize = 0;
+  private positionCount = 0;
   private buffers = new MarkerVertexBuffers();
   private scratch = document.createElement('canvas');
   private beforeRender: Observer<Scene>;
@@ -360,12 +366,15 @@ class MarkerOverlay {
     this.capacity = capacity;
     this.positions = new Float32Array(capacity * 12);
     this.uvs = new Float32Array(capacity * 8);
-    this.colors = new Float32Array(capacity * 16);
+    // Every drawn quad is opaque white; the atlas supplies its color and alpha.
+    this.colors = new Float32Array(capacity * 16).fill(1);
+    this.uvSlots.length = this.uvSizes.length = 0;
+    this.positionCount = 0;
     const indices = new Uint32Array(capacity * 6);
     for (let i = 0; i < capacity; i++) indices.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
     this.mesh.setVerticesData(VertexBuffer.PositionKind, this.positions, true, 3);
     this.mesh.setVerticesData(VertexBuffer.UVKind, this.uvs, true, 2);
-    this.mesh.setVerticesData(VertexBuffer.ColorKind, this.colors, true, 4);
+    this.mesh.setVerticesData(VertexBuffer.ColorKind, this.colors, false, 4);
     this.mesh.setIndices(indices);
   }
 
@@ -383,16 +392,33 @@ class MarkerOverlay {
       this.rasterize(marker, pixelRatio, markers);
     }
     const visible = this.visible;
-    visible.length = 0;
-    for (const marker of markers) if (marker.placement.visible && marker.raster && marker.slot) visible.push(marker);
-    visible.sort((a, b) => a.raster!.zIndex - b.raster!.zIndex);
+    let count = 0, orderChanged = false;
+    for (const marker of markers) {
+      if (!marker.placement.visible || !marker.raster || !marker.slot) continue;
+      const zIndex = marker.raster.zIndex;
+      if (this.visibleSource[count] !== marker || this.visibleZIndices[count] !== zIndex) orderChanged = true;
+      this.visibleSource[count] = marker;
+      this.visibleZIndices[count++] = zIndex;
+    }
+    if (this.visibleSource.length !== count) orderChanged = true;
+    this.visibleSource.length = this.visibleZIndices.length = count;
+    if (orderChanged) {
+      visible.length = count;
+      for (let i = 0; i < count; i++) visible[i] = this.visibleSource[i];
+      // Start from registration order so ties retain the same hit-test priority.
+      visible.sort((a, b) => a.raster!.zIndex - b.raster!.zIndex);
+    }
     this.input.setOrder(visible);
     if (visible.length > this.capacity) this.grow(Math.max(visible.length, this.capacity * 2));
-    this.positions.fill(0);
     const projection = getMarkerProjection(this.scene);
     const rect = projection?.rect;
+    let positionCount = 0, uvChanged = false;
     if (rect && rect.width && rect.height) {
       const size = this.atlas.size;
+      const atlasChanged = this.uvAtlasSize !== size;
+      if (atlasChanged) this.uvSlots.length = this.uvSizes.length = 0;
+      this.uvAtlasSize = size;
+      positionCount = visible.length;
       const snap = (value: number) => Math.round(value * pixelRatio) / pixelRatio;
       for (let i = 0; i < visible.length; i++) {
         const marker = visible[i];
@@ -401,22 +427,29 @@ class MarkerOverlay {
         const right = left + raster.width * scale, bottom = top + raster.height * scale;
         const x0 = (left - rect.left) / rect.width * 2 - 1, x1 = (right - rect.left) / rect.width * 2 - 1;
         const y0 = 1 - (top - rect.top) / rect.height * 2, y1 = 1 - (bottom - rect.top) / rect.height * 2;
-        // The z values are already zeroed above; write directly into the reusable arrays.
+        // z stays zero from allocation; x/y follow the current projection every frame.
         const p = i * 12;
         this.positions[p] = x0; this.positions[p + 1] = y0;
         this.positions[p + 3] = x1; this.positions[p + 4] = y0;
         this.positions[p + 6] = x1; this.positions[p + 7] = y1;
         this.positions[p + 9] = x0; this.positions[p + 10] = y1;
-        const u0 = slot.x / size, v0 = slot.y / size, u1 = (slot.x + marker.used.width) / size, v1 = (slot.y + marker.used.height) / size;
-        const u = i * 8;
-        this.uvs[u] = u0; this.uvs[u + 1] = v0; this.uvs[u + 2] = u1; this.uvs[u + 3] = v0;
-        this.uvs[u + 4] = u1; this.uvs[u + 5] = v1; this.uvs[u + 6] = u0; this.uvs[u + 7] = v1;
-        this.colors.fill(1, i * 16, i * 16 + 16);
+        // Slots and used sizes are replaced on atlas allocation/rasterization.
+        // Camera motion alone does not change texture coordinates.
+        if (atlasChanged || this.uvSlots[i] !== slot || this.uvSizes[i] !== marker.used) {
+          const u0 = slot.x / size, v0 = slot.y / size, u1 = (slot.x + marker.used.width) / size, v1 = (slot.y + marker.used.height) / size;
+          const u = i * 8;
+          this.uvs[u] = u0; this.uvs[u + 1] = v0; this.uvs[u + 2] = u1; this.uvs[u + 3] = v0;
+          this.uvs[u + 4] = u1; this.uvs[u + 5] = v1; this.uvs[u + 6] = u0; this.uvs[u + 7] = v1;
+          this.uvSlots[i] = slot; this.uvSizes[i] = marker.used;
+          uvChanged = true;
+        }
       }
     }
+    // Removed/hidden quads must collapse, including when the canvas has no size.
+    if (positionCount < this.positionCount) this.positions.fill(0, positionCount * 12, this.positionCount * 12);
+    this.positionCount = positionCount;
     this.buffers.upload(this.mesh, VertexBuffer.PositionKind, this.positions);
-    this.buffers.upload(this.mesh, VertexBuffer.UVKind, this.uvs);
-    this.buffers.upload(this.mesh, VertexBuffer.ColorKind, this.colors);
+    if (uvChanged) this.buffers.upload(this.mesh, VertexBuffer.UVKind, this.uvs);
   }
 
   private rasterize(marker: Marker, pixelRatio: number, all: readonly Marker[]): void {

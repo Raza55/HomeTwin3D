@@ -147,7 +147,8 @@ Browser übernimmt sie von dort. Öffentliche Builds enthalten keine Installatio
 | Glasdurchgang | `TransmissionCulling.ts` lässt unsichtbare und außerhalb des Sichtvolumens liegende Meshes weg. |
 | Außenobjekte | `ExteriorMeshPool.ts` teilt Geometrie und Materialien gleicher Formen. |
 | Leuchten | Unveränderte Zustände schreiben weder Meshwerte noch Schattenkarten neu. Pro Mesh zählen bis zu sechs relevante Lichtquellen. Schattenkarten werden verteilt neu berechnet (höchstens 4 pro Bild, Tablet 2); dunkle Lampen warten. |
-| Marker | Gemeinsame Projektion pro Bild, budgetierte Verdeckungsprüfung, keine identischen DOM-Schreibzugriffe. |
+| Marker | Gemeinsame Projektion pro Bild, budgetierte Verdeckungsprüfung, keine identischen DOM-Schreibzugriffe. Sortierung und Texturkoordinaten werden nur bei Änderungen erneuert, Farbwerte einmal pro Puffergröße gesetzt; Positionen und Trefferprüfung bleiben pro Bild aktuell. |
+| Saugroboter | Wiederverwendbare Vektoren und Quaternionen für die Bewegung aller Modellteile; unveränderte Interpolation und Schattenaktualisierung. |
 | Spiegel | Umgebung wird über sechs Bilder aufgenommen, eine Würfelseite pro Bild. |
 | Rendern | Ohne Bewegung ruht die Render-Schleife. Tablets erhalten eine eigene Leistungsstufe (`?device=tablet`). |
 | HA-Verlauf | 60-Sekunden-Cache, Zusammenfassung gleichzeitiger Anfragen, Begrenzung der Ergebnismenge. |

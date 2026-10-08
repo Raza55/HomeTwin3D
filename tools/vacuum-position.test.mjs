@@ -4,14 +4,17 @@ import { mapToModel, parseEcovacsPosition, vacuumPollDelay, validateVacuumTracki
 import { applyFloorplanMappings, collectFloorplanBindings, importFloorplanBindings, mergeFloorplan, validateManifest } from '../src/services/floorplanImport.ts';
 
 const tracking = { positionEntityId: 'vacuum.robot_map', mapTransform: [0.001, 0, 2, 0, -0.001, 3] };
-const response = (pos) => ({ 'vacuum.robot_map': { ret: 'ok', resp: { body: { code: 0, data: { deebotPos: pos, chargePos: [] } } } } });
+const response = (pos, chargePos = []) => ({ 'vacuum.robot_map': { ret: 'ok', resp: { body: { code: 0, data: { deebotPos: pos, chargePos } } } } });
 const robot = { id: 'robot', label: 'Robot', domain: 'vacuum', entityId: 'vacuum.robot', position: { x: 2, y: 0, z: 3 },
   size: { width: .35, height: .1, depth: .35 }, rotationY: 0, vacuum: tracking };
 const manifest = (objects) => ({ version: 1, source: 'test', coordinateSystem: 'babylon-lh-meters', objects });
 const config = () => ({ lights: [], blinds: [], smartDevices: [], displays: [] });
 
 test('reads the robot position from the service response', () => {
-  assert.deepEqual(parseEcovacsPosition(response({ x: 122, y: -115, a: 143, invalid: 0 }), 'vacuum.robot_map'), { x: 122, y: -115, a: 143 });
+  assert.deepEqual(parseEcovacsPosition(response({ x: 122, y: -115, a: 143, invalid: 0 }), 'vacuum.robot_map'), { x: 122, y: -115, a: 143, atStation: false });
+  const station = [{ x: 122, y: -115, a: 143, t: 3, invalid: 0 }];
+  assert.equal(parseEcovacsPosition(response({ x: 140, y: -100, a: 143, invalid: 0 }, station), 'vacuum.robot_map').atStation, true);
+  assert.equal(parseEcovacsPosition(response({ x: 900, y: -115, a: 0, invalid: 0 }, station), 'vacuum.robot_map').atStation, false);
   assert.equal(parseEcovacsPosition(response({ x: 1, y: 2, a: 0, invalid: 1 }), 'vacuum.robot_map'), null);
   assert.equal(parseEcovacsPosition(response({ x: 1, y: 2, a: 0 }), 'vacuum.other'), null);
   assert.equal(parseEcovacsPosition(undefined, 'vacuum.robot_map'), null);
@@ -31,6 +34,9 @@ test('polls only while the robot is away from its station', () => {
   assert.equal(vacuumPollDelay({ state: 'paused', attributes: {} }), 20000);
   assert.equal(vacuumPollDelay({ state: 'docked', attributes: {} }), null);
   assert.equal(vacuumPollDelay(undefined), null);
+  // One integration may still report the station while the other already reports cleaning.
+  assert.equal(vacuumPollDelay({ state: 'docked', attributes: {} }, { state: 'cleaning', attributes: {} }), 2500);
+  assert.equal(vacuumPollDelay(undefined, { state: 'idle', attributes: {} }), 20000);
 });
 
 test('validates the map assignment', () => {

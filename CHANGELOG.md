@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.66 · Saugroboter: Start schon beim Moppwaschen erkannt (08.10.2026)
+
+- Ist ein Roboter über zwei Integrationen eingebunden, zählt der aktivere Zustand. Eine Integration meldete das Reinigen erst Minuten später, während die Station noch den Mopp wusch.
+- Steht der Roboter auf seinem Ladepunkt, bleibt er im Modell genau an seinem Platz an der Station.
+
 ## 0.5.65 · Saugroboter fährt im Modell mit (08.10.2026)
 
 - Ein Saugroboter im Modell kann seiner echten Position folgen. Während er reinigt oder zur Station fährt, fragt HomeTwin3D alle 2,5 Sekunden `ecovacs.raw_get_positions` ab und bewegt die Robotermeshes samt Fahrtrichtung weich über den Boden. Angedockt steht er wieder an seinem Platz im Modell, dann ruht die Abfrage.

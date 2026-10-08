@@ -35,15 +35,15 @@ export default function VacuumTracker({ scene, config, states, connected, reques
     for (const object of robots) {
       const rig = rigs.current.get(object.id), tracking = object.vacuum!;
       if (!rig) continue;
-      const stateOf = () => live.current.states[tracking.positionEntityId] ?? live.current.states[object.entityId];
       const poll = async () => {
-        const delay = live.current.connected ? vacuumPollDelay(stateOf()) : null;
+        const { states, connected } = live.current;
+        const delay = connected ? vacuumPollDelay(states[tracking.positionEntityId], object.entityId ? states[object.entityId] : undefined) : null;
         if (delay === null) { rig.moveTo(null, 0); return; }
         try {
           const result = await getActiveHAConnection()?.request({ type: 'call_service', domain: 'ecovacs', service: 'raw_get_positions',
             target: { entity_id: tracking.positionEntityId }, return_response: true }) as { response?: unknown } | undefined;
           const position = parseEcovacsPosition(result?.response, tracking.positionEntityId);
-          if (!stopped && position) rig.moveTo(mapToModel(tracking, position), delay);
+          if (!stopped && position) rig.moveTo(position.atStation ? null : mapToModel(tracking, position), delay);
         } catch { /* Keep the last known position; the next poll tries again. */ }
         if (!stopped) timers.push(setTimeout(poll, delay));
       };

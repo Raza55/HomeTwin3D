@@ -3,7 +3,8 @@ import type { FloorplanObject, HAState } from '../types';
 export type VacuumTracking = NonNullable<FloorplanObject['vacuum']>;
 /** Robot pose in model coordinates (metres, before model scale); `yaw` is the heading angle in the X/Z plane. */
 export interface VacuumPose { x: number; z: number; yaw: number }
-export interface EcovacsPosition { x: number; y: number; a: number }
+/** `atStation`: the robot stands on its charging position (e.g. while the station washes the mop). */
+export interface EcovacsPosition { x: number; y: number; a: number; atStation?: boolean }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -16,10 +17,13 @@ export function validateVacuumTracking(value: unknown): void {
 
 /** Robot position from an `ecovacs.raw_get_positions` service response (map millimetres, heading in degrees). */
 export function parseEcovacsPosition(response: unknown, entityId: string): EcovacsPosition | null {
-  const entry = (response as Record<string, unknown> | null)?.[entityId] as { resp?: { body?: { data?: { deebotPos?: unknown } } } } | undefined;
-  const pos = entry?.resp?.body?.data?.deebotPos as { x?: unknown; y?: unknown; a?: unknown; invalid?: unknown } | undefined;
+  type Raw = { x?: unknown; y?: unknown; a?: unknown; invalid?: unknown };
+  const entry = (response as Record<string, unknown> | null)?.[entityId] as { resp?: { body?: { data?: { deebotPos?: Raw; chargePos?: Raw[] } } } } | undefined;
+  const data = entry?.resp?.body?.data, pos = data?.deebotPos;
   if (!pos || pos.invalid === 1 || !finite(pos.x) || !finite(pos.y)) return null;
-  return { x: pos.x, y: pos.y, a: finite(pos.a) ? pos.a : 0 };
+  const { x, y } = pos;
+  const atStation = Array.isArray(data?.chargePos) && data.chargePos.some(c => c?.invalid !== 1 && finite(c?.x) && finite(c?.y) && Math.hypot(c.x - x, c.y - y) <= 60);
+  return { x, y, a: finite(pos.a) ? pos.a : 0, atStation };
 }
 
 /** `mapTransform` [a, b, c, d, e, f]: X = a·x + b·y + c, Z = d·x + e·y + f (map millimetres to model metres). */
@@ -32,10 +36,11 @@ export function mapToModel(tracking: VacuumTracking, p: EcovacsPosition): Vacuum
 const ACTIVE = new Set(['cleaning', 'returning']);
 const AWAY = new Set(['paused', 'idle', 'error']);
 
-/** Polling interval for the robot's state; null while docked or unknown (the model shows it at its station). */
-export function vacuumPollDelay(state: HAState | undefined): number | null {
-  if (!state) return null;
-  if (ACTIVE.has(state.state)) return 2500;
-  if (AWAY.has(state.state)) return 20000;
-  return null;
+/**
+ * Polling interval for the robot; null while docked or unknown (the model shows it at its station).
+ * Integrations of one robot report state changes at different times, so the most active one wins.
+ */
+export function vacuumPollDelay(...states: (HAState | undefined)[]): number | null {
+  const delays = states.flatMap(state => !state ? [] : ACTIVE.has(state.state) ? [2500] : AWAY.has(state.state) ? [20000] : []);
+  return delays.length ? Math.min(...delays) : null;
 }

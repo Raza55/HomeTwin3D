@@ -19,6 +19,7 @@ import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
 import VacuumTracker from '../../components/VacuumTracker';
+import VacuumMarkers from '../../components/VacuumMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
@@ -221,6 +222,7 @@ export default function Dashboard() {
   const [itOpen, setITOpen] = useState<string | null>(null);
   const [echoOpen, setEchoOpen] = useState<string | null>(null);
   const [fanOpen, setFanOpen] = useState<string | null>(null);
+  const [vacuumOpen, setVacuumOpen] = useState<string | null>(null);
   const [haStatus, setHaStatus] = useState<HAConnectionStatus>('disconnected');
   const [haSettingsVersion, setHaSettingsVersion] = useState(0);
   const [modelStatus, setModelStatus] = useState('loading');
@@ -321,7 +323,8 @@ export default function Dashboard() {
       if (o.it) itEntityIds(o.it).forEach(id => ids.add(id));
       if (o.appliance?.finishedEntityId) ids.add(o.appliance.finishedEntityId);
       // A robot's state decides whether its live position is polled.
-      if (o.vacuum) { ids.add(o.vacuum.positionEntityId); if (o.entityId) ids.add(o.entityId); }
+      if (o.domain === 'vacuum' && o.entityId) ids.add(o.entityId);
+      if (o.vacuum) ids.add(o.vacuum.positionEntityId);
       if (o.coffee) {
         if (o.entityId) ids.add(o.entityId);
         Object.values(o.coffee).forEach(id => { if (typeof id === 'string') ids.add(id); });
@@ -1339,6 +1342,9 @@ export default function Dashboard() {
             if (fanObject) {
               closeQuick(); setFanOpen(fanObject.id); pressedSmartDeviceId = null; return;
             }
+            // A robot opens its controls (rooms, pause, return) instead of starting right away.
+            const vacuumObject = device && configRef.current?.model?.floorplan?.objects.find(o => o.domain === 'vacuum' && o.entityId === device.entityId);
+            if (vacuumObject) { closeQuick(); setVacuumOpen(vacuumObject.id); pressedSmartDeviceId = null; return; }
             if (device && haRef.current && device.action !== 'none') {
               const domain = device.entityId.split('.')[0];
               const service = device.action === 'start' ? (domain === 'vacuum' ? 'start' : 'turn_on')
@@ -2595,6 +2601,7 @@ export default function Dashboard() {
         {!matchingOpen && sceneReady && sceneCtxRef.current && <MarkerCategoryScope value="media"><TVDialControl scene={sceneCtxRef.current.scene} states={lastStatesRef.current} connected={haStatus==='connected'}/></MarkerCategoryScope>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><ITMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={itOpen} onOpen={setITOpen} onSave={(id,it)=>{const next=structuredClone(configRef.current!);const object=next.model?.floorplan?.objects.find(o=>o.id===id);if(object){object.it=it;updateConfig(next);handleReloadModel();}}}/></MarkerCategoryScope>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><CoffeeMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={coffeeOpen} onOpen={setCoffeeOpen} onAssign={id=>{setCoffeeOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/></MarkerCategoryScope>}
+        {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="device"><VacuumMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={vacuumOpen} onOpen={setVacuumOpen}/></MarkerCategoryScope>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="media"><EchoMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} open={echoOpen} onOpen={setEchoOpen} onAssign={id=>{setEchoOpen(null);closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}}/></MarkerCategoryScope>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <BatteryWarningMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <WaterLeakMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}

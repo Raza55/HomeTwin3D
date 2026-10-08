@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.67 · Saugroboter im Board steuern (08.10.2026)
+
+- Über dem Saugroboter steht ein eigener Marker, der mit ihm mitfährt. Ein Tipp darauf oder auf den Roboter selbst öffnet die Steuerung; der Roboter startet dabei nicht mehr sofort.
+- Räume auswählen und gezielt reinigen lassen (`vacuum.clean_area`), oder die ganze Wohnung. Die Räume kommen aus Home Assistant: die Kartenräume des Roboters, soweit sie dort einem Bereich zugeordnet sind, in der Reihenfolge des Roboters.
+- Während er arbeitet: Pause, Fortsetzen, Zur Station und Stopp. Saugkraft wählbar, wenn eine Integration des Roboters Stufen meldet.
+
 ## 0.5.66 · Saugroboter: Start schon beim Moppwaschen erkannt (08.10.2026)
 
 - Ist ein Roboter über zwei Integrationen eingebunden, zählt der aktivere Zustand. Eine Integration meldete das Reinigen erst Minuten später, während die Station noch den Mopp wusch.

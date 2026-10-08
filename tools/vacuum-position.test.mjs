@@ -55,3 +55,28 @@ test('keeps the map assignment across model reimports and binding files', () => 
   const restored = importFloorplanBindings({ ...config(), model: { floorplan: manifest([{ ...robot, vacuum: undefined }]) } }, file);
   assert.deepEqual(restored.model.floorplan.objects[0].vacuum, tracking);
 });
+
+test('robot controls follow the most active integration', async () => {
+  const { vacuumState, vacuumView, vacuumService } = await import('../src/services/vacuumControl.ts');
+  const s = (state) => ({ state, attributes: {} });
+  assert.equal(vacuumState(s('docked'), s('cleaning')).state, 'cleaning');
+  assert.equal(vacuumState(undefined, s('paused')).state, 'paused');
+  const cleaning = vacuumView(s('cleaning'), true);
+  assert.deepEqual([cleaning.canPause, cleaning.canResume, cleaning.canReturn, cleaning.canStop, cleaning.canStart], [true, false, true, true, false]);
+  const paused = vacuumView(s('paused'), true);
+  assert.deepEqual([paused.canPause, paused.canResume, paused.canStop, paused.canStart], [false, true, true, false]);
+  const docked = vacuumView(s('docked'), true);
+  assert.deepEqual([docked.canStart, docked.canReturn, docked.canStop], [true, false, false]);
+  assert.equal(vacuumView(s('cleaning'), false).available, false);
+  assert.equal(vacuumService('resume'), 'start');
+  assert.equal(vacuumService('return'), 'return_to_base');
+});
+
+test('rooms are mapped areas in the robot room order', async () => {
+  const { cleanableRooms } = await import('../src/services/vacuumControl.ts');
+  const segments = [{ id: '1', name: 'Flur' }, { id: '2', name: 'Bad' }, { id: '3', name: 'Küche' }, { id: '4', name: 'Essen' }];
+  assert.deepEqual(cleanableRooms(segments, { bad: ['2'], wohnen: ['3', '4'], flur: ['1'] }),
+    [{ areaId: 'flur', name: 'Flur' }, { areaId: 'bad', name: 'Bad' }, { areaId: 'wohnen', name: 'Küche + Essen' }]);
+  assert.deepEqual(cleanableRooms(segments, { bad: ['2'] }), [{ areaId: 'bad', name: 'Bad' }]);
+  assert.deepEqual(cleanableRooms(segments, undefined), []);
+});

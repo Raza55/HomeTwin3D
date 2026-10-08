@@ -108,6 +108,10 @@ Umgebung ab. Mit `?off=exterior` in der Adresse lässt sie sich zum Vergleich au
 
 ### Kalender
 
+Im Kioskmodus bleibt das Datum als Kalenderbutton sichtbar, während die Uhrzeit der Systemleiste überlassen wird. Wetter,
+Ansichtsbuttons und Markierungsfilter passen ihre Anordnung an die verfügbare Breite an; der Kalenderbutton und die
+Ansichtsbuttons haben dort mindestens 44 Pixel große Touchflächen.
+
 Ein Tipp auf das Datum öffnet einen Kalender (Jahr, Monat, Woche) über dem Modell. Termine kommen per WebSocket Abo aus den
 Kalendern von Home Assistant und werden dort angelegt, geändert und gelöscht. Feiertage werden für die gewählten Bundesländer
 berechnet, Schulferien von der OpenHolidays API geladen und im Browser zwischengespeichert. Freitext und Sprache werden in

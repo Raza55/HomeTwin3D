@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.69 · Kalenderzugang und freie Bedienelemente im Kioskmodus (08.10.2026)
+
+- Im Kioskmodus bleibt das Datum als eigener Kalenderbutton mit mindestens 44 Pixeln Touchfläche sichtbar; nur die Uhrzeit wird ausgeblendet.
+- Wetter, Ansichtsbuttons und Markierungsfilter ordnen sich nach ihrer tatsächlichen Größe an. Auf schmalen Tablets und Smartphones umbrechen die Bedienelemente unterhalb des Logos, ohne sich gegenseitig zu verdecken. Die Ansichtsbuttons im Kioskmodus sind ebenfalls mindestens 44 Pixel groß.
+
 ## 0.5.68 · Weniger Rechenarbeit für Marker und Saugroboter (08.10.2026)
 
 - Leistung: Markierungen verwenden unveränderte Sortierung, Texturkoordinaten und Farbwerte weiter; ihre Positionen und Trefferprüfung bleiben pro Bild aktuell. Die Saugroboteranimation verwendet Rechenobjekte erneut, statt pro Bild und Modellteil neue anzulegen. Darstellung, Bewegung und Bedienung bleiben erhalten.

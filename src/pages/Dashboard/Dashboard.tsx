@@ -2441,6 +2441,64 @@ export default function Dashboard() {
           onScrubberTimeChange={setScrubberTime}
           cloudCoverFactor={cloudCoverFactor}
           currentWeather={currentWeather}
+          viewControls={
+            <div className="dashboard-render-toggle">
+              {/* Always the same four buttons: textures, energy view, navigation mode, recentre. */}
+              <button
+                className={`dashboard-icon-btn dashboard-texture-btn${showTextures ? ' active' : ''}`}
+                // Without textures the plan always shows the energy view (no bare sketch state).
+                onClick={() => { if (showTextures) changeEnergyView(true); handleShowTexturesChange(!showTextures); }}
+                aria-label={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
+                aria-pressed={showTextures}
+                title={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
+              >
+                <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
+              </button>
+              <button
+                className={`dashboard-icon-btn${!showTextures && energyView ? ' active' : ''}`}
+                disabled={!!dayDemoController}
+                onClick={() => {
+                  // The energy view lives on the sketch model: it switches over, and closing it returns to the textures.
+                  if (showTextures || !energyView) { changeEnergyView(true); if (showTextures) handleShowTexturesChange(false); } else handleShowTexturesChange(true);
+                }}
+                aria-pressed={!showTextures && energyView}
+                aria-label={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
+                title={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
+              >
+                <Zap size={18} strokeWidth={1.7} aria-hidden="true" />
+              </button>
+              <button
+                className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}
+                disabled={!sceneReady || homeViewSetting || !!dayDemoController}
+                onClick={() => { if (!dayDemoRef.current) changeNavigationMode(nextNavigationMode(navigationMode)); }}
+                aria-label={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
+                title={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
+              >
+                {navigationMode === 'normal' ? <Orbit size={18} strokeWidth={1.7} aria-hidden="true" /> : navigationMode === 'walk' ? <Footprints size={18} strokeWidth={1.7} aria-hidden="true" /> : <Move3d size={18} strokeWidth={1.7} aria-hidden="true" />}
+              </button>
+              <button
+                className="dashboard-icon-btn"
+                onClick={resetView}
+                aria-label={t('common.recenter')}
+                title={t('common.recenter')}
+              >
+                <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
+              </button>
+            </div>
+          }
+          markerFilters={sceneReady && !(dayDemoController ? demoEnergyMode : !showTextures && energyView) && (
+            <div className="dashboard-marker-filter" role="group" aria-label={t('markers.filter')}>
+              {([['light', Lightbulb], ['blind', Blinds], ['climate', Fan], ['door', DoorOpen], ['device', WashingMachine], ['media', Tv]] as const).map(([category, Icon]) => {
+                const shown = dayDemoController ? (demoCategories ?? MARKER_CATEGORIES).includes(category) : !hiddenCategories.includes(category);
+                return (
+                  <button key={category} type="button" data-category={category} className={`dashboard-icon-btn${shown ? ' active' : ''}`}
+                    aria-pressed={shown} aria-label={t(`markers.category.${category}`)} title={t(`markers.category.${category}`)} onClick={() => dayDemoController ? toggleDemoCategory(category) : toggleCategory(category)}>
+                    <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         />
 
         {calendarOpen && <Suspense fallback={null}><CalendarView onClose={() => setCalendarOpen(false)} /></Suspense>}
@@ -2453,63 +2511,6 @@ export default function Dashboard() {
             longitude={configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude}
             onExit={exitDayDemo}
           />
-        )}
-
-        <div className="dashboard-render-toggle">
-          {/* Always the same four buttons: textures, energy view, navigation mode, recentre. */}
-          <button
-            className={`dashboard-icon-btn dashboard-texture-btn${showTextures ? ' active' : ''}`}
-            // Without textures the plan always shows the energy view (no bare sketch state).
-            onClick={() => { if (showTextures) changeEnergyView(true); handleShowTexturesChange(!showTextures); }}
-            aria-label={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
-            aria-pressed={showTextures}
-            title={`${t('settings.textures')} ${showTextures ? t('common.on') : t('common.off')}`}
-          >
-            <ImageIcon size={18} strokeWidth={1.7} aria-hidden="true" />
-          </button>
-          <button
-            className={`dashboard-icon-btn${!showTextures && energyView ? ' active' : ''}`}
-            disabled={!!dayDemoController}
-            onClick={() => {
-              // The energy view lives on the sketch model: it switches over, and closing it returns to the textures.
-              if (showTextures || !energyView) { changeEnergyView(true); if (showTextures) handleShowTexturesChange(false); } else handleShowTexturesChange(true);
-            }}
-            aria-pressed={!showTextures && energyView}
-            aria-label={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
-            title={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
-          >
-            <Zap size={18} strokeWidth={1.7} aria-hidden="true" />
-          </button>
-          <button
-            className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}
-            disabled={!sceneReady || homeViewSetting || !!dayDemoController}
-            onClick={() => { if (!dayDemoRef.current) changeNavigationMode(nextNavigationMode(navigationMode)); }}
-            aria-label={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
-            title={t('dashboard.navMode', { mode: t(`dashboard.nav.${navigationMode}`), next: t(`dashboard.nav.${nextNavigationMode(navigationMode)}`) })}
-          >
-            {navigationMode === 'normal' ? <Orbit size={18} strokeWidth={1.7} aria-hidden="true" /> : navigationMode === 'walk' ? <Footprints size={18} strokeWidth={1.7} aria-hidden="true" /> : <Move3d size={18} strokeWidth={1.7} aria-hidden="true" />}
-          </button>
-          <button
-            className="dashboard-icon-btn"
-            onClick={resetView}
-            aria-label={t('common.recenter')}
-            title={t('common.recenter')}
-          >
-            <Crosshair size={18} strokeWidth={1.7} aria-hidden="true" />
-          </button>
-        </div>
-        {sceneReady && !(dayDemoController ? demoEnergyMode : !showTextures && energyView) && (
-          <div className="dashboard-marker-filter" role="group" aria-label={t('markers.filter')}>
-            {([['light', Lightbulb], ['blind', Blinds], ['climate', Fan], ['door', DoorOpen], ['device', WashingMachine], ['media', Tv]] as const).map(([category, Icon]) => {
-              const shown = dayDemoController ? (demoCategories ?? MARKER_CATEGORIES).includes(category) : !hiddenCategories.includes(category);
-              return (
-                <button key={category} type="button" data-category={category} className={`dashboard-icon-btn${shown ? ' active' : ''}`}
-                  aria-pressed={shown} aria-label={t(`markers.category.${category}`)} title={t(`markers.category.${category}`)} onClick={() => dayDemoController ? toggleDemoCategory(category) : toggleCategory(category)}>
-                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
-                </button>
-              );
-            })}
-          </div>
         )}
 
         {navigationMode !== 'normal' && !dayDemoController && <div className="walkthrough-controls" aria-label="Rundgang-Steuerung">

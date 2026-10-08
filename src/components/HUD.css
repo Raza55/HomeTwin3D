@@ -65,11 +65,25 @@
   color: var(--orange);
 }
 
-/* Clock */
-.time-display {
+/* Status and controls share their actual dimensions, including in kiosk mode. */
+.hud-top-controls {
   position: absolute;
   top: 20px;
   right: 32px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100% - 64px);
+}
+.hud-top-controls-minimal { top: 90px; }
+.hud-top-row { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; max-width: 100%; }
+.hud-top-controls .dashboard-render-toggle,
+.hud-top-controls .dashboard-marker-filter { position: static; pointer-events: auto; flex: none; }
+
+/* Clock */
+.time-display {
   text-align: right;
   /* Sun and weather beside the clock, so the top right stays one compact row. */
   display: flex;
@@ -111,6 +125,7 @@
   border-radius: 8px;
 }
 .hud-clock-button:active { opacity: 0.7; }
+.hud-clock-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .hud-clock-button .date { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .hud-calendar-icon { color: var(--accent); flex: none; }
 .hud-calendar-badge {
@@ -231,9 +246,15 @@
     letter-spacing: 0.05em;
   }
 
-  .time-display {
+  .hud-top-controls {
     top: 14px;
     right: 18px;
+    max-width: calc(100% - 36px);
+  }
+  .hud-top-controls-minimal { top: 64px; }
+  .hud-top-row { gap: 6px; }
+
+  .time-display {
     gap: 10px;
     padding: 4px 8px 4px 10px;
     border-radius: 10px;
@@ -283,4 +304,8 @@
   .corner.tr { top: 8px; right: 8px; }
   .corner.bl { bottom: 8px; left: 8px; }
   .corner.br { bottom: 8px; right: 8px; }
+}
+
+@media (max-width: 520px) {
+  .hud-top-controls { top: 64px; }
 }

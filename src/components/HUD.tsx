@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import {
   CalendarDays,
   Cloud,
@@ -30,6 +30,8 @@ interface Props {
   onSettings?: () => void;
   /** Opens the calendar (tap on the date). */
   onCalendar?: () => void;
+  viewControls?: ReactNode;
+  markerFilters?: ReactNode;
   latitude: number;
   longitude: number;
   northOffset: number;
@@ -78,6 +80,8 @@ function weatherVisualFor(weather?: WeatherData | null): { icon: LucideIcon; var
 export default function HUD({
   onSettings,
   onCalendar,
+  viewControls,
+  markerFilters,
   latitude,
   longitude,
   northOffset,
@@ -207,70 +211,76 @@ export default function HUD({
   const SunStatusIcon = sunStatus.icon;
   const WeatherStatusIcon = weatherStatus.icon;
 
-  if (!hudVisible) return null;
-
   return (
     <div className="hud">
-      <div className="corner tl" />
-      <div className="corner tr" />
-      <div className="corner bl" />
-      <div className="corner br" />
+      {hudVisible && <>
+        <div className="corner tl" />
+        <div className="corner tr" />
+        <div className="corner bl" />
+        <div className="corner br" />
 
-      <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
-        <img className="hud-logo" src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="HomeTwin3D" draggable={false} />
-        {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
-        {(simulationMode || demoMode) && (
-          <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>
-        )}
-      </div>
-
-      <div className="time-display">
-        <div className="hud-status-lines">
-          <div className="hud-status-line" title={sunStatus.title} aria-label={sunStatus.title}>
-            <span className={`hud-status-icon-badge ${sunStatus.variant}`}>
-              <SunStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
-            </span>
-            <strong>{sunStatus.text}</strong>
-          </div>
-          <div className="hud-status-line" title={weatherStatus.title} aria-label={weatherStatus.title}>
-            <span className={`hud-status-icon-badge ${weatherStatus.variant}`}>
-              <WeatherStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
-            </span>
-            {weatherStatus.temperature && <strong>{weatherStatus.temperature}</strong>}
-            {weatherStatus.clouds && (
-              <span className="hud-status-part">
-                <Cloud className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
-                <strong>{weatherStatus.clouds}</strong>
-              </span>
-            )}
-            {weatherStatus.precipitation && (() => {
-              const PrecipitationIcon = weatherStatus.precipitation.icon;
-              return (
-                <span className="hud-status-part">
-                  <PrecipitationIcon className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
-                  <strong>{weatherStatus.precipitation.text}</strong>
-                </span>
-              );
-            })()}
-            {!weatherStatus.temperature && !weatherStatus.clouds && <span className="hud-status-label">{weatherStatus.title}</span>}
-          </div>
+        <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
+          <img className="hud-logo" src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="HomeTwin3D" draggable={false} />
+          {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
+          {(simulationMode || demoMode) && (
+            <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>
+          )}
         </div>
-        {onCalendar ? (
-          <button type="button" className="hud-clock hud-clock-button" onClick={onCalendar}
-            aria-label={`${t('calendar.open')}${todayHint.label ? ` · ${todayHint.label}` : ''}`} title={todayHint.label || t('calendar.open')}>
-            <div className="time">{clock}</div>
-            <div className="date">
-              <CalendarDays className="hud-calendar-icon" size={10} strokeWidth={2} aria-hidden="true" />
-              {date}
-              {todayHint.count > 0 && <span className="hud-calendar-badge">{todayHint.count}</span>}
+      </>}
+
+      <div className={`hud-top-controls${hudVisible ? '' : ' hud-top-controls-minimal'}`}>
+        <div className="hud-top-row">
+          {hudVisible && <div className="time-display">
+            <div className="hud-status-lines">
+              <div className="hud-status-line" title={sunStatus.title} aria-label={sunStatus.title}>
+                <span className={`hud-status-icon-badge ${sunStatus.variant}`}>
+                  <SunStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <strong>{sunStatus.text}</strong>
+              </div>
+              <div className="hud-status-line" title={weatherStatus.title} aria-label={weatherStatus.title}>
+                <span className={`hud-status-icon-badge ${weatherStatus.variant}`}>
+                  <WeatherStatusIcon className="hud-status-icon" size={13} strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                {weatherStatus.temperature && <strong>{weatherStatus.temperature}</strong>}
+                {weatherStatus.clouds && (
+                  <span className="hud-status-part">
+                    <Cloud className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
+                    <strong>{weatherStatus.clouds}</strong>
+                  </span>
+                )}
+                {weatherStatus.precipitation && (() => {
+                  const PrecipitationIcon = weatherStatus.precipitation.icon;
+                  return (
+                    <span className="hud-status-part">
+                      <PrecipitationIcon className="hud-status-mini" size={11} strokeWidth={1.8} aria-hidden="true" />
+                      <strong>{weatherStatus.precipitation.text}</strong>
+                    </span>
+                  );
+                })()}
+                {!weatherStatus.temperature && !weatherStatus.clouds && <span className="hud-status-label">{weatherStatus.title}</span>}
+              </div>
             </div>
-          </button>
-        ) : (
-          <div className="hud-clock">
-            <div className="time">{clock}</div>
-            <div className="date">{date}</div>
-          </div>
-        )}
+            {onCalendar ? (
+              <button type="button" className="hud-clock hud-clock-button" onClick={onCalendar}
+                aria-label={`${t('calendar.open')}${todayHint.label ? ` · ${todayHint.label}` : ''}`} title={todayHint.label || t('calendar.open')}>
+                <div className="time">{clock}</div>
+                <div className="date">
+                  <CalendarDays className="hud-calendar-icon" size={10} strokeWidth={2} aria-hidden="true" />
+                  {date}
+                  {todayHint.count > 0 && <span className="hud-calendar-badge">{todayHint.count}</span>}
+                </div>
+              </button>
+            ) : (
+              <div className="hud-clock">
+                <div className="time">{clock}</div>
+                <div className="date">{date}</div>
+              </div>
+            )}
+          </div>}
+          {viewControls}
+        </div>
+        {markerFilters}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { validateIT } from './itState.ts';
+import { validateVacuumTracking } from './vacuumPosition.ts';
 import type { AppConfig, FloorplanBinding, FloorplanManifest, FloorplanObject, LightConfig } from '../types';
 
 const domains = new Set(['light', 'cover', 'switch', 'fan', 'vacuum', 'media_player', 'sensor', 'binary_sensor', 'button', 'climate', 'lock']);
@@ -29,6 +30,10 @@ export function validateManifest(value: unknown): FloorplanManifest {
       || !Array.isArray(o.statusIndicator.activeStates) || !o.statusIndicator.activeStates.length
       || o.statusIndicator.activeStates.some(s => typeof s !== 'string' || !s.trim() || ['unknown', 'unavailable'].includes(s.trim().toLowerCase())))) throw new Error('Ungültige Statusanzeige.');
     if (o.it) validateIT(o.it);
+    if (o.vacuum !== undefined) {
+      if (o.domain !== 'vacuum') throw new Error('Ungültige Saugroboter-Kartenzuordnung.');
+      validateVacuumTracking(o.vacuum);
+    }
     if (o.coffee) {
       const domains = { statusEntityId: 'sensor', activeProgramEntityId: 'select', remainingEntityId: 'sensor', progressEntityId: 'sensor', remoteStartEntityId: 'binary_sensor', connectivityEntityId: 'binary_sensor', localControlEntityId: 'binary_sensor', stopEntityId: 'button' };
       if (o.domain !== 'switch' || Object.entries(domains).some(([key, domain]) => typeof o.coffee![key as keyof NonNullable<typeof o.coffee>] !== 'string' || !new RegExp(`^${domain}\\.[a-z0-9_]+$`).test(o.coffee![key as keyof NonNullable<typeof o.coffee>]))) throw new Error('Ungültige Kaffeemaschinen-Entitäten.');
@@ -71,10 +76,10 @@ export async function readFloorplanManifest(blob: Blob): Promise<FloorplanManife
 export function collectFloorplanBindings(config: AppConfig): FloorplanBinding[] {
   const saved = new Map((config.floorplanBindings ?? []).map(b => [b.id, b]));
   for (const o of config.model?.floorplan?.objects ?? []) {
-    const { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it } = o;
+    const { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it, vacuum } = o;
     // A reused ID with a different device domain must never erase the old relationship.
     if (saved.has(id) && saved.get(id)!.domain !== domain) continue;
-    saved.set(id, { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it });
+    saved.set(id, { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it, vacuum });
   }
   return structuredClone([...saved.values()]);
 }
@@ -92,8 +97,8 @@ export function importFloorplanBindings(config: AppConfig, value: unknown): AppC
   const saved = new Map(collectFloorplanBindings(config).map(b => [b.id, b]));
   for (const b of checked.objects) {
     if (saved.has(b.id) && saved.get(b.id)!.domain !== b.domain) throw new Error(`Objektkennung ${b.id} hat einen anderen Gerätetyp.`);
-    const { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it } = b;
-    saved.set(id, { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it });
+    const { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it, vacuum } = b;
+    saved.set(id, { id, label, domain, entityId, haAreaId, lightCalibration, lightType, appliance, door, doorLock, statusIndicator, echo, coffee, it, vacuum });
   }
   const next = { ...config, floorplanBindings: [...saved.values()], model: { ...config.model, floorplan: undefined } };
   return mergeFloorplan(next, config.model?.floorplan);
@@ -111,6 +116,7 @@ export function mergeFloorplan(config: AppConfig, manifest?: FloorplanManifest):
     o.lightType = old.lightType ?? o.lightType;
     o.appliance = old.appliance ?? o.appliance;
     o.coffee = old.coffee ?? o.coffee;
+    o.vacuum = old.vacuum ?? o.vacuum;
     if (old.it) {
       const modelDevices = o.it?.devices;
       o.it = { ...old.it, devices: old.it.devices.map(device => {

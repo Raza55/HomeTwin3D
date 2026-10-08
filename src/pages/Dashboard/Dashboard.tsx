@@ -18,6 +18,7 @@ import { notifyEntityStates } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
+import VacuumTracker from '../../components/VacuumTracker';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
@@ -319,6 +320,8 @@ export default function Dashboard() {
       if ((o.statusIndicator || o.echo || o.door || o.doorLock) && o.entityId) ids.add(o.entityId);
       if (o.it) itEntityIds(o.it).forEach(id => ids.add(id));
       if (o.appliance?.finishedEntityId) ids.add(o.appliance.finishedEntityId);
+      // A robot's state decides whether its live position is polled.
+      if (o.vacuum) { ids.add(o.vacuum.positionEntityId); if (o.entityId) ids.add(o.entityId); }
       if (o.coffee) {
         if (o.entityId) ids.add(o.entityId);
         Object.values(o.coffee).forEach(id => { if (typeof id === 'string') ids.add(id); });
@@ -2585,6 +2588,7 @@ export default function Dashboard() {
         />
 
         {sceneReady && sceneCtxRef.current && configRef.current && <DoorStatus scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} />}
+        {sceneReady && sceneCtxRef.current && configRef.current && <VacuumTracker scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} requestRender={sceneCtxRef.current.requestRender} />}
         {(dayDemoController ? !!demoEnergyMode : !showTextures && energyView && haSeen) && sceneReady && sceneCtxRef.current && configRef.current && <Suspense fallback={null}><EnergyFlowView scene={sceneCtxRef.current.scene} config={configRef.current} connection={haRef.current} states={energyStates} displays={energyDisplays} lampPoint={energyLampPoint} mode={dayDemoController ? demoEnergyMode ?? undefined : undefined} onClose={() => { if (!dayDemoController) handleShowTexturesChange(true); }} /></Suspense>}
         {!matchingOpen && sceneReady && sceneCtxRef.current && configRef.current && <MarkerCategoryScope value="door"><DoorMarkers scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'} onAssign={id=>{closeQuick();setMatchingCategory('other');setMatchingObjectId(id);setMatchingObjectIds(undefined);setMatchingOpen(true);}} /></MarkerCategoryScope>}
         {sceneReady && sceneCtxRef.current && configRef.current && <ITVisuals scene={sceneCtxRef.current.scene} config={configRef.current} states={lastStatesRef.current} connected={haStatus==='connected'}/>}

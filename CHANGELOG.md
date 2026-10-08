@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.65 · Saugroboter fährt im Modell mit (08.10.2026)
+
+- Ein Saugroboter im Modell kann seiner echten Position folgen. Während er reinigt oder zur Station fährt, fragt HomeTwin3D alle 2,5 Sekunden `ecovacs.raw_get_positions` ab und bewegt die Robotermeshes samt Fahrtrichtung weich über den Boden. Angedockt steht er wieder an seinem Platz im Modell, dann ruht die Abfrage.
+- Die Zuordnung von Roboterkarte zu Modell ist eine 2D Transformation (Drehung, Spiegelung, Maßstab, Versatz) am Planobjekt (`vacuum.mapTransform`) und bleibt bei neuem Modellimport und in Zuordnungsdateien erhalten. Bestimmen lässt sie sich, indem man die Raumumrisse der Roboterkarte an die Wände des Modells anlegt und mit der aufgezeichneten Fahrspur gegenprüft.
+
 ## 0.5.64 · Kalender: Heute deutlicher, Monatsbilder und Jahresdaten (07.10.2026)
 
 - Heute ist im Monat als ganze Zelle hervorgehoben (Akzentrahmen, leichte Fläche, Hinweis „Heute“), in der Woche mit Kopf, Unterstreichung und kräftiger getönter Spalte, im Jahr mit zusätzlichem Ring.

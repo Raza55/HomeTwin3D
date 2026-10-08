@@ -14,7 +14,7 @@
     "addon:export": "node tools/addon-export.mjs",
     "addon:sync": "node tools/addon-export.mjs --sync",
     "build:lan": "node tools/build-lan.mjs",
-    "test:floorplan": "node --test tools/floorplan.test.mjs tools/floorplan-matching.test.mjs tools/light-clusters.test.mjs tools/hue-sync.test.mjs",
+    "test:floorplan": "node --test tools/floorplan.test.mjs tools/floorplan-matching.test.mjs tools/light-clusters.test.mjs tools/hue-sync.test.mjs tools/vacuum-position.test.mjs",
     "test:media": "node --test tools/tv-media.test.mjs",
     "test:balcony": "node --test tools/balcony.test.mjs",
     "test:coffee": "node --test tools/coffee.test.mjs",

@@ -166,6 +166,12 @@ export interface FloorplanObject {
     stopEntityId: string;
   };
   echo?: { kind: 'dot' | 'show' };
+  /**
+   * Live robot position: `positionEntityId` answers `ecovacs.raw_get_positions`; `mapTransform`
+   * [a, b, c, d, e, f] maps its map millimetres to model X/Z metres (X = a·x + b·y + c, Z = d·x + e·y + f).
+   * `restYawDeg` is the heading of the modelled robot (X/Z plane, 0 = +X), which stands at its station.
+   */
+  vacuum?: { positionEntityId: string; mapTransform: number[]; restYawDeg?: number };
   /** Read-only marker, visible only for explicitly listed active states. */
   statusIndicator?: { kind: 'smoke'; activeStates: string[] };
   /** One contact per opening; a double door animates its right leaf only. */
@@ -196,7 +202,7 @@ export interface FloorplanManifest {
 }
 
 /** Durable relationships, independent of the currently loaded model geometry. */
-export type FloorplanBinding = Pick<FloorplanObject, 'id' | 'label' | 'domain' | 'entityId' | 'haAreaId' | 'lightCalibration' | 'lightType' | 'appliance' | 'door' | 'doorLock' | 'statusIndicator' | 'echo' | 'coffee' | 'it'>;
+export type FloorplanBinding = Pick<FloorplanObject, 'id' | 'label' | 'domain' | 'entityId' | 'haAreaId' | 'lightCalibration' | 'lightType' | 'appliance' | 'door' | 'doorLock' | 'statusIndicator' | 'echo' | 'coffee' | 'it' | 'vacuum'>;
 
 export interface ModelConfig {
   floorplan?: FloorplanManifest;

@@ -112,6 +112,11 @@ Im Kioskmodus bleibt das Datum als Kalenderbutton sichtbar, während die Uhrzeit
 Ansichtsbuttons und Markierungsfilter passen ihre Anordnung an die verfügbare Breite an; der Kalenderbutton und die
 Ansichtsbuttons haben dort mindestens 44 Pixel große Touchflächen.
 
+Unter Kalender-Einstellungen → Monatsbilder lässt sich für jeden Kalendermonat ein eigenes Bild hochladen, ersetzen oder
+entfernen. Das Motiv erscheint über der Monats- und Wochenansicht und wird in kommenden Jahren wiederverwendet. JPG, PNG
+und WebP bis 20 MB werden beim Import auf maximal 1920 Pixel Kantenlänge verkleinert. Die Bilder liegen ausschließlich in
+einer eigenen IndexedDB des jeweiligen Browsers; sie sind nicht Bestandteil der gemeinsamen Version oder der Modellexporte.
+
 Ein Tipp auf das Datum öffnet einen Kalender (Jahr, Monat, Woche) über dem Modell. Termine kommen per WebSocket Abo aus den
 Kalendern von Home Assistant und werden dort angelegt, geändert und gelöscht. Feiertage werden für die gewählten Bundesländer
 berechnet, Schulferien von der OpenHolidays API geladen und im Browser zwischengespeichert. Freitext und Sprache werden in

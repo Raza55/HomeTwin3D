@@ -11,6 +11,7 @@ import { eventKind } from '../../services/calendar/eventKinds';
 import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
 import EventIcon from './EventIcon';
 import MonthArt from './MonthArt';
+import MonthPictures, { useMonthPictures } from './MonthPictures';
 import { calendarColor, indexByDay, layoutDay, makeMarks, type DayMarks } from './calendarModel';
 import EventEditor, { type EditorRequest } from './EventEditor';
 import RegionPicker from './RegionPicker';
@@ -36,6 +37,8 @@ export default function CalendarView({ onClose }: Props) {
   const [editor, setEditor] = useState<EditorRequest | null>(null);
   const [schoolVersion, setSchoolVersion] = useState(0);
   const view = prefs.view;
+  const monthPictures = useMonthPictures();
+  const picture = monthPictures.pictures[focus.getMonth()];
 
   const updatePrefs = useCallback((patch: Partial<CalendarPrefs>) => {
     setPrefs(prev => {
@@ -177,7 +180,7 @@ export default function CalendarView({ onClose }: Props) {
 
   const dayPanel = (
     <aside className="cal-agenda" aria-label={fmt.dayLong.format(focus)}>
-      <MonthArt month={focus.getMonth()} label={fmt.monthName.format(focus)} />
+      {!picture && <MonthArt month={focus.getMonth()} label={fmt.monthName.format(focus)} />}
       <div className="cal-agenda-head">
         <div>
           <div className="cal-agenda-date">{fmt.dayLong.format(focus)}</div>
@@ -266,6 +269,10 @@ export default function CalendarView({ onClose }: Props) {
       {status === 'ready' && !writable.length && <div className="cal-status">{t('calendar.noWritable')}</div>}
       {backend && !backend.live && <div className="cal-status cal-status-demo">{t('calendar.demo')}</div>}
 
+      {view !== 'year' && picture && <figure className="cal-picture-banner">
+        <img src={picture} alt={fmt.monthName.format(focus)} />
+        <figcaption>{fmt.monthName.format(focus)}</figcaption>
+      </figure>}
       <div className={`cal-body cal-body-${view}`} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = null; }}>
         <main className="cal-main">
           {view === 'year' && (
@@ -336,6 +343,7 @@ export default function CalendarView({ onClose }: Props) {
 
       {settingsOpen && (
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
+          <MonthPictures initialMonth={focus.getMonth()} state={monthPictures} />
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />
           <label className="cal-check"><input type="checkbox" checked={prefs.showTimetable} onChange={e => updatePrefs({ showTimetable: e.target.checked })} /> {t('calendar.showTimetable')}</label>

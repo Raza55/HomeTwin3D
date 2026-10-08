@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.70 · Eigene Monatsbilder im Kalender (08.10.2026)
+
+- Kalender: eigene Monatsbilder hochladen, ersetzen und entfernen. Anzeige über der Monats- und Wochenansicht, lokal im Browser gespeichert und jedes Jahr wiederverwendet.
+
 ## 0.5.69 · Kalenderzugang und freie Bedienelemente im Kioskmodus (08.10.2026)
 
 - Im Kioskmodus bleibt das Datum als eigener Kalenderbutton mit mindestens 44 Pixeln Touchfläche sichtbar; nur die Uhrzeit wird ausgeblendet.

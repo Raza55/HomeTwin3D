@@ -17,6 +17,12 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Kioskbedienung und Hausstatus
+
+- Im Kioskmodus verhindert die Oberfläche die Browserauswahl beim langen Drücken; Textfelder bleiben bearbeitbar.
+- Der Rahmen am Haus-Icon zeigt Anwesenheit grün und Abwesenheit grau. Personen und die Home-Zone liefern den Zustand; ohne verwertbare Daten bleibt er grau.
+- Aktive HA-Warnzustände und Verbindungsfehler haben Vorrang und färben den Rahmen rot. Dazu zählen Problemsensoren, Sicherheitsalarme, Batterieprozente bis einschließlich 20 % und explizite Gerätefehler. Beliebige nicht verfügbare Einzelgeräte werden nicht pauschal als Alarm gewertet.
+
 ### Kalenderansichten und Gestaltung
 
 - Jahres-, Monats-, Wochen- und Sieben-Tage-Ansicht; die Sieben-Tage-Suche durchsucht Titel, Ort und Personen im angezeigten Zeitraum und berücksichtigt die Personenfilter.

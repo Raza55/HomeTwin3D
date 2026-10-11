@@ -10,6 +10,25 @@ html.kiosk {
   --kiosk-row: calc(var(--kiosk-top) + 18px);
 }
 
+/* Long presses operate dashboard controls instead of selecting the page or
+   opening the native iOS callout. Include portals mounted under body. */
+html.kiosk,
+html.kiosk * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Keep native text editing, selection and paste available in forms. */
+html.kiosk input,
+html.kiosk textarea,
+html.kiosk [contenteditable]:not([contenteditable="false"]),
+html.kiosk [contenteditable]:not([contenteditable="false"]) * {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* Top row: logo left, sun/weather and toolbar right, all below the status bar. */
 html.kiosk .title-bar { top: var(--kiosk-row); }
 html.kiosk .corner.tl, html.kiosk .corner.tr { top: calc(var(--kiosk-top) + 12px); }

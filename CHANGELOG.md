@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.72 · Kioskbedienung und Hausstatus (11.10.2026)
+
+- Langes Drücken markiert im Kioskmodus nicht mehr die Oberfläche; Eingabefelder bleiben auswählbar und bearbeitbar.
+- Das Haus-Icon erhält einen grünen Rahmen bei Anwesenheit, einen grauen bei Abwesenheit oder unbekannter Anwesenheit und einen roten bei aktiven Warnungen oder Verbindungsfehlern. Rot hat Vorrang.
+- Anwesenheit nutzt Personen und die Home-Zone; Warnungen berücksichtigen unter anderem Problemsensoren, Rauch, Gas, Wasser, schwache Batterien und gemeldete Gerätefehler.
+
 ## 0.5.71 · Kalendergestaltung (11.10.2026)
 
 - Ruhigere Kalenderflächen, klarer hervorgehobener heutiger Tag, vereinfachte Navigation und gut lesbare Schrift.

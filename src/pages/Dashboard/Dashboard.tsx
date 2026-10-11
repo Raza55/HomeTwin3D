@@ -9,6 +9,7 @@ import FanMarkers from '../../components/FanMarkers';
 import WaterLeakMarkers from '../../components/WaterLeakMarkers';
 import BatteryWarningMarkers from '../../components/BatteryWarningMarkers';
 import { isBatteryState } from '../../services/batteryWarning';
+import { affectsHomeStatus, summarizeHomeStatus, type HomeStatus } from '../../services/homeStatus';
 import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
@@ -224,6 +225,7 @@ export default function Dashboard() {
   const [fanOpen, setFanOpen] = useState<string | null>(null);
   const [vacuumOpen, setVacuumOpen] = useState<string | null>(null);
   const [haStatus, setHaStatus] = useState<HAConnectionStatus>('disconnected');
+  const [homeStatus, setHomeStatus] = useState<HomeStatus>('unknown');
   const [haSettingsVersion, setHaSettingsVersion] = useState(0);
   const [modelStatus, setModelStatus] = useState('loading');
   const [modelStatusColor, setModelStatusColor] = useState<string | undefined>(undefined);
@@ -1591,7 +1593,9 @@ export default function Dashboard() {
         }
         stopPendingFeedback(entityId);
         const wasBattery = lastStatesRef.current[entityId] && isBatteryState(lastStatesRef.current[entityId]);
+        const homeStatusChanged = affectsHomeStatus(state) || (lastStatesRef.current[entityId] && affectsHomeStatus(lastStatesRef.current[entityId]));
         lastStatesRef.current[entityId] = state;
+        if (homeStatusChanged) setHomeStatus(summarizeHomeStatus(lastStatesRef.current));
         // Plan overlays (markers, door status, IT) re-render themselves; the
         // Dashboard only re-renders where its own JSX shows the state: the
         // Hue Sync lock and an open light popup (below).
@@ -1660,6 +1664,7 @@ export default function Dashboard() {
         );
         setLightSceneOptions(buildSceneOptions(states));
         lastStatesRef.current = Object.fromEntries(states.map(state => [state.entity_id, state]));
+        setHomeStatus(summarizeHomeStatus(lastStatesRef.current));
         if (displayModalEntityIdsRef.current.size) {
           setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));
         }
@@ -2426,6 +2431,7 @@ export default function Dashboard() {
           onClose={() => { setMatchingOpen(false); setMatchingObjectIds(undefined); if (matchingChanged.current) { matchingChanged.current = false; handleReloadModel(); } }} /></Suspense>}
 
         <HUD
+          homeStatus={haStatus === 'connected' ? homeStatus : haStatus === 'connecting' ? 'unknown' : 'warning'}
           onSettings={() => setSettingsOpen(true)}
           onCalendar={dayDemoController ? undefined : () => setCalendarOpen(true)}
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}

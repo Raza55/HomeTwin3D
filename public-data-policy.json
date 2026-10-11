@@ -1,6 +1,9 @@
 {
   "description": "Reviewed anonymous examples and unchanged binary assets. Review changes manually; never auto-regenerate to bypass a finding.",
   "entities": [
+    "binary_sensor.example",
+    "sensor.example",
+    "switch.example",
     "automation.tv_dial_hdmi1",
     "binary_sensor.balkontuer",
     "binary_sensor.connected",

@@ -21,11 +21,13 @@ import { useSimulationMode } from '../contexts/SimulationModeContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSetting } from '../services/settingsStore';
+import type { HomeStatus } from '../services/homeStatus';
 import { isRaining, isSnowing, type WeatherData } from '../services/weatherApi';
 import { useTodayHint } from './Calendar/useTodayHint';
 import './HUD.css';
 
 interface Props {
+  homeStatus?: HomeStatus;
   /** Opens the settings (gear next to the logo; the editor is started from there). */
   onSettings?: () => void;
   /** Opens the calendar (tap on the date). */
@@ -78,6 +80,7 @@ function weatherVisualFor(weather?: WeatherData | null): { icon: LucideIcon; var
 }
 
 export default function HUD({
+  homeStatus = 'unknown',
   onSettings,
   onCalendar,
   viewControls,
@@ -220,7 +223,7 @@ export default function HUD({
         <div className="corner br" />
 
         <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
-          <img className="hud-logo" src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="HomeTwin3D" draggable={false} />
+          <img className={`hud-logo hud-logo--${homeStatus}`} src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt={`HomeTwin3D: ${t(`dashboard.homeStatus.${homeStatus}`)}`} title={t(`dashboard.homeStatus.${homeStatus}`)} draggable={false} />
           {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
           {(simulationMode || demoMode) && (
             <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>

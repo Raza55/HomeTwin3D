@@ -41,12 +41,19 @@
 
 /* HUD logo (app icon, public/favicon) */
 .hud-logo {
+  box-sizing: border-box;
+  border: 2px solid #94a3b8;
+  border-radius: 10px;
+  padding: 3px;
   width: 36px;
   height: 36px;
   display: block;
-  filter: drop-shadow(0 0 6px rgba(114, 230, 255, 0.35));
+  transition: border-color .2s;
   user-select: none;
 }
+
+.hud-logo--home { border-color: var(--green); }
+.hud-logo--warning { border-color: var(--red); }
 
 .title-bar .label {
   color: var(--text);

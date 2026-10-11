@@ -17,6 +17,13 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Kalenderansichten und Gestaltung
+
+- Jahres-, Monats-, Wochen- und Sieben-Tage-Ansicht; die Sieben-Tage-Suche durchsucht Titel, Ort und Personen im angezeigten Zeitraum und berücksichtigt die Personenfilter.
+- Tagesleiste mit nächstem oder laufendem zeitgebundenem Termin des ausgewählten Tages und einklappbarem Stundenplan. Volle Monatsfelder öffnen über „weitere“ eine Tagesübersicht.
+- Terminanzahl im Monatsraster richtet sich nach dem verfügbaren Platz; kleine Bildschirme können das Monatsraster vertikal scrollen.
+- Eigene Monatsbilder mit kompakter/großer Höhe und vollständiger/flächenfüllender Darstellung. Bildeinstellungen und Stundenplan-Aufklappzustand bleiben im jeweiligen Browser gespeichert.
+
 ### Modell, Räume und Konfiguration
 
 Ein GLB lässt sich im laufenden Betrieb ersetzen. Importprüfung und Wiederherstellung des vorherigen Modells schützen vor

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronLeft, ChevronRight, Clock3, Circle, MapPin, Moon, Plus, Repeat, Settings2, Sparkles, Sun, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
+import { ChevronLeft, ChevronRight, Clock3, Circle, MapPin, Moon, Plus, Repeat, Search, Settings2, Sparkles, Sun, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, weekViewStart, ymd } from '../../services/calendar/dates';
 import type { CalEvent } from '../../services/calendar/haCalendar';
@@ -26,7 +26,7 @@ type View = CalendarPrefs['view'];
 const HOUR_PX = 56;
 const EXAM_COLORS = ['#f97316', '#ef4444', '#eab308', '#22c55e', '#a855f7', '#ec4899'];
 const PERSON_COLORS = ['#f59e0b', '#8b5cf6', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
-const MAX_CHIPS = 3;
+
 
 export default function CalendarView({ onClose }: Props) {
   const { language, t } = useLanguage();
@@ -37,6 +37,13 @@ export default function CalendarView({ onClose }: Props) {
   const [editor, setEditor] = useState<EditorRequest | null>(null);
   const [schoolVersion, setSchoolVersion] = useState(0);
   const view = prefs.view;
+  const [query, setQuery] = useState('');
+  const [dayOpen, setDayOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
   const monthPictures = useMonthPictures();
   const picture = monthPictures.pictures[focus.getMonth()];
 
@@ -95,7 +102,7 @@ export default function CalendarView({ onClose }: Props) {
   );
   const marksOf = useMemo(
     () => makeMarks([year - 1, year, year + 1], prefs.regions, prefs.showPublicHolidays, school, prefs.showSchoolHolidays, prefs.showYearDates, language.startsWith('en') ? 'en' : 'de'),
-    [year, prefs.regions, prefs.showPublicHolidays, prefs.showSchoolHolidays, school],
+    [year, prefs.regions, prefs.showPublicHolidays, prefs.showSchoolHolidays, prefs.showYearDates, school, language],
   );
   // School days for the timetable: holidays of the home state (the first one chosen), whatever is displayed
   const schoolDayMarksOf = useMemo(
@@ -133,14 +140,14 @@ export default function CalendarView({ onClose }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (editor || !prefs.setupDone || (e.target as HTMLElement)?.closest?.('input, textarea, select')) return;
+      if (editor || dayOpen || !prefs.setupDone || (e.target as HTMLElement)?.closest?.('input, textarea, select')) return;
       if (e.key === 'Escape') { settingsOpen ? setSettingsOpen(false) : onClose(); }
       else if (e.key === 'ArrowLeft') navigate(-1);
       else if (e.key === 'ArrowRight') navigate(1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [editor, navigate, onClose, settingsOpen, prefs.setupDone]);
+  }, [editor, dayOpen, navigate, onClose, settingsOpen, prefs.setupDone]);
 
   // Horizontal swipe changes the period (week view keeps vertical scrolling)
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -155,6 +162,7 @@ export default function CalendarView({ onClose }: Props) {
 
   const title = view === 'year' ? String(year)
     : view === 'month' ? fmt.month.format(focus)
+    : view === 'agenda' ? t('calendar.sevenDays', { start: fmt.dayShort.format(focus), end: fmt.dayShort.format(addDays(focus, 6)) })
     : (() => {
       const ws = weekViewStart(focus, today, prefs.weekStart), we = addDays(ws, 6);
       const weeks = isoWeek(ws) === isoWeek(we) ? `${isoWeek(ws)}` : `${isoWeek(ws)}–${isoWeek(we)}`;
@@ -178,6 +186,21 @@ export default function CalendarView({ onClose }: Props) {
   };
   const openEvent = (e: CalEvent) => setEditor({ date: startOfDay(e.start), event: e, readOnly: !editable(e) });
 
+  const focusedEvents = byDay.get(ymd(focus)) ?? [];
+  const nextEvent = focusedEvents.filter(e => !e.allDay && e.end > now)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+  const agendaDays = Array.from({ length: 7 }, (_, i) => addDays(focus, i));
+  const search = query.trim().toLocaleLowerCase(language);
+  const matchesSearch = (e: CalEvent) => !search || [e.summary, e.location, ...personsOf(e)].join(' ').toLocaleLowerCase(language).includes(search);
+  const eventCard = (e: CalEvent) => (
+    <button type="button" className={`cal-agenda-item${examMarked(e) ? ' exam' : ''}`} onClick={() => { setDayOpen(false); openEvent(e); }} style={{ ['--event-color' as string]: colorOf(e) }}>
+      <span className="cal-agenda-time">{timeLabel(e)}</span>
+      <span className="cal-agenda-title"><EventIcon kind={kindOf(e)} size={16} />{e.summary}{gradeBadge(e)}
+        {(e.rrule || e.recurrenceId) && <Repeat size={13} aria-label={t('calendar.repeats')} />}
+      </span>
+      {e.location && <span className="cal-agenda-loc"><MapPin size={12} aria-hidden="true" /> {e.location}</span>}
+    </button>
+  );
   const dayPanel = (
     <aside className="cal-agenda" aria-label={fmt.dayLong.format(focus)}>
       {!picture && <MonthArt month={focus.getMonth()} label={fmt.monthName.format(focus)} />}
@@ -187,45 +210,37 @@ export default function CalendarView({ onClose }: Props) {
           {ymd(focus) === ymd(today) && <div className="cal-agenda-sub">{t('calendar.today')}</div>}
         </div>
         {writable.length > 0 && (
-          <button type="button" className="cal-btn cal-btn-primary" onClick={() => openNew(focus)}>
+          <button type="button" className="cal-btn cal-btn-primary" onClick={() => { setDayOpen(false); openNew(focus); }}>
             <Plus size={18} aria-hidden="true" /> {t('calendar.add')}
           </button>
         )}
       </div>
+      {nextEvent && <section className="cal-next">
+        <div className="cal-section-label"><Clock3 size={14} />{t(nextEvent.start <= now ? 'calendar.ongoing' : 'calendar.nextEvent')}</div>
+        {eventCard(nextEvent)}
+      </section>}
       <DayMarksList marks={marksOf(ymd(focus))} />
       {prefs.showTimetable && (() => {
         const lessons = lessonsFor(focus);
         if (!lessons.length) return null;
         const who = [...new Set(lessons.flatMap(personsOf))];
         return (
-          <section className="cal-timetable" aria-label={t('calendar.timetable')}>
-            <div className="cal-timetable-title">{t('calendar.timetable')}{who.length ? ` · ${who.join(', ')}` : ''}</div>
+          <details className="cal-timetable" open={prefs.timetableExpanded} onToggle={e => { const expanded = e.currentTarget.open; if (expanded !== prefs.timetableExpanded) updatePrefs({ timetableExpanded: expanded }); }}>
+            <summary className="cal-timetable-title">{t('calendar.timetable')} · {lessons.length}{who.length ? ` · ${who.join(', ')}` : ''}</summary>
             {lessons.map(l => (
-              <button type="button" key={`${l.uid}|${l.recurrenceId}|${l.start.getTime()}`} className="cal-lesson" onClick={() => openEvent(l)}
+              <button type="button" key={`${l.uid}|${l.recurrenceId}|${l.start.getTime()}`} className="cal-lesson" onClick={() => { setDayOpen(false); openEvent(l); }}
                 style={{ ['--event-color' as string]: personsOf(l)[0] ? personColor(personsOf(l)[0]) : 'var(--muted)' }}>
                 <span className="cal-lesson-time">{hhmm(minutesOfDay(l.start))}–{hhmm(minutesOfDay(l.end))}</span>
                 <span className="cal-lesson-title">{lessonTitle(l.summary, persons)}</span>
                 {readMeta(l.description).notes && <span className="cal-lesson-notes">{readMeta(l.description).notes}</span>}
               </button>
             ))}
-          </section>
+          </details>
         );
       })()}
+      <div className="cal-section-label">{t('calendar.daySchedule')}</div>
       <ul className="cal-agenda-list">
-        {(byDay.get(ymd(focus)) ?? []).map(e => (
-          <li key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}>
-            <button type="button" className={`cal-agenda-item${examMarked(e) ? ' exam' : ''}`} onClick={() => openEvent(e)} style={{ ['--event-color' as string]: colorOf(e) }}>
-              <span className="cal-agenda-time">{timeLabel(e)}</span>
-              <span className="cal-agenda-title">
-                <EventIcon kind={kindOf(e)} size={16} />
-                {e.summary}
-                {gradeBadge(e)}
-                {(e.rrule || e.recurrenceId) && <Repeat size={13} className="cal-inline-icon" aria-label={t('calendar.repeats')} />}
-              </span>
-              {e.location && <span className="cal-agenda-loc"><MapPin size={12} aria-hidden="true" /> {e.location}</span>}
-            </button>
-          </li>
-        ))}
+        {focusedEvents.map(e => <li key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}>{eventCard(e)}</li>)}
       </ul>
       {!(byDay.get(ymd(focus))?.length) && <p className="cal-empty">{t('calendar.noEvents')}</p>}
     </aside>
@@ -242,8 +257,8 @@ export default function CalendarView({ onClose }: Props) {
         </div>
         <button type="button" className="cal-btn" onClick={() => setFocus(today)}>{t('calendar.today')}</button>
         <div className="cal-segment" role="tablist">
-          {(['year', 'month', 'week'] as View[]).map(v => (
-            <button key={v} type="button" role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => updatePrefs({ view: v })}>
+          {(['year', 'month', 'week', 'agenda'] as View[]).map(v => (
+            <button key={v} type="button" role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => { updatePrefs({ view: v }); if (v === 'agenda') setFocus(today); }}>
               {t(`calendar.view.${v}`)}
             </button>
           ))}
@@ -253,7 +268,7 @@ export default function CalendarView({ onClose }: Props) {
 
       {persons.length > 0 && (
         <div className="cal-persons" role="group" aria-label={t('calendar.personFilter')}>
-          <button type="button" className={!activeFilter.length ? 'active' : ''} onClick={() => updatePrefs({ personFilter: [] })}>{t('calendar.everyone')}</button>
+          <button type="button" aria-pressed={!activeFilter.length} className={!activeFilter.length ? 'active' : ''} onClick={() => updatePrefs({ personFilter: [] })}>{t('calendar.everyone')}</button>
           {persons.map(p => (
             <button type="button" key={p} className={activeFilter.includes(p) ? 'active' : ''} aria-pressed={activeFilter.includes(p)}
               onClick={() => updatePrefs({ personFilter: activeFilter.includes(p) ? activeFilter.filter(x => x !== p) : [...activeFilter, p] })}>
@@ -269,12 +284,35 @@ export default function CalendarView({ onClose }: Props) {
       {status === 'ready' && !writable.length && <div className="cal-status">{t('calendar.noWritable')}</div>}
       {backend && !backend.live && <div className="cal-status cal-status-demo">{t('calendar.demo')}</div>}
 
-      {view !== 'year' && picture && <figure className="cal-picture-banner">
-        <img src={picture} alt={fmt.monthName.format(focus)} />
+      {view !== 'year' && picture && <figure className={`cal-picture-banner ${prefs.pictureSize}`}>
+        <img src={picture} alt={fmt.monthName.format(focus)} style={{ objectFit: prefs.pictureFit }} />
         <figcaption>{fmt.monthName.format(focus)}</figcaption>
       </figure>}
       <div className={`cal-body cal-body-${view}`} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = null; }}>
         <main className="cal-main">
+          {view === 'agenda' && <div className="cal-agenda-view">
+            <div className="cal-search-wrap">
+              <label className="cal-search"><Search size={18} aria-hidden="true" /><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={t('calendar.search')} aria-label={t('calendar.search')} />
+                {query && <button type="button" className="cal-icon-btn" aria-label={t('calendar.clearSearch')} onClick={() => setQuery('')}><X size={16} /></button>}
+              </label>
+              <p className="cal-muted cal-settings-note">{t('calendar.searchScope')}</p>
+            </div>
+            <div className="cal-agenda-days">
+              {search && !agendaDays.some(day => (byDay.get(ymd(day)) ?? []).some(matchesSearch)) && <p role="status" className="cal-empty">{t('calendar.noMatches')}</p>}
+              {agendaDays.map(day => {
+                const list = (byDay.get(ymd(day)) ?? []).filter(matchesSearch);
+                if (search && !list.length) return null;
+                return <section className={`cal-agenda-day${ymd(day) === ymd(today) ? ' today' : ''}`} key={ymd(day)}>
+                  <div className="cal-agenda-day-head"><h3>{fmt.dayLong.format(day)}{ymd(day) === ymd(today) && <span className="cal-today-tag">{t('calendar.today')}</span>}</h3>
+                    {writable.length > 0 && <button type="button" className="cal-icon-btn" aria-label={`${t('calendar.add')} · ${fmt.dayLong.format(day)}`} onClick={() => openNew(day)}><Plus size={18} /></button>}
+                  </div>
+                  <DayMarksList marks={marksOf(ymd(day))} />
+                  <ul className="cal-agenda-list">{list.map(e => <li key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}>{eventCard(e)}</li>)}</ul>
+                  {!list.length && <p className="cal-empty">{t('calendar.noEvents')}</p>}
+                </section>;
+              })}
+            </div>
+          </div>}
           {view === 'year' && (
             <YearView examMarked={examMarked} year={year} today={today} focus={focus} byDay={byDay} marksOf={marksOf} fmt={fmt} weekdayLabels={weekdayLabels}
               onMonth={d => { setFocus(d); updatePrefs({ view: 'month' }); }}
@@ -302,7 +340,7 @@ export default function CalendarView({ onClose }: Props) {
                     <div key={key} className={cls} role="button" tabIndex={0}
                       onClick={() => { if (key === ymd(focus) && writable.length && !list.length) openNew(day); else setFocus(day); }}
                       onDoubleClick={() => writable.length && openNew(day)}
-                      onKeyDown={e => { if (e.key === 'Enter') setFocus(day); }}>
+                      onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setFocus(day); } }}>
                       <div className="cal-day-top">
                         <span className="cal-day-num">{day.getDate()}</span>
                         {key === ymd(today) && <span className="cal-today-tag">{t('calendar.today')}</span>}
@@ -310,8 +348,8 @@ export default function CalendarView({ onClose }: Props) {
                       </div>
                       {marks.special && <SpecialLine items={marks.special} />}
                       {schoolStart && !marks.holiday && <span className="cal-day-school" title={marks.school!.name}>{marks.school!.name}</span>}
-                      <div className="cal-day-events">
-                        {list.slice(0, MAX_CHIPS).map(e => (
+                      <MonthDayEvents count={list.length} moreLabel={count => t('calendar.moreEvents', { count })} onMore={() => { setFocus(day); setDayOpen(true); }}>
+                        {list.map(e => (
                           <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}|${e.start.getTime()}`}
                             className={`cal-chip${e.allDay ? ' all-day' : ''}${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }}
                             onClick={ev => { ev.stopPropagation(); setFocus(day); openEvent(e); }}>
@@ -321,8 +359,7 @@ export default function CalendarView({ onClose }: Props) {
                             {gradeBadge(e)}
                           </button>
                         ))}
-                        {list.length > MAX_CHIPS && <span className="cal-more">+{list.length - MAX_CHIPS}</span>}
-                      </div>
+                      </MonthDayEvents>
                     </div>
                   );
                 })}
@@ -334,15 +371,23 @@ export default function CalendarView({ onClose }: Props) {
               canCreate={writable.length > 0} onSelect={setFocus} onCreate={openNew} onOpen={openEvent} allDayLabel={t('calendar.allDay')} todayLabel={t('calendar.today')} />
           )}
         </main>
-        {view !== 'year' && dayPanel}
+        {(view === 'month' || view === 'week') && !dayOpen && dayPanel}
       </div>
 
       {writable.length > 0 && (
-        <button type="button" className="cal-fab" onClick={() => openNew(focus)} aria-label={t('calendar.add')}><Plus size={30} /></button>
+        <button type="button" className="cal-fab" onClick={() => { setDayOpen(false); openNew(focus); }} aria-label={t('calendar.add')}><Plus size={30} /></button>
       )}
+
+      {dayOpen && <DayDialog label={t('calendar.dayOverview')} closeLabel={t('calendar.close')} onClose={() => setDayOpen(false)}>{dayPanel}</DayDialog>}
 
       {settingsOpen && (
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
+          <label className="cal-field">{t('calendar.pictureSize')}<select aria-label={t('calendar.pictureSize')} value={prefs.pictureSize} onChange={e => updatePrefs({ pictureSize: e.target.value as CalendarPrefs['pictureSize'] })}>
+            <option value="compact">{t('calendar.pictureCompact')}</option><option value="large">{t('calendar.pictureLarge')}</option>
+          </select></label>
+          <label className="cal-field">{t('calendar.pictureFit')}<select aria-label={t('calendar.pictureFit')} value={prefs.pictureFit} onChange={e => updatePrefs({ pictureFit: e.target.value as CalendarPrefs['pictureFit'] })}>
+            <option value="cover">{t('calendar.pictureCover')}</option><option value="contain">{t('calendar.pictureContain')}</option>
+          </select></label>
           <MonthPictures initialMonth={focus.getMonth()} state={monthPictures} />
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />
@@ -618,4 +663,38 @@ function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, exa
       </div>
     </div>
   );
+}
+
+/** Measure the space left after date/holiday labels, keeping overflow reachable. */
+function MonthDayEvents({ children, count, moreLabel, onMore }: { children: ReactNode[]; count: number; moreLabel: (n: number) => string; onMore: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [capacity, setCapacity] = useState(0);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      const height = element.clientHeight;
+      const allFit = count * 25 <= height;
+      setCapacity(Math.max(0, Math.floor((height - (allFit ? 0 : 28)) / 25)));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [count]);
+  return <div className="cal-day-events" ref={ref}>
+    {children.slice(0, capacity)}
+    {count > capacity && <button type="button" className="cal-more" onDoubleClick={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onMore(); }}>{moreLabel(count - capacity)}</button>}
+  </div>;
+}
+
+function DayDialog({ children, label, closeLabel, onClose }: { children: ReactNode; label: string; closeLabel: string; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    dialog?.showModal();
+    return () => { dialog?.close(); };
+  }, []);
+  return <dialog ref={ref} className="cal-day-dialog" aria-label={label} onCancel={e => { e.preventDefault(); onClose(); }}>
+    <div className="cal-day-dialog-head"><span>{label}</span><button type="button" className="cal-icon-btn" aria-label={closeLabel} onClick={onClose}><X size={20} /></button></div>
+    {children}
+  </dialog>;
 }

@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.71 · Kalendergestaltung (11.10.2026)
+
+- Ruhigere Kalenderflächen, klarer hervorgehobener heutiger Tag, vereinfachte Navigation und gut lesbare Schrift.
+- Tagesübersicht mit nächstem/laufendem Termin und einklappbarem Stundenplan.
+- Monatsfelder passen die Terminanzahl an den Platz an; „weitere“ öffnet eine vollständige Tagesübersicht.
+- Sieben-Tage-Liste mit Suche nach Titel, Ort und Person innerhalb des angezeigten Zeitraums.
+- Monatsbilder mit gespeicherter Bildhöhe und wählbarer Darstellung (ganzes Bild oder flächenfüllend).
+
 ## 0.5.70 · Eigene Monatsbilder im Kalender (08.10.2026)
 
 - Kalender: eigene Monatsbilder hochladen, ersetzen und entfernen. Anzeige über der Monats- und Wochenansicht, lokal im Browser gespeichert und jedes Jahr wiederverwendet.

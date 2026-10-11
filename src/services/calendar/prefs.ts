@@ -11,7 +11,10 @@ export interface CalendarPrefs {
   /** Calendar new appointments go to. */
   defaultCalendar?: string;
   hiddenCalendars: string[];
-  view: 'year' | 'month' | 'week';
+  view: 'year' | 'month' | 'week' | 'agenda';
+  pictureSize: 'compact' | 'large';
+  pictureFit: 'contain' | 'cover';
+  timetableExpanded: boolean;
   /** People added on this device (others come from the events' "Für:" lines). */
   persons: string[];
   /** Show only events for these people (empty: everyone). */
@@ -26,7 +29,7 @@ export interface CalendarPrefs {
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, showYearDates: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday' };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, showYearDates: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday', pictureSize: 'compact', pictureFit: 'cover', timetableExpanded: false };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

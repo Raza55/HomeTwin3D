@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.73 · Tabletbedienung, Warnungsdetails und Waschmaschine (12.10.2026)
+
+- Automatische Größe für Touch-Geräte und manueller Regler von 100–180 % unter Einstellungen → Darstellung, pro Browser gespeichert.
+- Ein Klick auf das Haus zeigt die Ursachen des Warnrahmens, einschließlich HA-Geräten außerhalb des 3D-Plans und Verbindungsfehlern.
+- Waschmaschinen-Popup mit Programmauswahl, Start und Stopp/Reset; eindeutige Steuerungen werden am zugeordneten HA-Gerät erkannt oder explizit zugeordnet.
+- Erfolgreich gesendete Startbefehle bestimmen die lokale Häufigkeitssortierung der Programme. Offline- und laufende Zustände sperren unpassende Befehle; Fehler werden im Popup angezeigt.
+
 ## 0.5.72 · Kioskbedienung und Hausstatus (11.10.2026)
 
 - Langes Drücken markiert im Kioskmodus nicht mehr die Oberfläche; Eingabefelder bleiben auswählbar und bearbeitbar.

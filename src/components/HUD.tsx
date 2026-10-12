@@ -28,6 +28,7 @@ import './HUD.css';
 
 interface Props {
   homeStatus?: HomeStatus;
+  onHomeStatus?: () => void;
   /** Opens the settings (gear next to the logo; the editor is started from there). */
   onSettings?: () => void;
   /** Opens the calendar (tap on the date). */
@@ -81,6 +82,7 @@ function weatherVisualFor(weather?: WeatherData | null): { icon: LucideIcon; var
 
 export default function HUD({
   homeStatus = 'unknown',
+  onHomeStatus,
   onSettings,
   onCalendar,
   viewControls,
@@ -223,7 +225,9 @@ export default function HUD({
         <div className="corner br" />
 
         <div className={`title-bar${simulationMode ? ' demo' : demoMode ? ' demo' : ''}`}>
-          <img className={`hud-logo hud-logo--${homeStatus}`} src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt={`HomeTwin3D: ${t(`dashboard.homeStatus.${homeStatus}`)}`} title={t(`dashboard.homeStatus.${homeStatus}`)} draggable={false} />
+          <button type="button" className="hud-home-button" onClick={onHomeStatus} aria-label={`${t(`dashboard.homeStatus.${homeStatus}`)} – ${t('dashboard.homeWarnings.title')}`} title={t(`dashboard.homeStatus.${homeStatus}`)}>
+            <img className={`hud-logo hud-logo--${homeStatus}`} src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="" draggable={false} />
+          </button>
           {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
           {(simulationMode || demoMode) && (
             <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>

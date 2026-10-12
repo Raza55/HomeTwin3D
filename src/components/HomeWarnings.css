@@ -1,0 +1,5 @@
+.home-warnings-backdrop { z-index: 110; color: var(--text); }
+.home-warnings-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.home-warnings-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 12px; }
+.home-warnings-list li { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border); border-left: 3px solid var(--red); border-radius: 8px; overflow-wrap: anywhere; font-size: 13px; }
+.home-warnings-list code { color: var(--muted); font-size: 11px; }

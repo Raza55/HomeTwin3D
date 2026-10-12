@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { startSharedInstallation, watchSharedUpdates } from './services/sharedStore';
 import './App.css';
 import './kiosk.css';
+import './uiScale.css';
 
 // Shared assets and lazy chunks can take a moment on the first visit.
 const root = document.getElementById('root')!;

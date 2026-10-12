@@ -1,0 +1,66 @@
+/* Scale DOM controls, never the canvas or its pointer coordinates. Explicit
+   root specificity keeps lazy component styles from restoring tiny sizes. */
+:root { --ui-scale: 1; }
+html[data-ui-compact] .hud-settings,
+html[data-ui-compact] .hud-logo {
+  width: calc(36px * var(--ui-scale));
+  height: calc(36px * var(--ui-scale));
+  flex-shrink: 0;
+}
+html[data-ui-compact] .hud-settings svg { width: calc(19px * var(--ui-scale)); height: calc(19px * var(--ui-scale)); }
+html[data-ui-compact] .dashboard-render-toggle .dashboard-icon-btn {
+  width: calc(40px * var(--ui-scale)); height: calc(40px * var(--ui-scale)); flex-shrink: 0;
+}
+html.kiosk[data-ui-compact] .dashboard-render-toggle .dashboard-icon-btn {
+  width: calc(44px * var(--ui-scale)); height: calc(44px * var(--ui-scale));
+}
+html[data-ui-compact] .dashboard-marker-filter .dashboard-icon-btn {
+  width: calc(34px * var(--ui-scale)); height: calc(34px * var(--ui-scale)); flex-shrink: 0;
+}
+html[data-ui-compact] .dashboard-icon-btn svg { width: calc(18px * var(--ui-scale)); height: calc(18px * var(--ui-scale)); }
+html[data-ui-compact] .dashboard-render-toggle { flex-wrap: wrap; max-width: 100%; }
+html[data-ui-compact] .dashboard-marker-filter { flex-direction: row; flex-wrap: wrap; max-width: calc(260px * var(--ui-scale)); }
+html[data-ui-compact] .hud-top-controls {
+  --controls-top: 20px;
+  top: var(--controls-top);
+  max-width: calc(100% - 64px - 180px * var(--ui-scale));
+  max-height: calc(100dvh - var(--controls-top) - 16px - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  pointer-events: auto;
+}
+html.kiosk[data-ui-compact] .hud-top-controls { --controls-top: var(--kiosk-row); }
+html[data-ui-compact="true"] .hud-top-controls {
+  --controls-top: calc(36px + 40px * var(--ui-scale));
+  right: 18px;
+  max-width: calc(100% - 36px);
+}
+html.kiosk[data-ui-compact="true"] .hud-top-controls { --controls-top: calc(var(--kiosk-row) + 16px + 40px * var(--ui-scale)); }
+html[data-ui-compact] .hud-top-controls-minimal { --controls-top: 20px; }
+html.kiosk[data-ui-compact] .hud-top-controls-minimal { --controls-top: var(--kiosk-row); }
+html[data-ui-compact] .hud-top-row { flex-shrink: 0; flex-wrap: wrap; }
+html[data-ui-compact] .time-display { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
+html[data-ui-compact] .hud-clock .date { font-size: calc(11px * var(--ui-scale)); }
+html[data-ui-compact] .hud-clock .time { font-size: calc(22px * var(--ui-scale)); }
+html[data-ui-compact] .hud-status-line { font-size: calc(10px * var(--ui-scale)); }
+html[data-ui-compact] .hud-calendar-icon { width: calc(18px * var(--ui-scale)); height: calc(18px * var(--ui-scale)); }
+html[data-ui-compact] .hud-clock-button { min-height: calc(36px * var(--ui-scale)); }
+
+/* Zoom the dialog itself, keeping its backdrop in viewport coordinates. The
+   divided bounds retain reachable close/back controls and an inner scrollbar. */
+html[data-ui-compact] .settings-modal {
+  container-type: inline-size;
+  zoom: var(--ui-scale);
+  width: min(460px, calc((100vw - 32px) / var(--ui-scale)));
+  max-height: min(760px, calc((100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) / var(--ui-scale)));
+}
+html[data-ui-compact] .settings-title { min-width: 0; overflow-wrap: anywhere; }
+html[data-ui-compact] .settings-header .settings-icon-btn { flex-shrink: 0; }
+html[data-ui-compact] .settings-slider input { min-width: 0; }
+@container (max-width: 360px) {
+  .settings-row { flex-wrap: wrap; }
+  .settings-row-control { max-width: 100%; }
+  .settings-segmented { flex-wrap: wrap; }
+  .settings-segment { flex: 1 1 auto; }
+  .settings-body { padding: 12px; }
+  .settings-group-body { padding: 10px; }
+}

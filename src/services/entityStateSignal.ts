@@ -10,6 +10,15 @@ let broadcast = false;
 const pending = new Set<string>();
 const entityVersions = new Map<string, number>();
 const listeners = new Set<() => void>();
+const interests = new Map<string, number>();
+export function watchEntityStates(ids: string[]): () => void {
+  ids.forEach(id => interests.set(id, (interests.get(id) ?? 0) + 1));
+  return () => ids.forEach(id => {
+    const remaining = (interests.get(id) ?? 1) - 1;
+    if (remaining) interests.set(id, remaining); else interests.delete(id);
+  });
+}
+export function isEntityStateWatched(id: string): boolean { return interests.has(id); }
 
 /** Coalesce one task's updates; omitted ID refreshes every subscriber. */
 export function notifyEntityStates(entityId?: string): void {

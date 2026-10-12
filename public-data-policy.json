@@ -1,6 +1,16 @@
 {
   "description": "Reviewed anonymous examples and unchanged binary assets. Review changes manually; never auto-regenerate to bypass a finding.",
   "entities": [
+    "lock.current",
+    "sensor.washer",
+    "select.washer_program",
+    "button.washer_start",
+    "button.washer_stop",
+    "sensor.washer_connection",
+    "button.dryer_start",
+    "binary_sensor.running",
+    "button.duplicate",
+    "button.custom_start",
     "binary_sensor.example",
     "sensor.example",
     "switch.example",

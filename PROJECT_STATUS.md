@@ -17,8 +17,17 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Waschmaschinensteuerung
+
+- Das Waschmaschinen-Popup bietet die von HA gelieferten Programme sowie Start und Stopp/Reset über `select.select_option` und `button.press`.
+- Eindeutige Steuerungen werden über die Gerätezusammengehörigkeit des zugeordneten Programm-/Restzeitsensors erkannt; über die Zuordnung lassen sich Programmauswahl und Befehlstasten explizit auswählen.
+- Häufig über das Popup gestartete Programme stehen zuerst. Gezählt werden erfolgreich gesendete Startbefehle lokal pro Browser; keine rückwirkende Gerätehistorie.
+- Bei fehlender Verbindung sind die Befehle gesperrt. Während eines laufenden Waschgangs bleiben Programmauswahl und erneuter Start gesperrt; Stopp bleibt erreichbar. Fehler erscheinen im Popup.
+
 ### Kioskbedienung und Hausstatus
 
+- Unter Einstellungen → Darstellung: automatische Größe für Touch-Geräte oder manueller Regler von 100–180 %, pro Browser gespeichert. Filter, Ansichtsbuttons, Haus-/Einstellungstaste sowie Einstellungen und Warnliste skalieren; die 3D-Auflösung bleibt unverändert.
+- Ein Klick auf das Haus öffnet die aktuellen Warnursachen mit Gerätename, Zustand und Entity. Die Liste umfasst dieselben HA-Zustände wie der Rahmen, auch Geräte außerhalb des Plans; Verbindungs- und Anmeldefehler werden gesondert erklärt.
 - Im Kioskmodus verhindert die Oberfläche die Browserauswahl beim langen Drücken; Textfelder bleiben bearbeitbar.
 - Der Rahmen am Haus-Icon zeigt Anwesenheit grün und Abwesenheit grau. Personen und die Home-Zone liefern den Zustand; ohne verwertbare Daten bleibt er grau.
 - Aktive HA-Warnzustände und Verbindungsfehler haben Vorrang und färben den Rahmen rot. Dazu zählen Problemsensoren, Sicherheitsalarme, Batterieprozente bis einschließlich 20 % und explizite Gerätefehler. Beliebige nicht verfügbare Einzelgeräte werden nicht pauschal als Alarm gewertet.

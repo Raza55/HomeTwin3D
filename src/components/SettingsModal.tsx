@@ -231,6 +231,7 @@ export default function SettingsModal({
   const [panelBgColor, setPanelBgColor] = useState(() => getSettings().appearance.panelBgColor);
   const [hudVisible, setHudVisible] = useState(() => getSettings().appearance.hudVisible);
   const [kioskMode, setKioskMode] = useState<KioskSetting>(() => getSettings().appearance.kioskMode ?? 'auto');
+  const [uiScale, setUiScale] = useState<number | undefined>(() => getSettings().appearance.uiScale);
 
   const updateAppearance = useCallback((patch: Record<string, unknown>) => {
     updateSettings('appearance', patch as any);
@@ -577,6 +578,20 @@ export default function SettingsModal({
           {section === 'appearance' && (
             <div className="settings-page">
               <Group title={t('settings.design')}>
+                <Row label={t('settings.uiScaleAuto')} hint={t('settings.uiScaleHint')}>
+                  <Switch label={t('settings.uiScaleAuto')} checked={uiScale === undefined} onChange={auto => {
+                    const value = auto ? undefined : Number(document.documentElement.style.getPropertyValue('--ui-scale')) || 1;
+                    setUiScale(value); updateAppearance({ uiScale: value });
+                  }} />
+                </Row>
+                <Row label={t('settings.uiScale')} stacked htmlFor="settings-ui-scale">
+                  <div className="settings-slider">
+                    <input id="settings-ui-scale" type="range" min={100} max={180} step={5}
+                      value={Math.round((uiScale ?? (Number(document.documentElement.style.getPropertyValue('--ui-scale')) || 1)) * 100)}
+                      onChange={event => { const value = Number(event.target.value) / 100; setUiScale(value); updateAppearance({ uiScale: value }); }} />
+                    <output>{uiScale === undefined ? t('settings.kioskAuto') : `${Math.round(uiScale * 100)}%`}</output>
+                  </div>
+                </Row>
                 <Row label={t('settings.theme')} stacked>
                   <Segmented label={t('settings.theme')} value={theme}
                     options={[

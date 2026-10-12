@@ -30,6 +30,7 @@ export default function VisualMatchingGuide({ scene, initialConfig, onSave, onCl
   const [showAssigned, setShowAssigned] = useState(false);
   const [remainingEntityId,setRemainingEntityId] = useState('');
   const [programEntityId,setProgramEntityId] = useState('');
+  const [applianceControls, setApplianceControls] = useState({ programSelectEntityId: '', startEntityId: '', stopEntityId: '' });
   const [finishedEntityId,setFinishedEntityId] = useState('');
   const [runningStates,setRunningStates] = useState('');
   const [powerThreshold,setPowerThreshold] = useState(5);
@@ -37,6 +38,7 @@ export default function VisualMatchingGuide({ scene, initialConfig, onSave, onCl
   const marker = useRef<HTMLDivElement>(null);
   const request = useRef(0);
   const current = config.model?.floorplan?.objects.find(o => o.id === queue[index]);
+  useEffect(() => { setApplianceControls({ programSelectEntityId: current?.appliance?.programSelectEntityId ?? '', startEntityId: current?.appliance?.startEntityId ?? '', stopEntityId: current?.appliance?.stopEntityId ?? '' }); }, [current?.id]);
   const done = index >= queue.length;
   const confirmed = Object.values(reviewed).filter(v => v !== 'skipped').length;
   const skipped = allLights.filter(o => reviewed[o.id] === 'skipped');
@@ -102,7 +104,7 @@ export default function VisualMatchingGuide({ scene, initialConfig, onSave, onCl
         if (decision === 'confirmed' && !selectedEntity) throw new Error(t('matching.chooseEntity'));
         const entityId = decision === 'unassigned' ? '' : selected;
         const manifest = { ...config.model!.floorplan!, objects: config.model!.floorplan!.objects.map(o => o.id === current.id ? {
-          ...o, appliance: o.appliance ? {...o.appliance,runningStates:runningStates.split(',').map(s=>s.trim()).filter(Boolean),powerThreshold,remainingEntityId,programEntityId,finishedEntityId} : undefined, entityId, haAreaId: entityId ? selectedEntity?.areaId ?? o.haAreaId : o.haAreaId,
+          ...o, appliance: o.appliance ? {...o.appliance,...applianceControls,runningStates:runningStates.split(',').map(s=>s.trim()).filter(Boolean),powerThreshold,remainingEntityId,programEntityId,finishedEntityId} : undefined, entityId, haAreaId: entityId ? selectedEntity?.areaId ?? o.haAreaId : o.haAreaId,
           lightType: inventory.lightTypes[entityId] ?? o.lightType,
           lightCalibration: o.domain==='light' ? calibration : o.lightCalibration,
           emitters: o.emitters?.map(e=>({...e,lumens:calibration.lumens ? e.lumens*calibration.lumens/o.emitters!.reduce((sum,e)=>sum+e.lumens,0) : e.lumens,range:calibration.range ?? e.range})),
@@ -164,6 +166,11 @@ export default function VisualMatchingGuide({ scene, initialConfig, onSave, onCl
           <label className="matching-field">{t('matching.appliance.power')}<input type="number" min="0" value={powerThreshold} onChange={e=>setPowerThreshold(Math.max(0,Number(e.target.value)))}/></label>
           <label className="matching-field">{t('matching.appliance.remaining')}<EntityPicker value={remainingEntityId} onChange={setRemainingEntityId} entities={inventory.entities.filter(e=>e.entity_id.startsWith('sensor.'))} placeholder={t('matching.appliance.remainingPlaceholder')}/></label>
           <label className="matching-field">{t('matching.appliance.program')}<EntityPicker value={programEntityId} onChange={setProgramEntityId} entities={inventory.entities.filter(e=>/^(sensor|select)\./.test(e.entity_id))} placeholder={t('matching.appliance.programPlaceholder')}/></label>
+          {current.appliance.kind === 'washer' && <>
+            <p>Steuerung: leer lassen für automatische Erkennung am zugeordneten Gerät.</p>
+            {([{ key: 'programSelectEntityId', label: 'Programmauswahl', domain: 'select.' }, { key: 'startEntityId', label: 'Start', domain: 'button.' }, { key: 'stopEntityId', label: 'Stopp / Reset', domain: 'button.' }] as const).map(field =>
+              <label key={field.key} className="matching-field">{field.label}<EntityPicker value={applianceControls[field.key]} onChange={value => setApplianceControls(previous => ({ ...previous, [field.key]: value }))} entities={inventory.entities.filter(entity => entity.entity_id.startsWith(field.domain))} placeholder="Automatisch" /></label>)}
+          </>}
           <label className="matching-field">{t('matching.appliance.finished')}<EntityPicker value={finishedEntityId} onChange={setFinishedEntityId} entities={inventory.entities.filter(e=>/^(input_boolean|binary_sensor)\./.test(e.entity_id))} placeholder={t('matching.appliance.finishedPlaceholder')}/></label>
         </details>}
         {!!shared.length && <p className="matching-note warn">{t('matching.sharedWith', { labels: shared.map(o => o.label).join(', ') })} {selected === current.entityId ? t('matching.sharedKeep') : t('matching.sharedMove')}</p>}

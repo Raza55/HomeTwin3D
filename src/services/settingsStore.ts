@@ -25,6 +25,8 @@ export interface AppearanceSettings {
   hudVisible: boolean;
   /** Wall/tablet display layout: auto-detected home-screen app, or forced on/off. */
   kioskMode?: 'auto' | 'on' | 'off';
+  /** Undefined selects automatic sizing for this browser. */
+  uiScale?: number;
   borderStyle: 'subtle' | 'large' | 'none';
   cornerRadius: 'sharp' | 'soft' | 'round';
 }

@@ -1,9 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { affectsHomeStatus, summarizeHomeStatus } from '../src/services/homeStatus.ts';
+import { affectsHomeStatus, summarizeHomeStatus, homeWarnings } from '../src/services/homeStatus.ts';
 
 const state = (entity_id, value, attributes = {}) => ({ entity_id, state: value, attributes });
 const summary = (...states) => summarizeHomeStatus(Object.fromEntries(states.map(s => [s.entity_id, s])));
+
+test('warning details explain the same states that turn the home indicator red', () => {
+  const battery = state('sensor.example', '12', { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'Example battery' });
+  const states = { [battery.entity_id]: battery };
+  assert.deepEqual(homeWarnings(states), [{ entityId: 'sensor.example', label: 'Example battery', kind: 'battery', value: '12 %' }]);
+  assert.equal(summarizeHomeStatus(states), 'warning');
+  states[battery.entity_id] = { ...battery, state: '80' };
+  assert.deepEqual(homeWarnings(states), []);
+  assert.notEqual(summarizeHomeStatus(states), 'warning');
+});
 
 test('presence uses people or the home zone, never ordinary powered devices', () => {
   assert.equal(summary(state('person.example', 'home')), 'home');

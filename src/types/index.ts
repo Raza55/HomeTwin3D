@@ -132,6 +132,9 @@ export interface ApplianceConfig {
   powerThreshold?: number;
   remainingEntityId?: string;
   programEntityId?: string;
+  programSelectEntityId?: string;
+  startEntityId?: string;
+  stopEntityId?: string;
   /** `on` while a finished load waits to be taken out (e.g. an input_boolean kept by an HA automation). */
   finishedEntityId?: string;
 }

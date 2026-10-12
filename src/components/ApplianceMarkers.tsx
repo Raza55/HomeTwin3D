@@ -9,6 +9,7 @@ import {floorplanId} from '../babylon/FloorplanBindings';
 import './ApplianceMarkers.css';
 import { useEntityStatesVersion } from '../services/entityStateSignal';
 import { getActiveHAConnection } from '../services/haWebSocket';
+import ApplianceControls from './ApplianceControls';
 
 export function applianceDetail(state?:HAState):string {
  if(!state||['unknown','unavailable'].includes(state.state))return '';
@@ -58,6 +59,7 @@ export default function ApplianceMarkers({scene,config,states,connected,onAssign
      {a.remainingEntityId&&<><dt>Restzeit</dt><dd>{rest||'Nicht verfügbar'}</dd></>}
      {a.programEntityId&&<><dt>Waschprogramm</dt><dd>{program||'Nicht verfügbar'}</dd></>}
     </dl>
+    {a.kind === 'washer' && <ApplianceControls key={o.id} appliance={a} entityId={o.entityId} states={states} connected={connected} running={running} />}
     {finished&&a.finishedEntityId!.startsWith('input_boolean.')&&<button className="appliance-assign" onClick={()=>{void getActiveHAConnection()?.callService('input_boolean','turn_off',a.finishedEntityId!);setOpen(null);}}>Ausgeräumt, Anzeige beenden</button>}
     {!o.entityId&&<button className="appliance-assign" onClick={()=>{setOpen(null);onAssign(o.id);}}>Betriebssensor zuordnen</button>}
     <details><summary>Entitäten</summary><p>{o.entityId||'Nicht zugeordnet'}</p>{a.remainingEntityId&&<p>{a.remainingEntityId}</p>}{a.programEntityId&&<p>{a.programEntityId}</p>}{a.finishedEntityId&&<p>{a.finishedEntityId}</p>}</details>

@@ -10,12 +10,13 @@ import WaterLeakMarkers from '../../components/WaterLeakMarkers';
 import BatteryWarningMarkers from '../../components/BatteryWarningMarkers';
 import { isBatteryState } from '../../services/batteryWarning';
 import { affectsHomeStatus, summarizeHomeStatus, type HomeStatus } from '../../services/homeStatus';
+import HomeWarnings from '../../components/HomeWarnings';
 import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
 import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
 import { coffeeAlertEntityIds } from '../../services/coffeeState';
-import { notifyEntityStates } from '../../services/entityStateSignal';
+import { notifyEntityStates, isEntityStateWatched } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
 import DoorMarkers from '../../components/DoorMarkers';
@@ -226,6 +227,10 @@ export default function Dashboard() {
   const [vacuumOpen, setVacuumOpen] = useState<string | null>(null);
   const [haStatus, setHaStatus] = useState<HAConnectionStatus>('disconnected');
   const [homeStatus, setHomeStatus] = useState<HomeStatus>('unknown');
+  const [homeWarningsOpen, setHomeWarningsOpen] = useState(false);
+  const homeWarningsOpenRef = useRef(false);
+  homeWarningsOpenRef.current = homeWarningsOpen;
+  const closeHomeWarnings = useCallback(() => setHomeWarningsOpen(false), []);
   const [haSettingsVersion, setHaSettingsVersion] = useState(0);
   const [modelStatus, setModelStatus] = useState('loading');
   const [modelStatusColor, setModelStatusColor] = useState<string | undefined>(undefined);
@@ -323,7 +328,11 @@ export default function Dashboard() {
       // Door contacts and locks move the leaf and switch the door marker icon.
       if ((o.statusIndicator || o.echo || o.door || o.doorLock) && o.entityId) ids.add(o.entityId);
       if (o.it) itEntityIds(o.it).forEach(id => ids.add(id));
-      if (o.appliance?.finishedEntityId) ids.add(o.appliance.finishedEntityId);
+      if (o.appliance) {
+        if (o.entityId) ids.add(o.entityId);
+        for (const id of [o.appliance.finishedEntityId, o.appliance.remainingEntityId, o.appliance.programEntityId,
+          o.appliance.programSelectEntityId, o.appliance.startEntityId, o.appliance.stopEntityId]) if (id) ids.add(id);
+      }
       // A robot's state decides whether its live position is polled.
       if (o.domain === 'vacuum' && o.entityId) ids.add(o.entityId);
       if (o.vacuum) ids.add(o.vacuum.positionEntityId);
@@ -1595,7 +1604,9 @@ export default function Dashboard() {
         const wasBattery = lastStatesRef.current[entityId] && isBatteryState(lastStatesRef.current[entityId]);
         const homeStatusChanged = affectsHomeStatus(state) || (lastStatesRef.current[entityId] && affectsHomeStatus(lastStatesRef.current[entityId]));
         lastStatesRef.current[entityId] = state;
+        if (isEntityStateWatched(entityId)) notifyEntityStates(entityId);
         if (homeStatusChanged) setHomeStatus(summarizeHomeStatus(lastStatesRef.current));
+        if (homeStatusChanged && homeWarningsOpenRef.current) refreshQuickStates(n => n + 1);
         // Plan overlays (markers, door status, IT) re-render themselves; the
         // Dashboard only re-renders where its own JSX shows the state: the
         // Hue Sync lock and an open light popup (below).
@@ -2430,7 +2441,9 @@ export default function Dashboard() {
           onSave={next => { updateConfig(next); matchingChanged.current = true; }}
           onClose={() => { setMatchingOpen(false); setMatchingObjectIds(undefined); if (matchingChanged.current) { matchingChanged.current = false; handleReloadModel(); } }} /></Suspense>}
 
+        {homeWarningsOpen && <HomeWarnings states={lastStatesRef.current} connection={haStatus} onClose={closeHomeWarnings} />}
         <HUD
+          onHomeStatus={() => setHomeWarningsOpen(true)}
           homeStatus={haStatus === 'connected' ? homeStatus : haStatus === 'connecting' ? 'unknown' : 'warning'}
           onSettings={() => setSettingsOpen(true)}
           onCalendar={dayDemoController ? undefined : () => setCalendarOpen(true)}

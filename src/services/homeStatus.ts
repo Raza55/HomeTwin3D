@@ -3,10 +3,18 @@ import type { HAState } from '../types';
 export type HomeStatus = 'home' | 'away' | 'warning' | 'unknown';
 
 const WARNING_CLASSES = new Set(['problem', 'safety', 'smoke', 'gas', 'moisture', 'carbon_monoxide', 'battery', 'tamper']);
+let qnapStatusEntities = new Set<string>();
+
+/** QNAP's aggregate warning is advisory; keep explicit error/fault states important. */
+export function setHomeStatusRegistry(entries: { entity_id: string; platform?: string; original_name?: string | null }[]): void {
+  qnapStatusEntities = new Set(entries.filter(entry => entry.platform === 'qnap'
+    && entry.original_name?.toLowerCase() === 'status').map(entry => entry.entity_id));
+}
 
 /** Semantic HA states only: an open window or a powered-on device is not an alarm. */
 export function homeWarningKind(state: HAState): string | undefined {
   const { entity_id: id, attributes, state: value } = state;
+  if (value.toLowerCase() === 'warning' && qnapStatusEntities.has(id)) return undefined;
   if (id.startsWith('binary_sensor.')) return value === 'on' && WARNING_CLASSES.has(String(attributes.device_class)) ? String(attributes.device_class) : undefined;
   if (id.startsWith('alert.')) return value === 'on' ? 'alert' : undefined;
   if (id.startsWith('alarm_control_panel.')) return value === 'triggered' ? 'alarm' : undefined;

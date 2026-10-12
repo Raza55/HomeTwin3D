@@ -19,7 +19,7 @@ html[data-ui-compact] .dashboard-marker-filter .dashboard-icon-btn {
 }
 html[data-ui-compact] .dashboard-icon-btn svg { width: calc(18px * var(--ui-scale)); height: calc(18px * var(--ui-scale)); }
 html[data-ui-compact] .dashboard-render-toggle { flex-wrap: wrap; max-width: 100%; }
-html[data-ui-compact] .dashboard-marker-filter { flex-direction: row; flex-wrap: wrap; max-width: calc(260px * var(--ui-scale)); }
+html[data-ui-compact] .dashboard-marker-filter { flex-direction: column; flex-wrap: nowrap; align-self: flex-end; }
 html[data-ui-compact] .hud-top-controls {
   --controls-top: 20px;
   top: var(--controls-top);

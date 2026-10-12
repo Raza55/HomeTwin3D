@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.74 · Vertikale Filter und QNAP-Warnungen (12.10.2026)
+
+- Die Markierungsfilter stehen wieder senkrecht am rechten Rand; die eingestellte Bediengröße bleibt erhalten.
+- Allgemeine QNAP-Statusmeldungen `warning` lösen keinen roten Hausrahmen und keinen Eintrag in der Warnliste mehr aus. Die Erkennung erfolgt über die HA-Registry; explizite Fehler und separate Problemsensoren bleiben sichtbar.
+
 ## 0.5.73 · Tabletbedienung, Warnungsdetails und Waschmaschine (12.10.2026)
 
 - Automatische Größe für Touch-Geräte und manueller Regler von 100–180 % unter Einstellungen → Darstellung, pro Browser gespeichert.

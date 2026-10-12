@@ -26,6 +26,7 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ### Kioskbedienung und Hausstatus
 
+- Allgemeine QNAP-Statusmeldungen `warning` werden über die HA-Registry erkannt und aus Hausrahmen und Warnliste ausgefiltert. `error`/`fault` und separate Problemsensoren bleiben wichtig.
 - Unter Einstellungen → Darstellung: automatische Größe für Touch-Geräte oder manueller Regler von 100–180 %, pro Browser gespeichert. Filter, Ansichtsbuttons, Haus-/Einstellungstaste sowie Einstellungen und Warnliste skalieren; die 3D-Auflösung bleibt unverändert.
 - Ein Klick auf das Haus öffnet die aktuellen Warnursachen mit Gerätename, Zustand und Entity. Die Liste umfasst dieselben HA-Zustände wie der Rahmen, auch Geräte außerhalb des Plans; Verbindungs- und Anmeldefehler werden gesondert erklärt.
 - Im Kioskmodus verhindert die Oberfläche die Browserauswahl beim langen Drücken; Textfelder bleiben bearbeitbar.

@@ -9,7 +9,7 @@ import FanMarkers from '../../components/FanMarkers';
 import WaterLeakMarkers from '../../components/WaterLeakMarkers';
 import BatteryWarningMarkers from '../../components/BatteryWarningMarkers';
 import { isBatteryState } from '../../services/batteryWarning';
-import { affectsHomeStatus, summarizeHomeStatus, type HomeStatus } from '../../services/homeStatus';
+import { affectsHomeStatus, summarizeHomeStatus, setHomeStatusRegistry, type HomeStatus } from '../../services/homeStatus';
 import HomeWarnings from '../../components/HomeWarnings';
 import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
@@ -1675,6 +1675,14 @@ export default function Dashboard() {
         );
         setLightSceneOptions(buildSceneOptions(states));
         lastStatesRef.current = Object.fromEntries(states.map(state => [state.entity_id, state]));
+        setHomeStatusRegistry([]);
+        const statusConnection = haRef.current;
+        void statusConnection?.request({ type: 'config/entity_registry/list' }).then(entries => {
+          if (haRef.current !== statusConnection || !Array.isArray(entries)) return;
+          setHomeStatusRegistry(entries);
+          setHomeStatus(summarizeHomeStatus(lastStatesRef.current));
+          refreshQuickStates(n => n + 1);
+        }).catch(() => { /* Without metadata keep warnings visible. */ });
         setHomeStatus(summarizeHomeStatus(lastStatesRef.current));
         if (displayModalEntityIdsRef.current.size) {
           setDisplayModalStates(selectEntityStates(lastStatesRef.current, displayModalEntityIdsRef.current));

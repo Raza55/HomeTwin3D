@@ -1,9 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { affectsHomeStatus, summarizeHomeStatus, homeWarnings } from '../src/services/homeStatus.ts';
+import { affectsHomeStatus, summarizeHomeStatus, homeWarnings, setHomeStatusRegistry } from '../src/services/homeStatus.ts';
 
 const state = (entity_id, value, attributes = {}) => ({ entity_id, state: value, attributes });
 const summary = (...states) => summarizeHomeStatus(Object.fromEntries(states.map(s => [s.entity_id, s])));
+
+test('QNAP aggregate warnings are advisory, but errors and other device warnings remain important', () => {
+  setHomeStatusRegistry([{ entity_id: 'sensor.example', platform: 'qnap', original_name: 'Status' }]);
+  try {
+    const warning = state('sensor.example', 'warning');
+    assert.equal(summary(warning), 'unknown');
+    assert.deepEqual(homeWarnings({ [warning.entity_id]: warning }), []);
+    assert.equal(summary(state('sensor.example', 'error')), 'warning');
+    assert.equal(summary(state('sensor.example', 'fault')), 'warning');
+    setHomeStatusRegistry([{ entity_id: 'sensor.example', platform: 'qnap', original_name: 'Disk' }]);
+    assert.equal(summary(warning), 'warning');
+    setHomeStatusRegistry([{ entity_id: 'sensor.example', platform: 'other', original_name: 'Status' }]);
+    assert.equal(summary(warning), 'warning');
+  } finally { setHomeStatusRegistry([]); }
+});
 
 test('warning details explain the same states that turn the home indicator red', () => {
   const battery = state('sensor.example', '12', { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'Example battery' });

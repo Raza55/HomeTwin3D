@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.75 · Touch-Eingaben neben der Filterleiste (12.10.2026)
+
+- Freie Flächen neben der vertikalen Filterleiste lassen Berührungen wieder zum 3D-Plan durch. Darunter liegende Rollo- und andere Marker bleiben anklickbar; sichtbare Bedienelemente behalten ihre Eingaben.
+
 ## 0.5.74 · Vertikale Filter und QNAP-Warnungen (12.10.2026)
 
 - Die Markierungsfilter stehen wieder senkrecht am rechten Rand; die eingestellte Bediengröße bleibt erhalten.

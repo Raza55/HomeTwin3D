@@ -26,7 +26,9 @@ html[data-ui-compact] .hud-top-controls {
   max-width: calc(100% - 64px - 180px * var(--ui-scale));
   max-height: calc(100dvh - var(--controls-top) - 16px - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
-  pointer-events: auto;
+  /* Empty space beside the vertical filters must let taps reach map markers.
+     Visible controls opt into pointer events in HUD.css. */
+  pointer-events: none;
 }
 html.kiosk[data-ui-compact] .hud-top-controls { --controls-top: var(--kiosk-row); }
 html[data-ui-compact="true"] .hud-top-controls {

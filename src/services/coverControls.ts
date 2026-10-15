@@ -1,11 +1,26 @@
 import type { AppConfig, HAState } from '../types';
 import type {MatchEntity} from './floorplanMatching';
 export type CoverAction='open_cover'|'close_cover'|'stop_cover'|'set_cover_position';
+/** Only mapped shutters participate; an unresolved balcony exclusion disables the batch. */
+export function sleepingCovers(config:AppConfig,excludedEntityId:string){
+ const ids=[...new Set([
+  ...(config.blinds??[]).map(blind=>blind.entityId),
+  ...(config.model?.floorplan?.objects??[]).filter(object=>object.domain==='cover').map(object=>object.entityId),
+ ])].filter(id=>id?.startsWith('cover.'));
+ return ids.includes(excludedEntityId)?ids.filter(id=>id!==excludedEntityId):[];
+}
 export function coverSupports(state:HAState|undefined|null,action:CoverAction){
  if(!state||['unknown','unavailable'].includes(state.state))return false;
  const bit={open_cover:1,close_cover:2,set_cover_position:4,stop_cover:8}[action];
  const features=state.attributes.supported_features;
  return typeof features==='number' && (features&bit)!==0;
+}
+/** Ignore unavailable shutters when choosing the next action; wait for movement to finish. */
+export function sleepingCoverAction(states:(HAState|undefined|null)[]){
+ const available=states.filter(state=>coverSupports(state,'open_cover')||coverSupports(state,'close_cover'));
+ const moving=available.some(state=>state?.state==='opening'||state?.state==='closing');
+ const action:CoverAction=available.length>0&&available.every(state=>state?.state==='closed')?'open_cover':'close_cover';
+ return {action,moving};
 }
 export function coverRoom(config:AppConfig,entityId:string,inventory:MatchEntity[]=[]){
  const objects=config.model?.floorplan?.objects??[];

@@ -1,7 +1,8 @@
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {ArrowUp,ArrowDown,Square,X,Blinds} from 'lucide-react';
+import {ArrowUp,ArrowDown,Square,X,Blinds,Moon,Sun} from 'lucide-react';
 import type {AppConfig,HAState} from '../types';
-import {coverRoom,coverSupports,type CoverAction} from '../services/coverControls';
+import {coverRoom,coverSupports,sleepingCovers,sleepingCoverAction,type CoverAction} from '../services/coverControls';
+import {installationEntity} from '../services/installationConfig';
 import {loadMatchingInventory} from '../services/matchingInventory';
 import type {MatchEntity} from '../services/floorplanMatching';
 import './LightQuickControls.css';
@@ -23,6 +24,11 @@ function Controls({entityId,label,state,states,config,connected,anchor,onClose,o
  const [inventory,setInventory]=useState<MatchEntity[]|null>(null);
  useEffect(()=>{let cancelled=false;loadMatchingInventory().then(data=>{if(!cancelled)setInventory(data.entities);}).catch(()=>{if(!cancelled)setInventory([]);});return()=>{cancelled=true;};},[connected]);
  const room=coverRoom(config,entityId,inventory??[]),value=state?.attributes.current_position;
+ const sleepIds=sleepingCovers(config,installationEntity('cover.living_room_balcony'));
+ const {action:sleepAction,moving:sleepMoving}=sleepingCoverAction(sleepIds.map(id=>id===entityId?state:states[id]));
+ const wakeUp=sleepAction==='open_cover',SleepIcon=wakeUp?Sun:Moon;
+ const sleepLabel=sleepMoving?'Rollos fahren …':wakeUp?'Alle aufwachen':'Alle schlafen';
+ const sleepVerb=wakeUp?'öffnen':'schließen';
  useEffect(()=>{if(!editing.current&&typeof value==='number')setPosition(value);},[value]);
  useLayoutEffect(()=>{const layout=()=>{const r=root.current?.getBoundingClientRect();if(!r)return;setPlace({left:Math.max(8,Math.min(anchor?anchor.x+16:(innerWidth-r.width)/2,innerWidth-r.width-8)),top:Math.max(8,Math.min(anchor?anchor.y-28:(innerHeight-r.height)/2,innerHeight-r.height-8))});};layout();const ro=new ResizeObserver(layout);if(root.current)ro.observe(root.current);window.addEventListener('resize',layout);return()=>{ro.disconnect();window.removeEventListener('resize',layout);};},[anchor]);
  useEffect(()=>{const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))onClose();};document.addEventListener('pointerdown',outside);root.current?.querySelector<HTMLButtonElement>('button')?.focus({preventScroll:true});return()=>document.removeEventListener('pointerdown',outside);},[onClose]);
@@ -41,6 +47,10 @@ function Controls({entityId,label,state,states,config,connected,anchor,onClose,o
   {actions([entityId])}
   {coverSupports(state,'set_cover_position')&&<label className="blind-position">Öffnung <span>{position} %</span><input aria-label="Rollo Öffnung" type="range" min="0" max="100" value={position} disabled={busy||!connected} onChange={e=>{editing.current=true;setPosition(Number(e.target.value));}} onPointerUp={()=>{if(editing.current)void send('set_cover_position');}} onKeyUp={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)&&editing.current)void send('set_cover_position');}} onBlur={()=>{if(editing.current)void send('set_cover_position');}}/></label>}
   {inventory!==null&&room.ids.length>1&&<section className="blind-room"><strong>{room.name}</strong><small>Alle {room.ids.length} zugeordneten Rollos im Raum</small>{actions(room.ids,true)}{room.ids.some(id=>!states[id]||['unknown','unavailable'].includes(states[id].state))&&<small>Nicht verfügbare Rollos werden übersprungen.</small>}</section>}
+  <section className="blind-room blind-sleep">
+   <button className="blind-sleep-button" disabled={busy||sleepMoving||!eligible(sleepIds,sleepAction).length} onClick={()=>void send(sleepAction,sleepIds)} aria-label={`${sleepLabel} – alle Rollos außer Wohnzimmer zum Balkon ${sleepVerb}`}><SleepIcon size={21} aria-hidden="true"/><span><strong>{sleepLabel}</strong><small>{sleepMoving?'Bitte kurz warten':`Alle Rollos ${sleepVerb}`}<br/>außer Wohnzimmer → Balkon</small></span></button>
+   {!sleepIds.length?<small>Balkonrollo-Zuordnung fehlt.</small>:connected&&eligible(sleepIds,sleepAction).length<sleepIds.length&&<small>Nicht verfügbare oder nicht steuerbare Rollos werden übersprungen.</small>}
+  </section>
   {error&&<p className="light-quick-error" role="alert">{error}</p>}
  </div>;
 }

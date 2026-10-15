@@ -79,6 +79,8 @@ unten).
 
 ### Rollos, Türen, Fenster und Schloss
 
+Der Sammelbutton in jedem Rollo-Popup bietet „Alle schlafen“ (Mond) zum Schließen oder „Alle aufwachen“ (Sonne) zum Öffnen, sobald alle erreichbaren zugeordneten Rollos geschlossen sind. Bei gemischten Stellungen bietet er Schließen; während der Fahrt ist er gesperrt. `cover.living_room_balcony` (über die Installationswerte auf das echte Balkonrollo abgebildet) bleibt in beiden Richtungen ausgenommen. Ohne aufgelöste Ausnahme bleibt der Button gesperrt. Verfügbarkeit, Fähigkeiten und Befehlsfehler werden wie bei Raumaktionen berücksichtigt.
+
 Rollo-Popups bieten Öffnen, Stopp, Schließen und je nach Gerät einen Positionsregler; Raumaktionen steuern alle Rollos
 eines Raums. Die Behang-Geometrie folgt der HA-Position.
 

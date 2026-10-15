@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.76 · Rollos schlafen und aufwachen (15.10.2026)
+
+- Alle Rollo-Popups bieten „Alle schlafen“ (Mond) zum Schließen und bei geschlossenen Rollos „Alle aufwachen“ (Sonne) zum Öffnen. Das Wohnzimmer-Balkonrollo bleibt in beiden Richtungen ausgenommen. Gemischte Stellungen bieten Schließen; während der Fahrt wartet der Button auf die Rückmeldung. Die Ausnahme folgt der privaten Installationszuordnung; fehlt sie im Modell, bleibt der Sammelbefehl gesperrt.
+
 ## 0.5.75 · Touch-Eingaben neben der Filterleiste (12.10.2026)
 
 - Freie Flächen neben der vertikalen Filterleiste lassen Berührungen wieder zum 3D-Plan durch. Darunter liegende Rollo- und andere Marker bleiben anklickbar; sichtbare Bedienelemente behalten ihre Eingaben.

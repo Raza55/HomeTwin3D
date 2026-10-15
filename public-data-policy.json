@@ -1,6 +1,10 @@
 {
   "description": "Reviewed anonymous examples and unchanged binary assets. Review changes manually; never auto-regenerate to bypass a finding.",
   "entities": [
+    "cover.living_room_balcony",
+    "cover.balcony",
+    "cover.bedroom",
+    "cover.unmapped",
     "lock.current",
     "sensor.washer",
     "select.washer_program",

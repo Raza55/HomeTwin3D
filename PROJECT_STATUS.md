@@ -23,10 +23,10 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 - Zufällige Fotos mit Überblendung und 10–300 Sekunden Wechselintervall; bei Fehlern fällt die Ansicht auf das lokale Monatsbild zurück. Nur das serverseitig freigegebene Album wird abgefragt, keine öffentlichen Freigabelinks und keine Bilddateien im Repository.
 - Einrichtung und Grenzen: [Add-on-Dokumentation](3dash-addon/DOCS.md#private-immich-album-diashow). Tests: `npm run test:immich`.
 
-### Kalender: Leistungskontrollen
+### Kalender: ÜL-Termine
 
-- Kategorie „LK“ mit ganztägigen Terminen und fester Schülerzuordnung über `calendarStudent` in den privaten Installationswerten; ohne Vorgabe wird ein eindeutiger Stundenplaninhaber verwendet. Die Fächer stammen aus dessen geladenen Stundenplaneinträgen.
-- Klausuren und LK unterstützen 0–15 Punkte sowie „Clear“. Auch das Entfernen der letzten Beschreibungszeile wird an Home Assistant übertragen.
+- Kategorie „ÜL“ mit ganztägigen Terminen und fester Schülerzuordnung über `calendarStudent` in den privaten Installationswerten; ohne Vorgabe wird ein eindeutiger Stundenplaninhaber verwendet. Die Fächer stammen aus dessen geladenen Stundenplaneinträgen.
+- Klausuren und ÜL unterstützen 0–15 Punkte sowie „Clear“. Auch das Entfernen der letzten Beschreibungszeile wird an Home Assistant übertragen.
 
 ### Waschmaschinensteuerung
 

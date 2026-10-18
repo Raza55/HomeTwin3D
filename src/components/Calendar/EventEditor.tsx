@@ -4,7 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, hhmm, minutesOfDay, parseYmd, startOfDay, ymd } from '../../services/calendar/dates';
 import type { CalEvent, CalendarBackend, CalendarInfo, EventDraft, RecurrenceScope } from '../../services/calendar/haCalendar';
 import { rememberSample, suggest, type Profile, type Suggestion } from '../../services/calendar/learning';
-import { EVENT_KINDS, eventKind, hasGrade, kindFromTitle } from '../../services/calendar/eventKinds';
+import { EVENT_KINDS, assessmentTitle, assessmentSubject, eventKind, hasGrade, kindFromTitle } from '../../services/calendar/eventKinds';
 import { gradeTone, pointsToGrade, readMeta, writeMeta } from '../../services/calendar/eventMeta';
 import { lessonTitle } from '../../services/calendar/timetable';
 import { installation } from '../../services/installationConfig';
@@ -61,7 +61,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const initialStart = existing && !existing.allDay ? minutesOfDay(existing.start)
     : request.startMinutes ?? Math.min(22 * 60, Math.ceil((minutesOfDay(new Date()) + 30) / 60) * 60);
 
-  const [title, setTitle] = useState(existing?.summary ?? '');
+  const [title, setTitle] = useState(existing ? assessmentTitle(existing.summary, readMeta(existing.description).symbol) : '');
   const [date, setDate] = useState(ymd(existing?.start ?? request.date));
   const [allDay, setAllDay] = useState(existing?.allDay ?? request.allDay ?? false);
   const [startMin, setStartMin] = useState(initialStart);
@@ -75,17 +75,17 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const [grade, setGrade] = useState(initialMeta.grade);
   const [persons, setPersons] = useState<string[]>(existing ? initialMeta.persons : defaultPersons);
   const [timetable, setTimetable] = useState(!!initialMeta.timetable);
-  const [symbol, setSymbol] = useState<string | undefined>(initialMeta.symbol);
-  const isLk = eventKind(title, symbol) === 'lk';
+  const [symbol, setSymbol] = useState<string | undefined>(initialMeta.symbol === 'lk' ? 'ul' : initialMeta.symbol);
+  const isUl = eventKind(title, symbol) === 'ul';
   const timetablePersons = [...new Set(lessons.flatMap(e => readMeta(e.description, e.summary, knownPersons).persons))];
   const student = installation.calendarStudent || (timetablePersons.length === 1 ? timetablePersons[0] : '');
   const subjects = [...new Set(lessons.filter(e => readMeta(e.description, e.summary, knownPersons).persons.includes(student))
     .map(e => lessonTitle(e.summary, knownPersons).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const [subject, setSubject] = useState(existing && eventKind(existing.summary, initialMeta.symbol) === 'lk'
-    ? existing.summary.replace(/^LK:\s*/i, '') : '');
+  const [subject, setSubject] = useState(existing && eventKind(existing.summary, initialMeta.symbol) === 'ul'
+    ? assessmentSubject(assessmentTitle(existing.summary, initialMeta.symbol)) : '');
   useEffect(() => {
-    if (isLk) { setAllDay(true); setTimetable(false); setPersons(student ? [student] : []); }
-  }, [isLk, student]);
+    if (isUl) { setAllDay(true); setTimetable(false); setPersons(student ? [student] : []); }
+  }, [isUl, student]);
   const [personChoices, setPersonChoices] = useState(() => [...new Set([...knownPersons, ...initialMeta.persons])]);
   const [newPerson, setNewPerson] = useState<string | null>(null);
   const [more, setMore] = useState(!!(existing?.location || initialMeta.notes));
@@ -102,8 +102,8 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
 
   const parsed = useMemo(() => parseQuickText(title), [title]);
   const suggestions = useMemo(
-    () => (titleFocused && !readOnly && !isLk ? suggest(profiles, parsed.title || title).filter(s => s.title !== title.trim()) : []),
-    [profiles, title, parsed.title, titleFocused, readOnly, isLk],
+    () => (titleFocused && !readOnly && !isUl ? suggest(profiles, parsed.title || title).filter(s => s.title !== title.trim()) : []),
+    [profiles, title, parsed.title, titleFocused, readOnly, isUl],
   );
 
   useEffect(() => () => recognition.current?.stop(), []);
@@ -169,7 +169,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
     rec.start();
   };
 
-  const metaDescription = (points: number | undefined) => writeMeta({ notes: description, persons: isLk ? [student] : persons, grade: points, ref: initialMeta.ref, timetable: isLk ? false : timetable, symbol });
+  const metaDescription = (points: number | undefined) => writeMeta({ notes: description, persons: isUl ? [student] : persons, grade: points, ref: initialMeta.ref, timetable: isUl ? false : timetable, symbol });
 
   // An unchanged frequency keeps the original rule (COUNT/UNTIL/BYDAY of a series)
   const rrule = repeat ? (existing?.rrule?.includes(`FREQ=${repeat}`) ? existing.rrule : `FREQ=${repeat}`) : undefined;
@@ -177,12 +177,12 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const buildDraft = (points: number | undefined): EventDraft | null => {
     let p: QuickParse | null = null;
     // "Zahnarzt morgen 15 Uhr" + save: the phrase decides unless date/time were set by hand
-    if (!isLk && !scheduleTouched && hasSchedule(parsed)) p = parsed;
-    if (isLk && (!student || !subject)) return null;
-    const summary = isLk ? `LK: ${subject}` : (p?.title || title).trim();
+    if (!isUl && !scheduleTouched && hasSchedule(parsed)) p = parsed;
+    if (isUl && (!student || !subject)) return null;
+    const summary = isUl ? `ÜL: ${subject}` : (p?.title || title).trim();
     if (!summary) return null;
     const day = p?.date ?? date;
-    const isAllDay = isLk || (p?.allDay ?? (p?.startMinutes !== undefined ? false : allDay));
+    const isAllDay = isUl || (p?.allDay ?? (p?.startMinutes !== undefined ? false : allDay));
     const start = parseYmd(day);
     if (isAllDay) {
       const last = p?.date ? start : parseYmd(endDate < day ? day : endDate);
@@ -248,10 +248,10 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
 
         <div className="cal-title-row">
           <input className="cal-title-input" value={title} placeholder={t('calendar.titlePlaceholder')} autoFocus={!existing}
-            readOnly={readOnly || isLk} enterKeyHint="done" autoComplete="off"
+            readOnly={readOnly || isUl} enterKeyHint="done" autoComplete="off"
             onChange={e => { setTitle(e.target.value); setTitleFocused(true); }}
             onFocus={() => setTitleFocused(true)} onBlur={() => setTimeout(() => setTitleFocused(false), 150)} />
-          {Speech && !readOnly && !isLk && (
+          {Speech && !readOnly && !isUl && (
             <button type="button" className={`cal-mic${listening ? ' listening' : ''}`} onClick={toggleVoice}
               aria-label={listening ? t('calendar.voiceStop') : t('calendar.voice')} title={listening ? t('calendar.voiceStop') : t('calendar.voice')}>
               {listening ? <MicOff size={22} /> : <Mic size={22} />}
@@ -260,7 +260,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
         </div>
         {listening && <div className="cal-hint">{t('calendar.voiceHint')}</div>}
 
-        {!readOnly && !isLk && hasSchedule(parsed) && !listening && (
+        {!readOnly && !isUl && hasSchedule(parsed) && !listening && (
           <button type="button" className="cal-parsed" onClick={() => applyParsed(parsed)}>
             <Sparkles size={15} aria-hidden="true" />
             <span><strong>{parsed.title || title}</strong> · {describe(parsed)}</span>
@@ -268,10 +268,10 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           </button>
         )}
 
-        {isLk && (
+        {isUl && (
           <label className="cal-row">
             <span className="cal-row-label">{t('calendar.subject')}</span>
-            <select className="cal-input" value={subject} disabled={readOnly || busy} required onChange={e => { setSubject(e.target.value); setTitle(`LK: ${e.target.value}`); }}>
+            <select className="cal-input" value={subject} disabled={readOnly || busy} required onChange={e => { setSubject(e.target.value); setTitle(`ÜL: ${e.target.value}`); }}>
               <option value="">{t('calendar.subjectChoose')}</option>
               {[...new Set([...subjects, ...(subject ? [subject] : [])])].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -335,7 +335,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           <div className="cal-row">
             <span className="cal-row-label">{t('calendar.time')}</span>
             <div className="cal-chips">
-              <button type="button" disabled={isLk} className={allDay ? 'active' : ''} onClick={() => { setAllDay(a => !a); touch(); }}>{t('calendar.allDay')}</button>
+              <button type="button" disabled={isUl} className={allDay ? 'active' : ''} onClick={() => { setAllDay(a => !a); touch(); }}>{t('calendar.allDay')}</button>
               {!allDay && <input type="time" value={hhmm(startMin)} step={300} onChange={e => { const [h, m] = e.target.value.split(':').map(Number); if (!Number.isNaN(h)) { setStartMin(h * 60 + (m || 0)); touch(); } }} />}
               {allDay && (
                 <label className="cal-inline">{t('calendar.until')}
@@ -363,7 +363,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
               {(['', 'WEEKLY', 'MONTHLY', 'YEARLY'] as Repeat[]).map(r => (
                 <button type="button" key={r || 'none'} className={repeat === r ? 'active' : ''} onClick={() => setRepeat(r)}>{t(`calendar.repeat.${r || 'none'}`)}</button>
               ))}
-              <button type="button" disabled={isLk} className={timetable ? 'active' : ''} aria-pressed={timetable} title={t('calendar.timetableHint')}
+              <button type="button" disabled={isUl} className={timetable ? 'active' : ''} aria-pressed={timetable} title={t('calendar.timetableHint')}
                 onClick={() => { setTimetable(v => !v); if (!timetable && !repeat) setRepeat('WEEKLY'); }}>
                 {t('calendar.timetable')}
               </button>
@@ -381,7 +381,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
                 return (
                   <button type="button" key={key} className={symbol === key ? 'active' : ''} aria-pressed={symbol === key}
                     title={t(`calendar.kind.${key}`)} aria-label={t(`calendar.kind.${key}`)} onClick={() => setSymbol(key)}>
-                    <Icon size={18} aria-hidden="true" />{key === 'lk' && ' LK'}
+                    <Icon size={18} aria-hidden="true" />{key === 'ul' && ' ÜL'}
                   </button>
                 );
               })}
@@ -392,14 +392,14 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           <div className="cal-row">
             <span className="cal-row-label">{t('calendar.forWhom')}</span>
             <div className="cal-chips">
-              {[...new Set([...personChoices, ...(isLk && student ? [student] : [])])].map(p => (
-                <button type="button" key={p} disabled={isLk} className={persons.includes(p) ? 'active' : ''} aria-pressed={persons.includes(p)}
+              {[...new Set([...personChoices, ...(isUl && student ? [student] : [])])].map(p => (
+                <button type="button" key={p} disabled={isUl} className={persons.includes(p) ? 'active' : ''} aria-pressed={persons.includes(p)}
                   onClick={() => setPersons(list => list.includes(p) ? list.filter(x => x !== p) : [...list, p])}>
                   <span className="cal-swatch" style={{ background: personColor(p) }} /> {p}
                 </button>
               ))}
               {newPerson === null ? (
-                <button type="button" disabled={isLk} onClick={() => setNewPerson('')}>{t('calendar.addPerson')}</button>
+                <button type="button" disabled={isUl} onClick={() => setNewPerson('')}>{t('calendar.addPerson')}</button>
               ) : (
                 <input autoFocus value={newPerson} placeholder={t('calendar.personName')} enterKeyHint="done" maxLength={30}
                   onChange={e => setNewPerson(e.target.value.replace(/[,:\n]/g, ''))}
@@ -465,7 +465,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
             )}
             <span className="cal-spacer" />
             <button type="button" className="cal-btn" onClick={onClose} disabled={busy}>{t('calendar.cancel')}</button>
-            <button type="submit" className="cal-btn cal-btn-primary cal-btn-large" disabled={busy || (isLk ? !student || !subject : !title.trim())}>{busy ? '…' : t('calendar.save')}</button>
+            <button type="submit" className="cal-btn cal-btn-primary cal-btn-large" disabled={busy || (isUl ? !student || !subject : !title.trim())}>{busy ? '…' : t('calendar.save')}</button>
           </div>
         )}
       </form>

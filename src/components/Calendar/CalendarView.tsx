@@ -7,7 +7,7 @@ import { gradeTone, personInitials, readMeta } from '../../services/calendar/eve
 import { buildProfiles, loadLocalSamples } from '../../services/calendar/learning';
 import { loadCalendarPrefs, saveCalendarPrefs, type CalendarPrefs } from '../../services/calendar/prefs';
 import { refreshSchoolHolidays, schoolHolidays } from '../../services/calendar/schoolHolidays';
-import { eventKind, hasGrade } from '../../services/calendar/eventKinds';
+import { assessmentTitle, eventKind, hasGrade } from '../../services/calendar/eventKinds';
 import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
 import EventIcon from './EventIcon';
 import MonthArt from './MonthArt';
@@ -73,7 +73,8 @@ export default function CalendarView({ onClose }: Props) {
   const year = focus.getFullYear();
   const rangeStart = useMemo(() => addDays(new Date(year, 0, 1), -14), [year]);
   const rangeEnd = useMemo(() => addDays(new Date(year + 1, 0, 1), 14), [year]);
-  const { backend, calendars, events: everything, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
+  const { backend, calendars, events: loadedEvents, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
+  const everything = useMemo(() => loadedEvents.map(e => ({ ...e, summary: assessmentTitle(e.summary, readMeta(e.description).symbol) })), [loadedEvents]);
   // Timetable lessons are no appointments: they only appear in the day list on school days
   const allEvents = useMemo(() => everything.filter(e => !readMeta(e.description).timetable), [everything]);
   const allLessons = useMemo(() => everything.filter(e => readMeta(e.description).timetable), [everything]);
@@ -115,7 +116,7 @@ export default function CalendarView({ onClose }: Props) {
     ? schoolLessons(day, lessonsByDay.get(ymd(day)) ?? [], allEvents, schoolDayMarksOf(ymd(day)), personsOf)
     : []), [prefs.showTimetable, lessonsByDay, allEvents, schoolDayMarksOf, personsOf]);
   const profiles = useMemo(() => buildProfiles([
-    ...loadLocalSamples(),
+    ...loadLocalSamples().map(sample => ({ ...sample, summary: assessmentTitle(sample.summary) })),
     ...events.map(e => ({ summary: e.summary, start: e.allDay ? ymd(e.start) : e.start.toISOString(), end: e.allDay ? ymd(e.end) : e.end.toISOString(), allDay: e.allDay, calendar: e.calendar, location: e.location })),
   ]), [events]);
 

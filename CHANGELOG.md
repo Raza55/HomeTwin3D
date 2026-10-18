@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.79 · ÜL-Termine (18.10.2026)
+
+- Die bisherige LK-Kategorie heißt jetzt ÜL, auch beim Hinzufügen und Speichern. Vorhandene LK-Termine werden weiterhin erkannt und als ÜL angezeigt; Fachauswahl und Noten bleiben erhalten.
+
 ## 0.5.78 · Private Immich-Album-Diashow (18.10.2026)
 
 - Kalenderbilder können automatisch aus einem freigegebenen Immich-Album wechseln. Zufällige Auswahl, Überblendung, wählbares Intervall und Monatsbild als Ersatz bei Fehlern.

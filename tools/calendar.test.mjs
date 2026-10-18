@@ -188,13 +188,17 @@ test('year dates: clock changes, seasons, moon phases and customs', () => {
 });
 
 
-test('LK category and grade support', async () => {
+test('ÜL category, legacy LK compatibility and grade support', async () => {
   const { eventKind, hasGrade } = await import('../src/services/calendar/eventKinds.ts');
-  assert.equal(eventKind('LK: Mathematik'), 'lk');
-  assert.equal(eventKind('Leistungskontrolle Englisch'), 'lk');
-  assert.equal(eventKind('Mathematik', 'lk'), 'lk');
+  assert.equal(eventKind('LK: Mathematik'), 'ul');
+  assert.equal(eventKind('ÜL: Mathematik'), 'ul');
+  assert.equal(eventKind('ül Englisch'), 'ul');
+  assert.equal(eventKind('Schüler'), undefined);
+  assert.equal(eventKind('Leistungskontrolle Englisch'), 'ul');
+  assert.equal(eventKind('Mathematik', 'lk'), 'ul');
+  assert.equal(eventKind('Mathematik', 'ul'), 'ul');
   assert.equal(eventKind('Walk'), undefined);
-  assert.equal(hasGrade('lk'), true);
+  assert.equal(hasGrade('ul'), true);
   assert.equal(hasGrade('exam'), true);
   assert.equal(hasGrade('school'), false);
 });
@@ -207,4 +211,15 @@ test('clearing the last metadata field sends an empty description to HA', async 
     summary: 'Klausur', start: now, end: new Date(+now + 3600000), allDay: false, description: '',
   });
   assert.equal(calls[0].event.description, '');
+});
+
+
+test('legacy assessment titles display as ÜL and both title prefixes yield the subject', async () => {
+  const { assessmentTitle, assessmentSubject } = await import('../src/services/calendar/eventKinds.ts');
+  assert.equal(assessmentTitle('LK: Mathematik', 'lk'), 'ÜL: Mathematik');
+  assert.equal(assessmentTitle('Anna: LK Englisch'), 'Anna: ÜL Englisch');
+  assert.equal(assessmentTitle('ÜL: Englisch', 'ul'), 'ÜL: Englisch');
+  assert.equal(assessmentTitle('LK: Mathematik', 'none'), 'LK: Mathematik');
+  assert.equal(assessmentSubject('ÜL: Mathematik'), 'Mathematik');
+  assert.equal(assessmentSubject('LK: Englisch'), 'Englisch');
 });

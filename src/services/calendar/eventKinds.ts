@@ -4,7 +4,7 @@
  */
 
 export const EVENT_KINDS = [
-  { key: 'lk', match: /\blk\b|leistungskontrolle/i },
+  { key: 'ul', match: /(?:^|[^\p{L}\p{N}])(?:ül|lk)(?=$|[^\p{L}\p{N}])|leistungskontrolle/iu },
   { key: 'exam', match: /klausur|klassenarbeit|kursarbeit|\btest\b|prüfung/i },
   { key: 'free', match: /unterrichtsfrei|ferientag|schulfrei/i },
   { key: 'doctor', match: /arzt|ärztin|praxis|klinik|krankenhaus|physio|kieferorthop|untersuchung/i },
@@ -36,11 +36,22 @@ export function kindFromTitle(summary: string): EventKind | undefined {
 
 /** The chosen symbol ("none" switches it off) or the one recognised from the title. */
 export function eventKind(summary: string, chosen?: string): EventKind | undefined {
+  if (chosen === 'lk') return 'ul'; // Compatibility with previously saved events.
   if (chosen === 'none') return undefined;
   if (chosen && KEYS.has(chosen)) return chosen as EventKind;
   return kindFromTitle(summary);
 }
 
 export function hasGrade(kind: EventKind | undefined): boolean {
-  return kind === 'exam' || kind === 'lk';
+  return kind === 'exam' || kind === 'ul';
+}
+
+/** Present old assessment titles consistently; persisted on the next edit. */
+export function assessmentTitle(summary: string, chosen?: string): string {
+  if (eventKind(summary, chosen) !== 'ul') return summary;
+  return summary.replace(/(^|:\s*)LK(?=\s|:|$)/i, '$1ÜL');
+}
+
+export function assessmentSubject(summary: string): string {
+  return summary.replace(/^(?:LK|ÜL):\s*/i, '');
 }

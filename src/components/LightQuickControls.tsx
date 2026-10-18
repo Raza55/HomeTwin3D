@@ -11,11 +11,12 @@ interface Props {
   onEdit?: () => void;
   children?: ReactNode;
   syncLocked?: boolean;
+  syncControls?: ReactNode;
   hideColors?: boolean;
   hideTemperature?: boolean;
 }
 
-export default function LightQuickControls({ label, state, connected, anchor, onClose, onPin, onEnter, onLeave, onMore, onCommand, onEdit, children, hideColors, hideTemperature, syncLocked = false }: Props) {
+export default function LightQuickControls({ label, state, connected, anchor, onClose, onPin, onEnter, onLeave, onMore, onCommand, onEdit, children, hideColors, hideTemperature, syncLocked = false, syncControls }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const [position,setPosition] = useState({left:anchor.x+16,top:anchor.y+16});
   const [level,setLevel] = useState(100), [kelvin,setKelvin] = useState(3000);
@@ -65,6 +66,7 @@ export default function LightQuickControls({ label, state, connected, anchor, on
     <header><div><strong title={label}>{label}</strong><small>{!connected?'Nicht verbunden':!available?'Nicht verfügbar':syncLocked?'An · Hue Sync aktiv':state?.state==='on'?`An · ${dim?`${level} %`:'Licht'}`:'Aus'}</small></div>
       {onEdit && <button className="light-quick-icon" aria-label="Lampenzuordnung bearbeiten" title="Zuordnung bearbeiten" onClick={onEdit}><Pencil size={15}/></button>}
       <button className="light-quick-icon" aria-label="Lichtsteuerung schließen" onClick={onClose}><X size={16}/></button></header>
+    {syncControls}
     {syncLocked ? <p className="light-quick-sync" role="status"><LockKeyhole size={16}/><span>Hue Sync steuert diese Lampen. Nach dem Stoppen von Sync sind die Regler wieder verfügbar.</span></p> : <>
     <button className={`light-quick-power ${state?.state==='on'?'is-on':''}`} disabled={!available||busy} aria-label={state?.state==='on'?'Licht ausschalten':'Licht einschalten'} onClick={()=>void send(state?.state==='on'?'turn_off':'turn_on')}><Power size={16}/>{state?.state==='on'?'Ausschalten':'Einschalten'}</button>
     {children}

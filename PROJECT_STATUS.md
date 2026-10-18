@@ -17,6 +17,11 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Kalender: Leistungskontrollen
+
+- Kategorie „LK“ mit ganztägigen Terminen und fester Schülerzuordnung über `calendarStudent` in den privaten Installationswerten; ohne Vorgabe wird ein eindeutiger Stundenplaninhaber verwendet. Die Fächer stammen aus dessen geladenen Stundenplaneinträgen.
+- Klausuren und LK unterstützen 0–15 Punkte sowie „Clear“. Auch das Entfernen der letzten Beschreibungszeile wird an Home Assistant übertragen.
+
 ### Waschmaschinensteuerung
 
 - Das Waschmaschinen-Popup bietet die von HA gelieferten Programme sowie Start und Stopp/Reset über `select.select_option` und `button.press`.
@@ -75,7 +80,12 @@ können sich eine Bediengruppe teilen und bleiben dabei getrennte HA-Entities. D
 **Hue Sync:** Läuft eine Hue-Sync-Box (Schalter, Bereichsauswahl und Helligkeit als Entities), zeigt die App die beteiligten
 Lampen mit Sperrhinweis an, statt alte Farben vorzutäuschen. Welche Lampen dazugehören, ist eine feste Liste von
 Beispiel-Entities (`src/services/hueSync.ts`), die über die Installationswerte auf eigene Entities umgelenkt wird (siehe
-unten).
+unten). Das Schnell-Popup jeder zugehörigen Lampe bietet „Sync stoppen“ oder „Weiterlaufen lassen“; Letzteres schließt
+nur das Popup. Nach dem Stoppen wartet die Oberfläche auf den tatsächlichen HA-Status. Bei inaktivem Sync lassen sich
+alle erreichbaren Sync-Lampen gemeinsam ein-/ausschalten, mit vier eingebauten Licht-Presets oder einer eigenen Farbe
+einstellen. HA-Szenen werden nur angeboten, wenn ihre explizite Entity-Liste ausschließlich Lampen dieser Zone enthält.
+„Sync starten“ verwendet den Light-Sync-Schalter und ist nur bei passender Bereichsauswahl verfügbar. Die Gruppenbefehle
+ändern keine weiteren Wohnzimmerlampen. Fehlende Lampen und fehlgeschlagene Befehle werden angezeigt.
 
 ### Rollos, Türen, Fenster und Schloss
 

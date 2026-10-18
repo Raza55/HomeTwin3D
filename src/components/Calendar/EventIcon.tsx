@@ -5,7 +5,7 @@ import {
 import type { EventKind } from '../../services/calendar/eventKinds';
 
 export const KIND_ICONS: Record<EventKind, LucideIcon> = {
-  exam: NotebookPen, free: Sun, doctor: Stethoscope, vaccine: Syringe, birthday: Cake, certificate: Award,
+  lk: NotebookPen, exam: NotebookPen, free: Sun, doctor: Stethoscope, vaccine: Syringe, birthday: Cake, certificate: Award,
   deadline: AlarmClock, work: Briefcase, parents: Users, sport: Trophy, trip: Bus, travel: Plane, culture: Drama,
   haircut: Scissors, shopping: ShoppingCart, food: Utensils, party: PartyPopper, car: Car, school: School,
 };

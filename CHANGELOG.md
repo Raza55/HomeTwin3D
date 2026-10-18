@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.77 · Kalender, Waschmaschinen-Restzeit und Hue Sync (18.10.2026)
+
+- Kalender: LK (Leistungskontrolle) mit ganztägigem Termin, fester Schülerzuordnung aus den Installationswerten (sonst eindeutiger Stundenplaninhaber), Fachauswahl aus dem Stundenplan und 0–15 Punkten. Klausuren und LK bieten „Clear“ zum dauerhaften Entfernen einer Note.
+
+- Laufende Waschmaschinen zeigen die verbleibende Zeit direkt unter ihrem Symbol.
+- Hue-Sync-Lampen bieten im Popup Stoppen, Weiterlaufenlassen und Starten sowie gemeinsame Ein-/Aus-Steuerung, Farben, Licht-Presets und passende HA-Szenen.
+
 ## 0.5.76 · Rollos schlafen und aufwachen (15.10.2026)
 
 - Alle Rollo-Popups bieten „Alle schlafen“ (Mond) zum Schließen und bei geschlossenen Rollos „Alle aufwachen“ (Sonne) zum Öffnen. Das Wohnzimmer-Balkonrollo bleibt in beiden Richtungen ausgenommen. Gemischte Stellungen bieten Schließen; während der Fahrt wartet der Button auf die Rückmeldung. Die Ausnahme folgt der privaten Installationszuordnung; fehlt sie im Modell, bleibt der Sammelbefehl gesperrt.

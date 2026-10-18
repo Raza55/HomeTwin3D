@@ -75,7 +75,7 @@ function toHaEvent(draft: EventDraft): Record<string, unknown> {
     dtstart: draft.allDay ? ymd(draft.start) : isoLocal(draft.start),
     dtend: draft.allDay ? ymd(draft.end) : isoLocal(draft.end),
   };
-  if (draft.description?.trim()) event.description = draft.description.trim();
+  if (draft.description !== undefined) event.description = draft.description.trim();
   if (draft.location?.trim()) event.location = draft.location.trim();
   if (draft.rrule) event.rrule = draft.rrule;
   return event;

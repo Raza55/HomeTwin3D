@@ -13,12 +13,14 @@ export interface InstallationConfig {
   mediaProxyTarget?: string;
   /** Who built this installation's board (shown in the day demo's intro). */
   author?: string;
+  /** Fixed owner of assessment events; kept with the private installation. */
+  calendarStudent?: string;
 }
 declare const __HOMETWIN_INSTALLATION__: InstallationConfig;
 
 const STORAGE_KEY = 'hometwin:installation';
 const built: InstallationConfig = typeof __HOMETWIN_INSTALLATION__ === 'undefined' ? {} : __HOMETWIN_INSTALLATION__;
-const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location || !!value.author;
+const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location || !!value.author || !!value.calendarStudent;
 
 function stored(): InstallationConfig {
   try {
@@ -51,13 +53,14 @@ export function sanitizeInstallation(value: unknown): InstallationConfig {
     result.location = { label: location.label.slice(0, 80), latitude: location.latitude as number, longitude: location.longitude as number };
   }
   if (typeof input.author === 'string' && input.author.trim()) result.author = input.author.trim().slice(0, 80);
+  if (typeof input.calendarStudent === 'string' && input.calendarStudent.trim()) result.calendarStudent = input.calendarStudent.trim().slice(0, 80);
   return result;
 }
 
 /** Values to publish with the shared installation (no LAN addresses: the media proxy target stays local). */
 export function publishableInstallation(): InstallationConfig | undefined {
-  const { entities, location, author } = installation;
-  return hasValues({ entities, location, author }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}), ...(author ? { author } : {}) } : undefined;
+  const { entities, location, author, calendarStudent } = installation;
+  return hasValues({ entities, location, author, calendarStudent }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}), ...(author ? { author } : {}), ...(calendarStudent ? { calendarStudent } : {}) } : undefined;
 }
 
 /**
@@ -73,7 +76,7 @@ export function storeInstallation(value: unknown): boolean {
   if (before === serialized) return false;
   localStorage.setItem(STORAGE_KEY, serialized);
   if (!hasValues(built)) {
-    delete installation.entities; delete installation.location; delete installation.author;
+    delete installation.entities; delete installation.location; delete installation.author; delete installation.calendarStudent;
     Object.assign(installation, next);
   }
   return true;

@@ -186,3 +186,25 @@ test('year dates: clock changes, seasons, moon phases and customs', () => {
   // 24 December on a Sunday is itself the fourth Advent (2028)
   assert.deepEqual(on(2028, '4. Advent'), ['2028-12-24']);
 });
+
+
+test('LK category and grade support', async () => {
+  const { eventKind, hasGrade } = await import('../src/services/calendar/eventKinds.ts');
+  assert.equal(eventKind('LK: Mathematik'), 'lk');
+  assert.equal(eventKind('Leistungskontrolle Englisch'), 'lk');
+  assert.equal(eventKind('Mathematik', 'lk'), 'lk');
+  assert.equal(eventKind('Walk'), undefined);
+  assert.equal(hasGrade('lk'), true);
+  assert.equal(hasGrade('exam'), true);
+  assert.equal(hasGrade('school'), false);
+});
+
+test('clearing the last metadata field sends an empty description to HA', async () => {
+  const { calendarBackend } = await import('../src/services/calendar/haCalendar.ts');
+  const calls = [];
+  const backend = calendarBackend({ subscribe() {}, request: async data => { calls.push(data); } });
+  await backend.update({ uid: 'exam-1', calendar: 'calendar.school' }, {
+    summary: 'Klausur', start: now, end: new Date(+now + 3600000), allDay: false, description: '',
+  });
+  assert.equal(calls[0].event.description, '');
+});

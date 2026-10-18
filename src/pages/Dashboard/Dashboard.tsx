@@ -14,7 +14,8 @@ import HomeWarnings from '../../components/HomeWarnings';
 import { isWaterLeakEntity } from '../../services/waterLeak';
 import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
-import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
+import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, isHueSyncMember, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
+import HueSyncControls from '../../components/HueSyncControls';
 import { coffeeAlertEntityIds } from '../../services/coffeeState';
 import { notifyEntityStates, isEntityStateWatched } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
@@ -2569,6 +2570,7 @@ export default function Dashboard() {
         {quickLight && quickMembers.length > 1 && <LightClusterControls key={quickMembers.map(l=>l.entityId).join('|')}
           label={isEnsis(quickMembers[0].label) ? 'Ensis · Tisch & Decke' : quickMembers[0].group ? configRef.current?.lightGroups?.find(g=>g.id===quickMembers[0].group)?.name ?? 'Leuchtengruppe' : /kueche|küche/i.test(quickMembers[0].label) ? 'Küchenspots' : 'Spotgruppe'}
           syncLocked={quickMembers.some(l=>isHueSyncLocked(l.entityId,lastStatesRef.current))}
+          syncControls={quickMembers.some(l=>isHueSyncMember(l.entityId)) && <HueSyncControls states={lastStatesRef.current} connected={haStatus === 'connected'} getConnection={()=>haRef.current} getStates={()=>lastStatesRef.current} onContinue={closeQuick}/>}
           members={quickMembers.map(l=>({entityId:l.entityId,label:l.label,state:lastStatesRef.current[l.entityId]??null}))}
           connected={haStatus === 'connected'} anchor={quickLight} onEdit={editQuickMapping}
           onClose={closeQuick} onEnter={cancelQuickTimer} onLeave={leaveQuick}
@@ -2581,6 +2583,7 @@ export default function Dashboard() {
         {quickLight && quickMembers.length <= 1 && <LightQuickControls key={quickLight.entityId}
           label={configRef.current?.lights.find(l => l.entityId === quickLight.entityId)?.label || quickLight.entityId}
           syncLocked={isHueSyncLocked(quickLight.entityId,lastStatesRef.current)}
+          syncControls={isHueSyncMember(quickLight.entityId) && <HueSyncControls states={lastStatesRef.current} connected={haStatus === 'connected'} getConnection={()=>haRef.current} getStates={()=>lastStatesRef.current} onContinue={closeQuick}/>}
           state={modalState} connected={haStatus === 'connected'} anchor={quickLight} onEdit={editQuickMapping}
           onClose={closeQuick} onEnter={cancelQuickTimer} onLeave={leaveQuick}
           onPin={() => setQuickLight(q => q ? { ...q, pinned: true } : q)}

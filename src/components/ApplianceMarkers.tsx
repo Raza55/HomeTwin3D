@@ -43,14 +43,16 @@ export default function ApplianceMarkers({scene,config,states,connected,onAssign
  return <>{objects.map(o=>{
   const a=o.appliance!,running=connected&&applianceRunning(a,states[o.entityId]);
   const rest=connected?applianceRemaining(states[a.remainingEntityId??'']):'';
+  const remainingLabel=running&&rest?`Restzeit: ${rest}`:'';
   const program=connected?applianceDetail(states[a.programEntityId??'']):'';
   const ready=connected&&states[o.entityId]?.state==='off';
   // Kept by HA until the door opens or the machine is switched off; the popup can acknowledge a helper.
   const finished=connected&&!running&&!!a.finishedEntityId&&states[a.finishedEntityId]?.state==='on';
   const status=!o.entityId?'Noch nicht zugeordnet':!connected?'Nicht verbunden':running?'Läuft':finished?'Fertig, bitte ausräumen':ready?'Bereit / aus':'Kein Betriebssignal';
   return <div key={o.id}>
-   <button className={`appliance-marker ${running?'is-running':finished?'is-finished':ready?'is-ready':'is-unknown'} ${open===o.id?'is-open':''}`} ref={el=>{refs.current[o.id]=el;}} onClick={()=>setOpen(open===o.id?null:o.id)} aria-label={`${o.label} anzeigen`} aria-expanded={open===o.id} aria-haspopup="dialog" title={`${o.label} · ${status}`}>
+   <button className={`appliance-marker ${running?'is-running':finished?'is-finished':ready?'is-ready':'is-unknown'} ${open===o.id?'is-open':''}`} ref={el=>{refs.current[o.id]=el;}} onClick={()=>setOpen(open===o.id?null:o.id)} aria-label={`${o.label} anzeigen${remainingLabel?` · ${remainingLabel}`:''}`} aria-expanded={open===o.id} aria-haspopup="dialog" title={`${o.label} · ${status}${remainingLabel?` · ${remainingLabel}`:''}`}>
     <WashingMachine size={18}/>{!o.entityId&&<span className="appliance-plus">+</span>}{finished&&<span className="appliance-finished-label">Fertig</span>}
+    {remainingLabel&&<span className="appliance-remaining-label">{rest}</span>}
    </button>
    {open===o.id&&<section className="appliance-popup" ref={popup} role="dialog" aria-label={o.label}>
     <header><WashingMachine size={18}/><strong>{o.label}</strong><button aria-label="Zuordnung bearbeiten" title="Zuordnung bearbeiten" onClick={()=>{setOpen(null);onAssign(o.id);}}><Pencil size={15}/></button><button aria-label="Geräteinfo schließen" onClick={()=>setOpen(null)}><X size={17}/></button></header>

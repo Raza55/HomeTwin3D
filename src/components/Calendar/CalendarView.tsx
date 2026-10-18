@@ -3,11 +3,11 @@ import { ChevronLeft, ChevronRight, Clock3, Circle, MapPin, Moon, Plus, Repeat, 
 import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, weekViewStart, ymd } from '../../services/calendar/dates';
 import type { CalEvent } from '../../services/calendar/haCalendar';
-import { gradeTone, isExam, personInitials, readMeta } from '../../services/calendar/eventMeta';
+import { gradeTone, personInitials, readMeta } from '../../services/calendar/eventMeta';
 import { buildProfiles, loadLocalSamples } from '../../services/calendar/learning';
 import { loadCalendarPrefs, saveCalendarPrefs, type CalendarPrefs } from '../../services/calendar/prefs';
 import { refreshSchoolHolidays, schoolHolidays } from '../../services/calendar/schoolHolidays';
-import { eventKind } from '../../services/calendar/eventKinds';
+import { eventKind, hasGrade } from '../../services/calendar/eventKinds';
 import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
 import EventIcon from './EventIcon';
 import MonthArt from './MonthArt';
@@ -170,12 +170,12 @@ export default function CalendarView({ onClose }: Props) {
     })();
 
   const kindOf = useCallback((e: CalEvent) => eventKind(e.summary, readMeta(e.description).symbol), []);
-  const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && kindOf(e) === 'exam', [prefs.highlightExams, kindOf]);
+  const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && hasGrade(kindOf(e)), [prefs.highlightExams, kindOf]);
   const colorOf = (e: CalEvent) => (examMarked(e) ? prefs.examColor : calendarColor(calendarIds, e.calendar));
   const timeLabel = (e: CalEvent) => e.allDay ? t('calendar.allDay') : `${hhmm(minutesOfDay(e.start))}–${hhmm(minutesOfDay(e.end))}`;
   const editable = (e: CalEvent) => !!e.uid && !!calendars.find(c => c.entityId === e.calendar)?.canUpdate;
   const gradeBadge = (e: CalEvent) => {
-    const points = kindOf(e) === 'exam' ? readMeta(e.description).grade : undefined;
+    const points = hasGrade(kindOf(e)) ? readMeta(e.description).grade : undefined;
     const ps = personsOf(e);
     return (
       <>
@@ -452,7 +452,7 @@ export default function CalendarView({ onClose }: Props) {
         <EventEditor request={editor} backend={backend} calendars={writable}
           defaultCalendar={writable.some(c => c.entityId === prefs.defaultCalendar) ? prefs.defaultCalendar! : writable[0]?.entityId}
           calendarColor={id => calendarColor(calendarIds, id)} profiles={profiles}
-          persons={persons} defaultPersons={activeFilter} personColor={personColor}
+          lessons={allLessons} persons={persons} defaultPersons={activeFilter} personColor={personColor}
           onClose={() => setEditor(null)}
           onSaved={(date, saved) => {
             setEditor(null);
@@ -604,7 +604,7 @@ function WeekView({ weekStart, lessonsFor, lessonColor, lessonLabel, kindOf, exa
               {allDay.map(e => (
                 <button type="button" key={`${e.calendar}|${e.uid}|${e.recurrenceId}`} className={`cal-chip all-day${examMarked(e) ? ' exam' : ''}`} style={{ ['--event-color' as string]: colorOf(e) }} onClick={() => onOpen(e)}>
                   <EventIcon kind={kindOf(e)} size={12} />
-                  <span className="cal-chip-title">{e.summary}</span>
+                  <span className="cal-chip-title">{e.summary}</span>{gradeBadge(e)}
                 </button>
               ))}
             </div>

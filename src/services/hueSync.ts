@@ -5,6 +5,7 @@ export const HUE_SYNC_COLOR = '#f6b8d5';
 export const HUE_SYNC_SWITCH = installationEntity('switch.media_sync');
 export const HUE_SYNC_AREA = installationEntity('select.media_sync_area');
 export const HUE_SYNC_BRIGHTNESS = installationEntity('number.media_sync_brightness');
+export const HUE_SYNC_AREA_NAME = 'TV-Bereich 2';
 // Example membership; configure local entities for your entertainment area.
 // Keep membership scoped to the selected entertainment area, not the HA room.
 export const HUE_SYNC_MEMBERS = [
@@ -17,10 +18,24 @@ export const HUE_SYNC_MEMBERS = [
 
 export function isHueSyncLocked(entityId: string, states: Record<string, HAState>): boolean {
   return states[HUE_SYNC_SWITCH]?.state === 'on'
-    && states[HUE_SYNC_AREA]?.state === 'TV-Bereich 2'
+    && states[HUE_SYNC_AREA]?.state === HUE_SYNC_AREA_NAME
     && (HUE_SYNC_MEMBERS as readonly string[]).includes(entityId)
     && !!states[entityId]
     && !['unavailable', 'unknown'].includes(states[entityId].state);
+}
+
+export function isHueSyncMember(entityId: string): boolean {
+  return (HUE_SYNC_MEMBERS as readonly string[]).includes(entityId);
+}
+
+/** Only scenes with explicit, wholly contained membership may affect this zone. */
+export function hueSyncScenes(states: Record<string, HAState>): HAState[] {
+  return Object.values(states).filter(s => {
+    const ids = s.attributes.entity_id;
+    return s.entity_id.startsWith('scene.') && !['unknown', 'unavailable'].includes(s.state)
+      && Array.isArray(ids) && ids.length > 0
+      && ids.every(id => typeof id === 'string' && isHueSyncMember(id));
+  });
 }
 
 /** Presentation only: never write synthetic colour/state into the HA cache. */

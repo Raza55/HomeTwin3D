@@ -4,6 +4,7 @@
  */
 
 export const EVENT_KINDS = [
+  { key: 'lk', match: /\blk\b|leistungskontrolle/i },
   { key: 'exam', match: /klausur|klassenarbeit|kursarbeit|\btest\b|prüfung/i },
   { key: 'free', match: /unterrichtsfrei|ferientag|schulfrei/i },
   { key: 'doctor', match: /arzt|ärztin|praxis|klinik|krankenhaus|physio|kieferorthop|untersuchung/i },
@@ -38,4 +39,8 @@ export function eventKind(summary: string, chosen?: string): EventKind | undefin
   if (chosen === 'none') return undefined;
   if (chosen && KEYS.has(chosen)) return chosen as EventKind;
   return kindFromTitle(summary);
+}
+
+export function hasGrade(kind: EventKind | undefined): boolean {
+  return kind === 'exam' || kind === 'lk';
 }

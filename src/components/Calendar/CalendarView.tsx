@@ -11,6 +11,7 @@ import { eventKind, hasGrade } from '../../services/calendar/eventKinds';
 import { lessonTitle, schoolLessons } from '../../services/calendar/timetable';
 import EventIcon from './EventIcon';
 import MonthArt from './MonthArt';
+import ImmichPictures, { useImmichPictures } from './ImmichPictures';
 import MonthPictures, { useMonthPictures } from './MonthPictures';
 import { calendarColor, indexByDay, layoutDay, makeMarks, type DayMarks } from './calendarModel';
 import EventEditor, { type EditorRequest } from './EventEditor';
@@ -45,7 +46,8 @@ export default function CalendarView({ onClose }: Props) {
     return () => clearInterval(timer);
   }, []);
   const monthPictures = useMonthPictures();
-  const picture = monthPictures.pictures[focus.getMonth()];
+  const immich = useImmichPictures(!!prefs.immichEnabled, prefs.immichInterval ?? 30);
+  const picture = immich.photo?.current ?? monthPictures.pictures[focus.getMonth()];
 
   const updatePrefs = useCallback((patch: Partial<CalendarPrefs>) => {
     setPrefs(prev => {
@@ -285,7 +287,8 @@ export default function CalendarView({ onClose }: Props) {
       {backend && !backend.live && <div className="cal-status cal-status-demo">{t('calendar.demo')}</div>}
 
       {view !== 'year' && picture && <figure className={`cal-picture-banner ${prefs.pictureSize}`}>
-        <img src={picture} alt={fmt.monthName.format(focus)} style={{ objectFit: prefs.pictureFit }} />
+        {immich.photo?.previous && <img className="cal-photo-previous" src={immich.photo.previous} alt="" aria-hidden="true" style={{ objectFit: prefs.pictureFit }} />}
+        <img key={picture} className={immich.photo ? 'cal-photo-enter' : undefined} src={picture} alt={immich.photo ? t('calendar.immichPhoto') : fmt.monthName.format(focus)} style={{ objectFit: prefs.pictureFit }} />
         <figcaption>{fmt.monthName.format(focus)}</figcaption>
       </figure>}
       <div className={`cal-body cal-body-${view}`} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = null; }}>
@@ -388,6 +391,7 @@ export default function CalendarView({ onClose }: Props) {
           <label className="cal-field">{t('calendar.pictureFit')}<select aria-label={t('calendar.pictureFit')} value={prefs.pictureFit} onChange={e => updatePrefs({ pictureFit: e.target.value as CalendarPrefs['pictureFit'] })}>
             <option value="cover">{t('calendar.pictureCover')}</option><option value="contain">{t('calendar.pictureContain')}</option>
           </select></label>
+          <ImmichPictures prefs={prefs} onChange={updatePrefs} state={immich} />
           <MonthPictures initialMonth={focus.getMonth()} state={monthPictures} />
           <div className="cal-settings-title">{t('calendar.regions')}</div>
           <RegionPicker prefs={prefs} onChange={updatePrefs} compact />

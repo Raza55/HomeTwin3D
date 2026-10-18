@@ -23,6 +23,7 @@ jobs:
       - run: npm run privacy:check
       - run: npm run test:privacy
       - run: npm run typecheck
+      - run: npm run test:immich
       - run: npm run test:floorplan
       - run: npm run test:balcony
       - run: npm run test:coffee

@@ -1,6 +1,6 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.5.77"
+version: "0.5.78"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
@@ -31,3 +31,6 @@ schema:
   calendar_api_token: "password?"
   calendar_feed_token: "password?"
   calendar_api_default: "str?"
+  immich_url: "url?"
+  immich_api_key: "password?"
+  immich_album_id: "str?"

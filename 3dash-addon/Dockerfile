@@ -40,3 +40,8 @@ RUN chmod +x /etc/services.d/nginx/run
 COPY calendar-api.mjs /opt/hometwin/calendar-api.mjs
 COPY calendar-api-run.sh /etc/services.d/calendar-api/run
 RUN chmod +x /etc/services.d/calendar-api/run
+
+# Private album photos, authenticated with the viewer's Home Assistant session.
+COPY immich-api.mjs /opt/hometwin/immich-api.mjs
+COPY immich-api-run.sh /etc/services.d/immich-api/run
+RUN chmod +x /etc/services.d/immich-api/run

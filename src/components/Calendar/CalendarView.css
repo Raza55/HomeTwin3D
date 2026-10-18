@@ -599,3 +599,8 @@
 .cal-agenda-item { grid-template-columns: 88px minmax(0, 1fr); }
 .cal-next .cal-agenda-item { grid-template-columns: 1fr; }
 .cal-next .cal-agenda-loc { grid-column: 1; }
+
+.cal-picture-banner .cal-photo-previous { position: absolute; inset: 0; }
+.cal-picture-banner .cal-photo-enter { position: relative; animation: cal-photo-fade .8s ease both; }
+@keyframes cal-photo-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cal-picture-banner .cal-photo-enter { animation: none; } }

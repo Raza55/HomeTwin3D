@@ -159,3 +159,25 @@ Einzelheiten zu Geräten, Medien und Warnungen: [Geräte und Warnungen](../docs/
 - [Energiefluss, Tagesdemo, Tiere und Markierungsfilter](../docs/ENERGY_DEMO_WILDLIFE.md)
 - [Funktionen, Grenzen und Technik](../PROJECT_STATUS.md)
 - [Fehler und Vorschläge](https://github.com/Raza55/HomeTwin3D/issues)
+
+
+## Private Immich-Album-Diashow
+
+Ab 0.5.78 kann die Bildfläche im Kalender zufällige Fotos aus genau einem freigegebenen Immich-Album anzeigen.
+
+1. In Immich ein Album für den Kalender anlegen und die gewünschten Fotos hinzufügen.
+2. In den Immich-Kontoeinstellungen einen API-Key mit `album.read`, `asset.read` und `asset.view` anlegen. Schreib-, Lösch- und Adminrechte werden nicht benötigt. Der Key muss Zugriff auf das gewünschte Album haben. Für eine zusätzliche Begrenzung kann ein eigener Immich-Nutzer verwendet werden, mit dem nur dieses Album geteilt wird.
+3. Unter **Home Assistant → Einstellungen → Add-ons → HomeTwin3D → Konfiguration** die optionalen Felder einblenden und setzen:
+   - `immich_url`: die Immich-Adresse, z. B. `https://photos.example.com` (mit oder ohne `/api`).
+   - `immich_api_key`: den Key im Passwortfeld eintragen.
+   - `immich_album_id`: die UUID aus der Albumadresse `/albums/<UUID>`; nicht den Albumtitel oder einen öffentlichen Freigabelink.
+4. Speichern und das Add-on neu starten.
+5. Im Kalender unter Einstellungen → **Immich → Album-Diashow verwenden** einschalten. Bildwechsel: 10, 30, 60 oder 300 Sekunden. Bildgröße und Einpassen/Ausfüllen gelten auch für die Diashow.
+
+Der Browser muss wie gewohnt mit Home Assistant verbunden sein. Die Bildschnittstelle prüft seinen vorhandenen HA-Token; der Immich-Key bleibt im Add-on. Ohne Anmeldung werden weder Albuminformationen noch Bilder geliefert. Alle angemeldeten Nutzer dieser HA-Instanz können das konfigurierte Album sehen.
+
+Die Bridge verwendet ausschließlich das konfigurierte Album und Immich-Vorschaubilder. Sie bietet keine freie URL-/Asset-Abfrage, folgt keinen Weiterleitungen und sendet keine Immich-Fehlertexte, EXIF-Datensätze oder Originaldateinamen an den Browser. Die Fotos werden nur im Arbeitsspeicher gehalten und mit `no-store` ausgeliefert; sie werden nicht in gemeinsame Modell-Exporte oder Git übernommen. Die Add-on-Konfiguration mit dem Key ist Teil privater Home-Assistant-Backups.
+
+Bei leerem Album, fehlender Freigabe oder Netzwerkfehler bleibt das lokale Monatsbild als Ersatz. Bei nicht eingerichteter Verbindung oder ungültiger HA-Anmeldung endet die automatische Wiederholung; nach der Korrektur **Neu laden / nächstes Bild** wählen. In versteckten Browser-Tabs pausiert die Diashow. Videos werden übersprungen.
+
+Die Bridge verwendet `GET /albums/{id}`, `POST /search/random` mit festem `albumIds`-Filter und `GET /assets/{id}/thumbnail?size=preview` aus der [Immich-API](https://api.immich.app/). Die echte Albumfreigabe lässt sich erst mit dem privat eingetragenen Schlüssel prüfen.

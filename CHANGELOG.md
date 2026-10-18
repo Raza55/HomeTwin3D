@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.78 · Private Immich-Album-Diashow (18.10.2026)
+
+- Kalenderbilder können automatisch aus einem freigegebenen Immich-Album wechseln. Zufällige Auswahl, Überblendung, wählbares Intervall und Monatsbild als Ersatz bei Fehlern.
+- Immich-Adresse, API-Key und Album-ID bleiben in der privaten Add-on-Konfiguration. Die Bildschnittstelle verlangt eine HA-Anmeldung und begrenzt alle Abrufe auf das konfigurierte Album.
+
 ## 0.5.77 · Kalender, Waschmaschinen-Restzeit und Hue Sync (18.10.2026)
 
 - Kalender: LK (Leistungskontrolle) mit ganztägigem Termin, fester Schülerzuordnung aus den Installationswerten (sonst eindeutiger Stundenplaninhaber), Fachauswahl aus dem Stundenplan und 0–15 Punkten. Klausuren und LK bieten „Clear“ zum dauerhaften Entfernen einer Note.

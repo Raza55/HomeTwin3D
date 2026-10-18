@@ -13,6 +13,8 @@ export interface CalendarPrefs {
   hiddenCalendars: string[];
   view: 'year' | 'month' | 'week' | 'agenda';
   pictureSize: 'compact' | 'large';
+  immichEnabled?: boolean;
+  immichInterval?: number;
   pictureFit: 'contain' | 'cover';
   timetableExpanded: boolean;
   /** People added on this device (others come from the events' "Für:" lines). */

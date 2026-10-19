@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.85 · Sauberer Wechsel der Kalenderfotos (19.10.2026)
+
+- Beim Diashow-Wechsel wird die vorige Bildebene vollständig entfernt und ihre Bild-URL freigegeben. Bei unterschiedlichen Bildformaten bleiben dadurch keine alten Bildränder sichtbar.
+- Neue Fotos werden weiterhin vor der Anzeige vollständig geladen und dekodiert.
+
 ## 0.5.84 · Kalenderfotos im Kopfbereich und Hintergrund (19.10.2026)
 
 - Immich-Fotos und lokale Monatsbilder können wie bisher als Bildstreifen, im Kopfbereich, als Kalenderhintergrund oder in beiden Bereichen erscheinen.

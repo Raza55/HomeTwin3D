@@ -4,14 +4,14 @@ import { getSetting } from '../../services/settingsStore';
 import type { CalendarPrefs } from '../../services/calendar/prefs';
 
 export function useImmichPictures(enabled: boolean, seconds: number) {
-  const [photo, setPhoto] = useState<{ current: string; previous?: string }>();
+  const [photo, setPhoto] = useState<{ current: string }>();
   const [album, setAlbum] = useState('');
   const [error, setError] = useState('');
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (!enabled) { setPhoto(undefined); setError(''); setAlbum(''); return; }
     setPhoto(undefined); setAlbum(''); setError('');
-    let stopped = false, busy = false, previousId = '', currentUrl = '', oldUrl = '';
+    let stopped = false, busy = false, previousId = '', currentUrl = '';
     let timer: ReturnType<typeof setTimeout>;
     const controller = new AbortController();
     const request = async (path: string) => {
@@ -29,8 +29,7 @@ export function useImmichPictures(enabled: boolean, seconds: number) {
     };
     const clear = () => {
       if (currentUrl) URL.revokeObjectURL(currentUrl);
-      if (oldUrl) URL.revokeObjectURL(oldUrl);
-      currentUrl = oldUrl = '';
+      currentUrl = '';
     };
     const load = async () => {
       if (stopped || busy || document.hidden) return;
@@ -47,10 +46,10 @@ export function useImmichPictures(enabled: boolean, seconds: number) {
         try { const image = new Image(); image.src = url; await image.decode(); }
         catch { URL.revokeObjectURL(url); throw Error('unavailable'); }
         if (stopped) { URL.revokeObjectURL(url); return; }
-        if (oldUrl) URL.revokeObjectURL(oldUrl);
-        oldUrl = currentUrl; currentUrl = url;
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        currentUrl = url;
         previousId = response.headers.get('x-photo-id') ?? '';
-        setPhoto({ current: currentUrl, previous: oldUrl || undefined });
+        setPhoto({ current: currentUrl });
         setAlbum(String(info.albumName ?? '')); setError('');
       } catch (e) {
         if (!stopped) {

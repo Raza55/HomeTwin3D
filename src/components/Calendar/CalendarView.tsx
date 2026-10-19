@@ -53,7 +53,6 @@ export default function CalendarView({ onClose }: Props) {
   const photoHeader = !!picture && ['header', 'both'].includes(prefs.picturePlacement);
   const photoBackground = !!picture && ['background', 'both'].includes(prefs.picturePlacement);
   const decorativePhoto = (className: string) => <div className={className} aria-hidden="true">
-    {immich.photo?.previous && <img className="cal-photo-previous" src={immich.photo.previous} alt="" style={{ objectFit: prefs.pictureFit }} />}
     <img key={picture} className={immich.photo ? 'cal-photo-enter' : undefined} src={picture} alt="" style={{ objectFit: prefs.pictureFit }} />
   </div>;
 
@@ -306,7 +305,6 @@ export default function CalendarView({ onClose }: Props) {
       {backend && !backend.live && <div className="cal-status cal-status-demo">{t('calendar.demo')}</div>}
 
       {view !== 'year' && picture && prefs.picturePlacement === 'banner' && <figure className={`cal-picture-banner ${prefs.pictureSize}`}>
-        {immich.photo?.previous && <img className="cal-photo-previous" src={immich.photo.previous} alt="" aria-hidden="true" style={{ objectFit: prefs.pictureFit }} />}
         <img key={picture} className={immich.photo ? 'cal-photo-enter' : undefined} src={picture} alt={immich.photo ? t('calendar.immichPhoto') : fmt.monthName.format(focus)} style={{ objectFit: prefs.pictureFit }} />
         <figcaption>{fmt.monthName.format(focus)}</figcaption>
       </figure>}

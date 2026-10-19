@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import {
   CalendarDays,
+  ShoppingCart,
   Cloud,
   CloudOff,
   CloudRain,
@@ -33,6 +34,7 @@ interface Props {
   onSettings?: () => void;
   /** Opens the calendar (tap on the date). */
   onCalendar?: () => void;
+  onShopping?: () => void;
   viewControls?: ReactNode;
   markerFilters?: ReactNode;
   latitude: number;
@@ -85,6 +87,7 @@ export default function HUD({
   onHomeStatus,
   onSettings,
   onCalendar,
+  onShopping,
   viewControls,
   markerFilters,
   latitude,
@@ -229,6 +232,7 @@ export default function HUD({
             <img className={`hud-logo hud-logo--${homeStatus}`} src={`${import.meta.env.BASE_URL}favicon/dark/favicon.svg`} alt="" draggable={false} />
           </button>
           {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
+          {onShopping && <button type="button" className="hud-settings hud-shopping" onClick={onShopping} aria-label={language.startsWith('de') ? 'Einkaufsliste öffnen' : 'Open shopping list'} title={language.startsWith('de') ? 'Einkaufsliste' : 'Shopping list'}><ShoppingCart size={21} aria-hidden="true" /></button>}
           {(simulationMode || demoMode) && (
             <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>
           )}

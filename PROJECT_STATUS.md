@@ -27,6 +27,19 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Einkaufsliste
+
+- Automatische Gruppierung in elf Warengruppen mit Icons. Mengen bleiben im Artikelnamen erhalten; lokale Korrekturen über das Etikett werden auch bei anderen Mengen wiederverwendet und können auf Automatik zurückgesetzt werden. Unbekannte Produkte stehen unter Sonstiges; Zuordnungen werden nicht mit Google synchronisiert.
+- Einkaufsmodus blendet Eingabe, Vorschläge und Einstellungen aus und vergrößert Abhakflächen. Fortschritt zählt alle offenen und erledigten Einträge der ausgewählten Liste, keine gesonderten Einkaufstouren.
+
+- Einkaufswagen neben den Einstellungen öffnet `#/shopping`. Die direkte Route benötigt keine 3D-Szene und lässt sich auf dem Smartphone als Lesezeichen öffnen.
+- Artikel per Text, Komma-/Zeilenliste oder optionaler Browser-Spracherkennung hinzufügen. Auf iPad/iPhone kann das systemeigene Tastatur-Diktat verwendet werden. Browser-Diktat benötigt HTTPS, Unterstützung und Mikrofonfreigabe; Text wird vor dem Speichern geprüft.
+- Große Abhakflächen, aufklappbare erledigte Artikel und erneutes Hinzufügen ohne offene Doppeleinträge. Vorschläge lernen pro Browser und Liste aus erfolgreichen Eingaben; diese Historie bleibt lokal.
+- Auswahl vorhandener `todo`-Entities über die HA-Verbindung des Browsers. Google-Konto über **Einstellungen → Geräte & Dienste → Google Tasks** in HA autorisieren und auf allen Geräten dieselbe Liste auswählen. Einrichtung: https://www.home-assistant.io/integrations/google_tasks/.
+- Google Tasks erhält Änderungen aus HA unmittelbar; externe Änderungen pollt die Integration standardmäßig alle 30 Minuten. Der Aktualisieren-Button fordert `homeassistant.update_entity` an. Die geöffnete Ansicht liest den HA-Stand alle 15 Sekunden und nach Änderungen neu.
+- Offline bleibt ein gespeicherter Stand lesbar, Online-Änderungen sind ohne Verbindung gesperrt. Keine Offline-Warteschlange. Die explizite lokale Liste bleibt gerätegebunden; Listenwechsel übertragen keine Inhalte. Unterwegs wird ein erreichbarer HA-Zugang benötigt.
+- Prüfung: `npm run test:shopping`; Browserprüfung mit simuliertem HA für Hinzufügen, UID-basiertes Abhaken, Fehler und nicht verfügbare Listen. Reales iPad-Diktat und echter Google-OAuth-Abgleich benötigen einen Gerätetest.
+
 ### Kalender: Immich-Bilder
 
 - Optionale Album-Diashow über die private Add-on-Konfiguration (`immich_url`, `immich_api_key`, `immich_album_id`). API-Schlüssel bleiben auf dem Server, jeder Bildabruf erfordert einen gültigen HA-Token.

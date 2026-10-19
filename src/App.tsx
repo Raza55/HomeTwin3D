@@ -12,6 +12,7 @@ import { joinedSharedInstallation } from './services/sharedStore';
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
 const ConfigEditor = lazy(() => import('./pages/ConfigEditor/ConfigEditor'));
 const Onboarding = lazy(() => import('./pages/Onboarding/Onboarding'));
+const ShoppingPage = lazy(() => import('./components/Shopping/ShoppingPage'));
 const loading = <div className="app-loading" role="status">HomeTwin3D …</div>;
 
 function AppRoutes() {
@@ -28,12 +29,13 @@ function AppRoutes() {
 
   // Redirect to onboarding if not completed and not already there
   // (simulation mode bypasses onboarding)
-  if (!onboardingDone && !simulationMode && location.pathname !== '/onboarding') {
+  if (!onboardingDone && !simulationMode && location.pathname !== '/onboarding' && location.pathname !== '/shopping') {
     return <Navigate to="/onboarding" replace />;
   }
 
   return (
     <Routes>
+      <Route path="/shopping" element={<Suspense fallback={loading}><ShoppingPage /></Suspense>} />
       <Route path="/" element={<Suspense fallback={loading}><Dashboard /></Suspense>} />
       <Route path="/editor" element={<Suspense fallback={loading}><ConfigEditor /></Suspense>} />
       <Route path="/onboarding" element={<Suspense fallback={loading}><Onboarding /></Suspense>} />

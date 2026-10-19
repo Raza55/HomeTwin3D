@@ -1,5 +1,15 @@
 # Änderungsverlauf
 
+## 0.5.86 · Einkaufsliste mit Warengruppen (19.10.2026)
+
+- Automatische Warengruppen mit farbigen Icons und Artikelanzahl; manuelle Korrekturen werden pro Liste und Gerät auch für geänderte Mengen gemerkt.
+- Einkaufsmodus mit großen Abhakflächen und ausgeblendeter Eingabe sowie Fortschrittsanzeige für die ausgewählte Liste. Artikelvorschläge tragen passende Warengruppen-Icons.
+
+- Einkaufswagen im Board öffnet eine eigenständige, für Smartphone und Tablet ausgelegte Einkaufsliste unter `#/shopping`, ohne die 3D-Ansicht zu laden.
+- Schnelle Mehrfacheingabe, Browser-Diktat mit Tastatur-Diktat als Alternative, große Abhakflächen und erneutes Hinzufügen erledigter Artikel.
+- Artikelvorschläge lernen aus erfolgreichen Eingaben pro Gerät und Liste. Offene Doppeleinträge werden vermieden.
+- Vorhandene Home-Assistant-Aufgabenlisten können ausgewählt werden; Google-Abgleich über die Google-Tasks-Integration. Alternativ explizite lokale Liste. Gespeicherte Online-Listen bleiben offline lesbar, Änderungen sind dann gesperrt.
+
 ## 0.5.85 · Sauberer Wechsel der Kalenderfotos (19.10.2026)
 
 - Beim Diashow-Wechsel wird die vorige Bildebene vollständig entfernt und ihre Bild-URL freigegeben. Bei unterschiedlichen Bildformaten bleiben dadurch keine alten Bildränder sichtbar.

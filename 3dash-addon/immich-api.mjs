@@ -42,7 +42,10 @@ export function createImmichHandler({ url = '', key = '', albumId = '', fetchImp
     active++;
     try {
       const authorization = req.headers.authorization;
-      if (!authorization?.startsWith('Bearer ') || !await authenticate(authorization)) return reply(401, { error: 'authentication' });
+      if (!authorization?.startsWith('Bearer ') || !authorization.slice(7).trim()) return reply(401, { error: 'authentication', reason: 'missing_authorization' });
+      const authenticated = await authenticate(authorization);
+      if (authenticated === null) return reply(503, { error: 'unavailable', reason: 'ha_unavailable' });
+      if (!authenticated) return reply(401, { error: 'authentication', reason: 'token_rejected' });
       if (!configured) return reply(503, { error: 'not_configured' });
       if (request.pathname.endsWith('/status')) {
         const album = await json('/albums/' + albumId);
@@ -67,14 +70,26 @@ export function createImmichHandler({ url = '', key = '', albumId = '', fetchImp
     } finally { active--; }
   };
 }
-export async function authenticateHA(authorization) {
+let lastAuthDiagnostic = 0;
+function authDiagnostic(reason) {
+  if (Date.now() - lastAuthDiagnostic < 60000) return;
+  lastAuthDiagnostic = Date.now();
+  console.warn('[immich-api] HA authentication check: ' + reason);
+}
+export async function authenticateHA(authorization, fetchImpl = fetch, report = authDiagnostic) {
   try {
-    const response = await fetch('http://homeassistant:8123/api/', {
+    const response = await fetchImpl('http://homeassistant:8123/api/', {
       headers: { Authorization: authorization }, redirect: 'error', signal: AbortSignal.timeout(5000),
     });
     await response.body?.cancel();
-    return response.ok;
-  } catch { return false; }
+    if (response.ok) return true;
+    report('HTTP ' + response.status);
+    return [401, 403].includes(response.status) ? false : null;
+  } catch (error) {
+    const code = error?.cause?.code ?? error?.code ?? error?.name;
+    report(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'TimeoutError'].includes(code) ? code : 'connection_failed');
+    return null;
+  }
 }
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   http.createServer(createImmichHandler({

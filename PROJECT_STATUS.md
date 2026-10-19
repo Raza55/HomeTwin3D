@@ -6,6 +6,8 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- Immich: Die HA-Prüfung unterscheidet ungültige Anmeldung (401) und nicht verfügbare Validierung (503). In beiden Fällen bleiben Fotos gesperrt; Diagnosemeldungen enthalten keine Zugangsdaten.
+
 - Wiederholungen: täglich, wöchentlich, monatlich oder jährlich mit ganzzahligem Intervall ab 1. Weitere vorhandene RRULE-Klauseln bleiben bei einer reinen Intervalländerung erhalten.
 
 - Kalender: `calendarOwners` in den privaten Installationswerten ordnet Kalender-Entities Personen zu, ohne Quelldaten zu verändern. Verknüpfte Kopien (Ref/UID und Beginn) werden in der Anzeige zusammengeführt. Der Google-Kalender unterstützt über die derzeitige HA-Anbindung Lesen und Anlegen, aber keine Änderungen vorhandener Termine; ein vollständiger beidseitiger Hintergrundabgleich ist nicht implementiert.

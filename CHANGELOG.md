@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.82 · Immich-Verbindungsdiagnose (19.10.2026)
+
+- Die Bildschnittstelle unterscheidet fehlende Anmeldung, abgelehnte Zugangsdaten und eine nicht erreichbare HA-Prüfung. Verbindungsfehler werden nicht mehr als falsche Anmeldung gemeldet.
+- Gedrosselte Diagnosemeldungen enthalten ausschließlich HTTP-Status oder festgelegte Fehlercodes, keine Zugangsdaten oder Serveradressen.
+
 ## 0.5.81 · Wiederholungsintervalle (19.10.2026)
 
 - Im Termin-Dialog sind tägliche Wiederholungen und frei wählbare Intervalle verfügbar, etwa alle zwei Wochen oder alle drei Monate.

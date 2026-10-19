@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { createImmichHandler } from '../3dash-addon/immich-api.mjs';
+import { createImmichHandler, authenticateHA } from '../3dash-addon/immich-api.mjs';
 const albumId = '11111111-1111-4111-8111-111111111111';
 const first = '22222222-2222-4222-8222-222222222222';
 const second = '33333333-3333-4333-8333-333333333333';
@@ -74,4 +74,30 @@ test('upstream failures are redacted and non-image responses rejected', async t 
 test('oversized previews are rejected', async t => {
   const { request } = await fixture(t, { fetchImpl: async url => url.endsWith('/search/random') ? json([{ id: first, type: 'IMAGE' }]) : new Response('small body', { headers: { 'content-type': 'image/jpeg', 'content-length': String(13 * 1024 * 1024) } }) });
   assert.equal((await request('image')).status, 502);
+});
+
+
+test('HA authentication distinguishes rejected credentials from unavailable validation', async () => {
+  for (const [status, expected] of [[200, true], [401, false], [403, false], [404, null], [500, null]]) {
+    const messages = [];
+    const result = await authenticateHA('Bearer test-only', async (url, init) => {
+      assert.equal(url, 'http://homeassistant:8123/api/');
+      assert.equal(init.headers.Authorization, 'Bearer test-only');
+      assert.equal(init.redirect, 'error');
+      return new Response('', { status });
+    }, message => messages.push(message));
+    assert.equal(result, expected);
+    assert.deepEqual(messages, status === 200 ? [] : ['HTTP ' + status]);
+  }
+  const messages = [];
+  assert.equal(await authenticateHA('Bearer test-only', async () => { throw Error('private credential and host'); }, m => messages.push(m)), null);
+  assert.deepEqual(messages, ['connection_failed']);
+});
+
+test('unavailable HA validation fails closed without reading Immich', async t => {
+  const { calls, request } = await fixture(t, { authenticate: async () => null });
+  const response = await request('status');
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: 'unavailable', reason: 'ha_unavailable' });
+  assert.equal(calls.length, 0);
 });

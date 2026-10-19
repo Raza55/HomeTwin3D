@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getActiveHAConnection, type HALike } from '../../services/haWebSocket';
 import { calendarBackend, type CalEvent, type CalendarBackend, type CalendarInfo } from '../../services/calendar/haCalendar';
+import { installation } from '../../services/installationConfig';
+import { presentCalendarEvents } from '../../services/calendar/presentation';
 
 /** The active HA connection, followed while the Dashboard (re)connects or switches to demo. */
 export function useActiveConnection(): HALike | null {
@@ -58,7 +60,7 @@ export function useCalendarData(start: Date, end: Date, hidden: string[] = [], e
   }, [backend, calendars, startMs, endMs, hiddenKey]);
 
   const events = useMemo(
-    () => Object.values(byCalendar).flat().sort((a, b) => a.start.getTime() - b.start.getTime() || Number(b.allDay) - Number(a.allDay)),
+    () => presentCalendarEvents(Object.values(byCalendar).flat(), installation.calendarOwners),
     [byCalendar],
   );
   return { backend, calendars, events, status };

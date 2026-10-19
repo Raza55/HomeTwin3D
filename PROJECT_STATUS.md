@@ -6,6 +6,8 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- Kalender: `calendarOwners` in den privaten Installationswerten ordnet Kalender-Entities Personen zu, ohne Quelldaten zu verändern. Verknüpfte Kopien (Ref/UID und Beginn) werden in der Anzeige zusammengeführt. Der Google-Kalender unterstützt über die derzeitige HA-Anbindung Lesen und Anlegen, aber keine Änderungen vorhandener Termine; ein vollständiger beidseitiger Hintergrundabgleich ist nicht implementiert.
+
 - Die App läuft vollständig im Browser (React, TypeScript, Babylon.js) und verbindet sich direkt per WebSocket mit Home
   Assistant. Der Zugriff erfolgt mit einem langlebigen Zugriffstoken, der nur im jeweiligen Browser gespeichert wird.
 - Das Wohnungsmodell ist eine GLB-Datei. Ein eingebettetes Manifest (`3dash_manifest`) beschreibt die Smart-Home-Objekte;

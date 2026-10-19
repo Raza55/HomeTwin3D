@@ -27,11 +27,14 @@ if (!existsSync(statePath)) {
   process.exit(1);
 }
 const state = JSON.parse(readFileSync(statePath, 'utf8'));
-const local = existsSync('.private/installation.json') ? JSON.parse(readFileSync('.private/installation.json', 'utf8')) : {};
+const local = { ...state.installation, ...(existsSync('.private/installation.json') ? JSON.parse(readFileSync('.private/installation.json', 'utf8')) : {}) };
 // The media proxy target is a LAN address and stays local; the add-on proxies to HA itself.
 const installation = {
   ...(local.entities && Object.keys(local.entities).length ? { entities: local.entities } : {}),
   ...(local.location ? { location: local.location } : {}),
+  ...(local.author ? { author: local.author } : {}),
+  ...(local.calendarStudent ? { calendarStudent: local.calendarStudent } : {}),
+  ...(local.calendarOwners ? { calendarOwners: local.calendarOwners } : {}),
 };
 if (Object.keys(installation).length) state.installation = installation;
 

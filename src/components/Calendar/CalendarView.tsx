@@ -17,6 +17,8 @@ import { calendarColor, indexByDay, layoutDay, makeMarks, type DayMarks } from '
 import EventEditor, { type EditorRequest } from './EventEditor';
 import RegionPicker from './RegionPicker';
 import { useCalendarData } from './useCalendarData';
+import { redundantHoliday } from '../../services/calendar/presentation';
+import { publicHolidays } from '../../services/calendar/holidays';
 import './CalendarView.css';
 
 interface Props {
@@ -75,8 +77,16 @@ export default function CalendarView({ onClose }: Props) {
   const rangeEnd = useMemo(() => addDays(new Date(year + 1, 0, 1), 14), [year]);
   const { backend, calendars, events: loadedEvents, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
   const everything = useMemo(() => loadedEvents.map(e => ({ ...e, summary: assessmentTitle(e.summary, readMeta(e.description).symbol) })), [loadedEvents]);
+  const holidayNames = useMemo(() => {
+    const names = new Map<string, Set<string>>();
+    if (prefs.showPublicHolidays) for (const y of [year - 1, year, year + 1]) for (const region of prefs.regions) for (const h of publicHolidays(y, region)) {
+      const day = names.get(h.date) ?? new Set<string>(); day.add(h.name); names.set(h.date, day);
+    }
+    return names;
+  }, [year, prefs.regions, prefs.showPublicHolidays]);
   // Timetable lessons are no appointments: they only appear in the day list on school days
-  const allEvents = useMemo(() => everything.filter(e => !readMeta(e.description).timetable), [everything]);
+  const allEvents = useMemo(() => everything.filter(e => !readMeta(e.description).timetable
+    && !redundantHoliday(e, calendars, [...(holidayNames.get(ymd(e.start)) ?? [])].join(' · '))), [everything, calendars, holidayNames]);
   const allLessons = useMemo(() => everything.filter(e => readMeta(e.description).timetable), [everything]);
   // People: named in events ("Für: ...") plus those added on this device
   const persons = useMemo(() => {

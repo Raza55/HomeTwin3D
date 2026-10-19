@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.80 · Personen für externe Kalender (19.10.2026)
+
+- Externe Kalender lassen sich über private Installationswerte einer Person zuordnen. Alle Termine erscheinen mit dieser Person, ohne die Beschreibungen beim Anbieter zu ändern.
+- Kalenderübergreifende Kopien mit derselben Referenz oder UID und demselben Beginn erscheinen einmal; Personenzuordnungen bleiben erhalten. Ein zugeordneter externer Kalender hat Vorrang.
+- Ganztägige Feiertage aus schreibgeschützten Kalendern werden ausgeblendet, wenn derselbe Feiertag bereits als Tagesmarkierung angezeigt wird.
+- Dies ist eine Anzeigezuordnung und Dublettenfilterung, kein Hintergrundabgleich zwischen Kalendern. Änderungen und Löschungen beim Anbieter benötigen dessen API-Unterstützung.
+
 ## 0.5.79 · ÜL-Termine (18.10.2026)
 
 - Die bisherige LK-Kategorie heißt jetzt ÜL, auch beim Hinzufügen und Speichern. Vorhandene LK-Termine werden weiterhin erkannt und als ÜL angezeigt; Fachauswahl und Noten bleiben erhalten.

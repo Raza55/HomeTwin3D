@@ -15,12 +15,14 @@ export interface InstallationConfig {
   author?: string;
   /** Fixed owner of assessment events; kept with the private installation. */
   calendarStudent?: string;
+  /** Calendar entity to person; display assignment, never written into source events. */
+  calendarOwners?: Record<string, string>;
 }
 declare const __HOMETWIN_INSTALLATION__: InstallationConfig;
 
 const STORAGE_KEY = 'hometwin:installation';
 const built: InstallationConfig = typeof __HOMETWIN_INSTALLATION__ === 'undefined' ? {} : __HOMETWIN_INSTALLATION__;
-const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location || !!value.author || !!value.calendarStudent;
+const hasValues = (value: InstallationConfig) => !!(value.entities && Object.keys(value.entities).length) || !!value.location || !!value.author || !!value.calendarStudent || !!Object.keys(value.calendarOwners ?? {}).length;
 
 function stored(): InstallationConfig {
   try {
@@ -54,13 +56,17 @@ export function sanitizeInstallation(value: unknown): InstallationConfig {
   }
   if (typeof input.author === 'string' && input.author.trim()) result.author = input.author.trim().slice(0, 80);
   if (typeof input.calendarStudent === 'string' && input.calendarStudent.trim()) result.calendarStudent = input.calendarStudent.trim().slice(0, 80);
+  if (input.calendarOwners && typeof input.calendarOwners === 'object' && !Array.isArray(input.calendarOwners)) {
+    const owners = Object.entries(input.calendarOwners).filter(([id, person]) => /^calendar\.[a-z0-9_]+$/.test(id) && typeof person === 'string' && person.trim());
+    if (owners.length) result.calendarOwners = Object.fromEntries(owners.map(([id, person]) => [id, (person as string).trim().slice(0, 80)]));
+  }
   return result;
 }
 
 /** Values to publish with the shared installation (no LAN addresses: the media proxy target stays local). */
 export function publishableInstallation(): InstallationConfig | undefined {
-  const { entities, location, author, calendarStudent } = installation;
-  return hasValues({ entities, location, author, calendarStudent }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}), ...(author ? { author } : {}), ...(calendarStudent ? { calendarStudent } : {}) } : undefined;
+  const { entities, location, author, calendarStudent, calendarOwners } = installation;
+  return hasValues({ entities, location, author, calendarStudent, calendarOwners }) ? { ...(entities ? { entities } : {}), ...(location ? { location } : {}), ...(author ? { author } : {}), ...(calendarStudent ? { calendarStudent } : {}), ...(calendarOwners ? { calendarOwners } : {}) } : undefined;
 }
 
 /**
@@ -76,7 +82,7 @@ export function storeInstallation(value: unknown): boolean {
   if (before === serialized) return false;
   localStorage.setItem(STORAGE_KEY, serialized);
   if (!hasValues(built)) {
-    delete installation.entities; delete installation.location; delete installation.author; delete installation.calendarStudent;
+    delete installation.entities; delete installation.location; delete installation.author; delete installation.calendarStudent; delete installation.calendarOwners;
     Object.assign(installation, next);
   }
   return true;

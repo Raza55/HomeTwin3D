@@ -101,3 +101,12 @@ test('unavailable HA validation fails closed without reading Immich', async t =>
   assert.deepEqual(await response.json(), { error: 'unavailable', reason: 'ha_unavailable' });
   assert.equal(calls.length, 0);
 });
+
+
+test('dedicated viewer header works when a reverse proxy consumes Authorization', async t => {
+  const { request, calls } = await fixture(t);
+  assert.equal((await request('status', { headers: { 'X-HomeTwin-HA-Authorization': 'Bearer test-viewer' } })).status, 200);
+  const count = calls.length;
+  assert.equal((await request('status', { headers: { 'X-HomeTwin-HA-Authorization': 'Bearer invalid', Authorization: 'Bearer test-viewer' } })).status, 401);
+  assert.equal(calls.length, count);
+});

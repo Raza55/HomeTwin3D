@@ -6,7 +6,7 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
-- Immich: Die HA-Prüfung unterscheidet ungültige Anmeldung (401) und nicht verfügbare Validierung (503). In beiden Fällen bleiben Fotos gesperrt; Diagnosemeldungen enthalten keine Zugangsdaten.
+- Immich: Ein eigener Anmeldeheader ermöglicht die Nutzung hinter Reverse-Proxys, die Authorization entfernen. Die HA-Prüfung unterscheidet ungültige Anmeldung (401) und nicht verfügbare Validierung (503). In beiden Fällen bleiben Fotos gesperrt; Diagnosemeldungen enthalten keine Zugangsdaten.
 
 - Wiederholungen: täglich, wöchentlich, monatlich oder jährlich mit ganzzahligem Intervall ab 1. Weitere vorhandene RRULE-Klauseln bleiben bei einer reinen Intervalländerung erhalten.
 

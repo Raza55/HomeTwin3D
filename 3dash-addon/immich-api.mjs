@@ -41,7 +41,8 @@ export function createImmichHandler({ url = '', key = '', albumId = '', fetchImp
     if (active >= 4) return reply(429, { error: 'busy' });
     active++;
     try {
-      const authorization = req.headers.authorization;
+      // Reverse proxies may consume Authorization for their own access control.
+      const authorization = req.headers['x-hometwin-ha-authorization'] ?? req.headers.authorization;
       if (!authorization?.startsWith('Bearer ') || !authorization.slice(7).trim()) return reply(401, { error: 'authentication', reason: 'missing_authorization' });
       const authenticated = await authenticate(authorization);
       if (authenticated === null) return reply(503, { error: 'unavailable', reason: 'ha_unavailable' });

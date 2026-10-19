@@ -19,7 +19,7 @@ export function useImmichPictures(enabled: boolean, seconds: number) {
       const token = connection.mode === 'live' ? connection.haSettings.token : '';
       if (!token) throw Error('authentication');
       const response = await fetch(new URL('api/immich/' + path, new URL(import.meta.env.BASE_URL, window.location.href)), {
-        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', redirect: 'error', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]),
+        headers: { 'X-HomeTwin-HA-Authorization': `Bearer ${token}` }, cache: 'no-store', redirect: 'error', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));

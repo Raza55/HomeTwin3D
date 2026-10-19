@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.83 · Immich hinter Reverse-Proxys (19.10.2026)
+
+- Der Browser übermittelt den HA-Token für die Bildschnittstelle in einem eigenen Header. Reverse-Proxys, die den Standard-Authorization-Header entfernen oder selbst verwenden, verhindern dadurch nicht mehr die Anmeldung.
+- Die serverseitige HA-Validierung bleibt verpflichtend; der bisherige Header bleibt für bestehende Clients unterstützt.
+
 ## 0.5.82 · Immich-Verbindungsdiagnose (19.10.2026)
 
 - Die Bildschnittstelle unterscheidet fehlende Anmeldung, abgelehnte Zugangsdaten und eine nicht erreichbare HA-Prüfung. Verbindungsfehler werden nicht mehr als falsche Anmeldung gemeldet.

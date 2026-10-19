@@ -604,3 +604,25 @@
 .cal-picture-banner .cal-photo-enter { position: relative; animation: cal-photo-fade .8s ease both; }
 @keyframes cal-photo-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cal-picture-banner .cal-photo-enter { animation: none; } }
+/* Photos remain decorative; controls and event cards retain readable surfaces. */
+.cal-overlay { isolation: isolate; }
+.cal-photo-background, .cal-photo-header-image { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; border-radius: inherit; }
+.cal-photo-background { opacity: var(--cal-photo-opacity, .4); }
+.cal-photo-background img, .cal-photo-header-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cal-photo-background .cal-photo-enter, .cal-photo-header-image .cal-photo-enter { animation: cal-photo-fade .8s ease both; }
+.cal-photo-header { align-items: flex-start; position: relative; isolation: isolate; flex: none; border-radius: var(--cal-radius); padding: 12px; margin-bottom: 10px; }
+.cal-photo-header.compact { min-height: clamp(100px, 15vh, 160px); }
+.cal-photo-header.large { min-height: clamp(150px, 24vh, 260px); }
+.cal-photo-header-image { background: var(--bg); }
+.cal-photo-header-image::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: .45; }
+.cal-photo-header .cal-title { background: color-mix(in srgb, var(--bg) 80%, transparent); padding: 8px 12px; border-radius: 10px; }
+.cal-with-photo-background .cal-day { background: linear-gradient(var(--day-fill), var(--day-fill)), linear-gradient(var(--day-school), var(--day-school)), color-mix(in srgb, var(--surface) 82%, transparent); }
+.cal-with-photo-background :is(.cal-week, .cal-agenda, .cal-agenda-day, .cal-mini-month) { background: color-mix(in srgb, var(--surface) 86%, transparent); }
+.cal-with-photo-background .cal-weekdays { background: color-mix(in srgb, var(--bg) 85%, transparent); border-radius: 8px; padding-top: 4px; }
+@media (max-width: 600px), (max-height: 600px) {
+  .cal-photo-header.compact { min-height: 100px; }
+  .cal-photo-header.large { min-height: 140px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-photo-background .cal-photo-enter, .cal-photo-header-image .cal-photo-enter { animation: none; }
+}

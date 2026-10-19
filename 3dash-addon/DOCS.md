@@ -172,7 +172,7 @@ Ab 0.5.78 kann die Bildfläche im Kalender zufällige Fotos aus genau einem frei
    - `immich_api_key`: den Key im Passwortfeld eintragen.
    - `immich_album_id`: die UUID aus der Albumadresse `/albums/<UUID>`; nicht den Albumtitel oder einen öffentlichen Freigabelink.
 4. Speichern und das Add-on neu starten.
-5. Im Kalender unter Einstellungen → **Immich → Album-Diashow verwenden** einschalten. Bildwechsel: 10, 30, 60 oder 300 Sekunden. Bildgröße und Einpassen/Ausfüllen gelten auch für die Diashow.
+5. Im Kalender unter Einstellungen → **Immich → Album-Diashow verwenden** einschalten. Bildwechsel: 10, 30, 60 oder 300 Sekunden. Bildgröße und Einpassen/Ausfüllen gelten auch für die Diashow. Unter **Fotodarstellung** lässt sich zwischen Bildstreifen, Kopfbereich, Kalenderhintergrund und beidem wählen. Für den Hintergrund gibt es einen Regler für die Bildstärke; die Auswahl gilt pro Browser.
 
 Der Browser muss wie gewohnt mit Home Assistant verbunden sein. Die Bildschnittstelle prüft seinen vorhandenen HA-Token; der Immich-Key bleibt im Add-on. Ohne Anmeldung werden weder Albuminformationen noch Bilder geliefert. Alle angemeldeten Nutzer dieser HA-Instanz können das konfigurierte Album sehen.
 

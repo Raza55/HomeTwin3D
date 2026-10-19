@@ -50,6 +50,12 @@ export default function CalendarView({ onClose }: Props) {
   const monthPictures = useMonthPictures();
   const immich = useImmichPictures(!!prefs.immichEnabled, prefs.immichInterval ?? 30);
   const picture = immich.photo?.current ?? monthPictures.pictures[focus.getMonth()];
+  const photoHeader = !!picture && ['header', 'both'].includes(prefs.picturePlacement);
+  const photoBackground = !!picture && ['background', 'both'].includes(prefs.picturePlacement);
+  const decorativePhoto = (className: string) => <div className={className} aria-hidden="true">
+    {immich.photo?.previous && <img className="cal-photo-previous" src={immich.photo.previous} alt="" style={{ objectFit: prefs.pictureFit }} />}
+    <img key={picture} className={immich.photo ? 'cal-photo-enter' : undefined} src={picture} alt="" style={{ objectFit: prefs.pictureFit }} />
+  </div>;
 
   const updatePrefs = useCallback((patch: Partial<CalendarPrefs>) => {
     setPrefs(prev => {
@@ -260,8 +266,10 @@ export default function CalendarView({ onClose }: Props) {
   );
 
   return (
-    <div className="cal-overlay" style={{ ['--exam-color' as string]: prefs.examColor }} role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
-      <header className="cal-header">
+    <div className={`cal-overlay${photoBackground ? ' cal-with-photo-background' : ''}`} style={{ ['--exam-color' as string]: prefs.examColor, ['--cal-photo-opacity' as string]: Math.max(10, Math.min(70, Number(prefs.pictureOpacity) || 40)) / 100 }} role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
+      {photoBackground && decorativePhoto('cal-photo-background')}
+      <header className={`cal-header${photoHeader ? ' cal-photo-header ' + prefs.pictureSize : ''}`}>
+        {photoHeader && decorativePhoto('cal-photo-header-image')}
         <button type="button" className="cal-icon-btn" onClick={onClose} aria-label={t('calendar.close')}><X size={22} /></button>
         <div className="cal-nav">
           <button type="button" className="cal-icon-btn" onClick={() => navigate(-1)} aria-label={t('calendar.previous')}><ChevronLeft size={24} /></button>
@@ -297,7 +305,7 @@ export default function CalendarView({ onClose }: Props) {
       {status === 'ready' && !writable.length && <div className="cal-status">{t('calendar.noWritable')}</div>}
       {backend && !backend.live && <div className="cal-status cal-status-demo">{t('calendar.demo')}</div>}
 
-      {view !== 'year' && picture && <figure className={`cal-picture-banner ${prefs.pictureSize}`}>
+      {view !== 'year' && picture && prefs.picturePlacement === 'banner' && <figure className={`cal-picture-banner ${prefs.pictureSize}`}>
         {immich.photo?.previous && <img className="cal-photo-previous" src={immich.photo.previous} alt="" aria-hidden="true" style={{ objectFit: prefs.pictureFit }} />}
         <img key={picture} className={immich.photo ? 'cal-photo-enter' : undefined} src={picture} alt={immich.photo ? t('calendar.immichPhoto') : fmt.monthName.format(focus)} style={{ objectFit: prefs.pictureFit }} />
         <figcaption>{fmt.monthName.format(focus)}</figcaption>
@@ -396,6 +404,12 @@ export default function CalendarView({ onClose }: Props) {
 
       {settingsOpen && (
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
+          <label className="cal-field">{t('calendar.picturePlacement')}<select aria-label={t('calendar.picturePlacement')} value={prefs.picturePlacement} onChange={e => updatePrefs({ picturePlacement: e.target.value as CalendarPrefs['picturePlacement'] })}>
+            {(['banner', 'header', 'background', 'both'] as const).map(mode => <option key={mode} value={mode}>{t('calendar.picturePlacement.' + mode)}</option>)}
+          </select></label>
+          {['background', 'both'].includes(prefs.picturePlacement) && <label className="cal-field">{t('calendar.pictureOpacity')} · {prefs.pictureOpacity}%
+            <input type="range" aria-label={t('calendar.pictureOpacity')} min="10" max="70" step="5" value={prefs.pictureOpacity} onChange={e => updatePrefs({ pictureOpacity: Number(e.target.value) })} />
+          </label>}
           <label className="cal-field">{t('calendar.pictureSize')}<select aria-label={t('calendar.pictureSize')} value={prefs.pictureSize} onChange={e => updatePrefs({ pictureSize: e.target.value as CalendarPrefs['pictureSize'] })}>
             <option value="compact">{t('calendar.pictureCompact')}</option><option value="large">{t('calendar.pictureLarge')}</option>
           </select></label>

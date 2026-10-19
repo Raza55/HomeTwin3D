@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.84 · Kalenderfotos im Kopfbereich und Hintergrund (19.10.2026)
+
+- Immich-Fotos und lokale Monatsbilder können wie bisher als Bildstreifen, im Kopfbereich, als Kalenderhintergrund oder in beiden Bereichen erscheinen.
+- Die Hintergrund-Bildstärke ist einstellbar. Darstellung und Bildstärke werden pro Browser gespeichert; die bisherige Darstellung bleibt Standard.
+- Abgedunkelte Fotos und lesbare Kartenflächen unterstützen helle und dunkle Darstellung sowie schmale Bildschirme.
+
 ## 0.5.83 · Immich hinter Reverse-Proxys (19.10.2026)
 
 - Der Browser übermittelt den HA-Token für die Bildschnittstelle in einem eigenen Header. Reverse-Proxys, die den Standard-Authorization-Header entfernen oder selbst verwenden, verhindern dadurch nicht mehr die Anmeldung.

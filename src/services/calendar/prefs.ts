@@ -16,6 +16,8 @@ export interface CalendarPrefs {
   immichEnabled?: boolean;
   immichInterval?: number;
   pictureFit: 'contain' | 'cover';
+  picturePlacement: 'banner' | 'header' | 'background' | 'both';
+  pictureOpacity: number;
   timetableExpanded: boolean;
   /** People added on this device (others come from the events' "Für:" lines). */
   persons: string[];
@@ -31,7 +33,7 @@ export interface CalendarPrefs {
 }
 
 const KEY = 'calendar.prefs';
-const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, showYearDates: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday', pictureSize: 'compact', pictureFit: 'cover', timetableExpanded: false };
+const DEFAULTS: CalendarPrefs = { regions: [], setupDone: false, showPublicHolidays: true, showSchoolHolidays: true, showYearDates: true, hiddenCalendars: [], view: 'month', persons: [], personFilter: [], highlightExams: true, examColor: '#f97316', showTimetable: true, weekStart: 'yesterday', pictureSize: 'compact', pictureFit: 'cover', picturePlacement: 'banner', pictureOpacity: 40, timetableExpanded: false };
 
 export function loadCalendarPrefs(): CalendarPrefs {
   try {

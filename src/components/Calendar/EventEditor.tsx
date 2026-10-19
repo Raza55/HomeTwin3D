@@ -8,6 +8,7 @@ import { EVENT_KINDS, assessmentTitle, assessmentSubject, eventKind, hasGrade, k
 import { gradeTone, pointsToGrade, readMeta, writeMeta } from '../../services/calendar/eventMeta';
 import { lessonTitle } from '../../services/calendar/timetable';
 import { installation } from '../../services/installationConfig';
+import { readRepeat, repeatRule, type Repeat } from '../../services/calendar/recurrence';
 import EventIcon, { KIND_ICONS } from './EventIcon';
 import { hasSchedule, parseQuickText, type QuickParse } from '../../services/calendar/quickParse';
 
@@ -38,7 +39,6 @@ interface Props {
   onSaved: (date?: Date, persons?: string[]) => void;
 }
 
-type Repeat = '' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 const DURATIONS = [30, 60, 90, 120, 180];
 
 interface SpeechRecognitionLike {
@@ -67,7 +67,8 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const [startMin, setStartMin] = useState(initialStart);
   const [duration, setDuration] = useState(existing && !existing.allDay ? Math.max(5, Math.round((existing.end.getTime() - existing.start.getTime()) / 60000)) : 60);
   const [endDate, setEndDate] = useState(existing?.allDay ? ymd(addDays(existing.end, -1)) : ymd(existing?.start ?? request.date));
-  const [repeat, setRepeat] = useState<Repeat>((existing?.rrule?.match(/FREQ=(WEEKLY|MONTHLY|YEARLY)/)?.[1] as Repeat) ?? '');
+  const [repeat, setRepeat] = useState<Repeat>(() => readRepeat(existing?.rrule).repeat);
+  const [interval, setInterval] = useState(() => String(readRepeat(existing?.rrule).interval));
   const [calendar, setCalendar] = useState(existing?.calendar ?? defaultCalendar ?? calendars[0]?.entityId ?? '');
   const [location, setLocation] = useState(existing?.location ?? '');
   const initialMeta = useMemo(() => readMeta(existing?.description, existing?.summary, knownPersons), [existing, knownPersons]);
@@ -172,7 +173,8 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   const metaDescription = (points: number | undefined) => writeMeta({ notes: description, persons: isUl ? [student] : persons, grade: points, ref: initialMeta.ref, timetable: isUl ? false : timetable, symbol });
 
   // An unchanged frequency keeps the original rule (COUNT/UNTIL/BYDAY of a series)
-  const rrule = repeat ? (existing?.rrule?.includes(`FREQ=${repeat}`) ? existing.rrule : `FREQ=${repeat}`) : undefined;
+  const validInterval = !repeat || repeat === 'CUSTOM' || (Number.isSafeInteger(Number(interval)) && Number(interval) >= 1);
+  const rrule = validInterval ? repeatRule(repeat, Number(interval), existing?.rrule) : undefined;
 
   const buildDraft = (points: number | undefined): EventDraft | null => {
     let p: QuickParse | null = null;
@@ -195,6 +197,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
   };
 
   const save = async (scope?: RecurrenceScope, points: number | null = grade ?? null) => {
+    if (!validInterval) { setError(t('calendar.repeat.invalidInterval')); return; }
     const draft = buildDraft(points ?? undefined);
     if (!draft) { setError(t('calendar.titleMissing')); return; }
     if (existing && recurring && !scope) { setAskScope('save'); return; }
@@ -360,7 +363,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           <div className="cal-row">
             <span className="cal-row-label">{t('calendar.repeat')}</span>
             <div className="cal-chips">
-              {(['', 'WEEKLY', 'MONTHLY', 'YEARLY'] as Repeat[]).map(r => (
+              {(['', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', ...(readRepeat(existing?.rrule).repeat === 'CUSTOM' ? ['CUSTOM'] : [])] as Repeat[]).map(r => (
                 <button type="button" key={r || 'none'} className={repeat === r ? 'active' : ''} onClick={() => setRepeat(r)}>{t(`calendar.repeat.${r || 'none'}`)}</button>
               ))}
               <button type="button" disabled={isUl} className={timetable ? 'active' : ''} aria-pressed={timetable} title={t('calendar.timetableHint')}
@@ -369,6 +372,15 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
               </button>
             </div>
           </div>
+
+          {repeat && repeat !== 'CUSTOM' && <div className="cal-row">
+            <label className="cal-row-label" htmlFor="calendar-repeat-interval">{t('calendar.repeat.every')}</label>
+            <div className="cal-chips">
+              <input id="calendar-repeat-interval" aria-label={t('calendar.repeat.interval')} type="number" min="1" step="1" required
+                style={{ width: '5rem' }} value={interval} onChange={e => setInterval(e.target.value)} />
+              <span>{t(`calendar.repeat.unit.${repeat}${Number(interval) === 1 ? '.one' : ''}`)}</span>
+            </div>
+          </div>}
 
           <div className="cal-row">
             <span className="cal-row-label">{t('calendar.symbol')}</span>

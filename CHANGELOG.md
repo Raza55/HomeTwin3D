@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.81 · Wiederholungsintervalle (19.10.2026)
+
+- Im Termin-Dialog sind tägliche Wiederholungen und frei wählbare Intervalle verfügbar, etwa alle zwei Wochen oder alle drei Monate.
+- Bestehende Intervalle werden eingelesen. Beim Ändern des Intervalls bleiben weitere Serienregeln wie Wochentage und Endbedingungen erhalten; unbekannte Frequenzen bleiben benutzerdefiniert bestehen.
+- Die Demo berücksichtigt die gewählten Intervalle ebenfalls.
+
 ## 0.5.80 · Personen für externe Kalender (19.10.2026)
 
 - Externe Kalender lassen sich über private Installationswerte einer Person zuordnen. Alle Termine erscheinen mit dieser Person, ohne die Beschreibungen beim Anbieter zu ändern.

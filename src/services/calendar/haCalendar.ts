@@ -5,6 +5,7 @@
  */
 import type { HALike } from '../haWebSocket';
 import { addDays, isoLocal, ymd } from './dates.ts';
+import { readRepeat } from './recurrence.ts';
 
 export interface CalendarInfo {
   entityId: string;
@@ -159,14 +160,15 @@ function demoBackend(): CalendarBackend {
   const expand = (s: DemoStored, from: Date, to: Date): CalEvent[] => {
     const base = fromRaw(DEMO_CALENDAR, { ...s, all_day: s.allDay });
     base.rrule = s.rrule;
-    const freq = s.rrule?.match(/FREQ=(WEEKLY|MONTHLY|YEARLY)/)?.[1];
+    const { repeat: freq, interval } = readRepeat(s.rrule);
     const out: CalEvent[] = [];
     const length = base.end.getTime() - base.start.getTime();
     for (let i = 0, start = base.start; start < to && i < 600; i++) {
       if (start.getTime() + length > from.getTime()) out.push({ ...base, start, end: new Date(start.getTime() + length) });
-      if (!freq) break;
-      start = freq === 'WEEKLY' ? addDays(base.start, 7 * (i + 1))
-        : new Date(base.start.getFullYear() + (freq === 'YEARLY' ? i + 1 : 0), base.start.getMonth() + (freq === 'MONTHLY' ? i + 1 : 0), base.start.getDate(), base.start.getHours(), base.start.getMinutes());
+      if (!freq || freq === 'CUSTOM' || !Number.isSafeInteger(interval) || interval < 1) break;
+      const step = interval * (i + 1);
+      start = freq === 'DAILY' || freq === 'WEEKLY' ? addDays(base.start, (freq === 'WEEKLY' ? 7 : 1) * step)
+        : new Date(base.start.getFullYear() + (freq === 'YEARLY' ? step : 0), base.start.getMonth() + (freq === 'MONTHLY' ? step : 0), base.start.getDate(), base.start.getHours(), base.start.getMinutes());
     }
     return out;
   };

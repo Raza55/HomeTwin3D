@@ -34,7 +34,8 @@
     "test:privacy": "node --test tools/public-data.test.mjs",
     "test:immich": "node --test tools/immich-api.test.mjs",
     "test:calendar": "node --test tools/calendar.test.mjs tools/calendar-presentation.test.mjs tools/calendar-recurrence.test.mjs",
-    "test:shopping": "node --test tools/shopping.test.mjs"
+    "test:shopping": "node --test tools/shopping.test.mjs",
+    "test:mobile": "node --test tools/start-page.test.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.28.0",

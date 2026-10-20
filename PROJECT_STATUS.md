@@ -27,7 +27,19 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionen
 
+### Handy-Startseite
+
+- `#/mobile` bietet große Kacheln für Einkaufsliste, Kalender, Hauswarnungen und 3D-Board. Bei der normalen Startadresse wird sie bis 600 px Bildschirmbreite automatisch gewählt; unter „Startseite auf diesem Gerät“ lassen sich Automatik, Handy oder 3D festlegen.
+- `#/board` öffnet ausdrücklich die 3D-Ansicht. Desktop und Simulation behalten standardmäßig das Board. Kalender und Warnliste verwenden eine eigene HA-Verbindung und benötigen keine 3D-Szene.
+- Lokale Einkaufsanzahl ist auch ohne HA nutzbar. Die ausgewählte HA-Liste zeigt ihre vom Server gemeldete Anzahl offener Artikel. Hausstatus und Kontakt-/Lichtzahlen werden nur nach erfolgreichem Laden der HA-Zustände angezeigt; Wiederaufnahme nach Hintergrundbetrieb erneuert die Verbindung.
+- Voraussetzung für Kalender und Hausstatus bleibt die HA-Anmeldung im jeweiligen Browser. „Keine aktiven Warnungen“ bezieht sich ausschließlich auf die bekannten Warnklassen; die Übersicht ist kein vollständiger Sicherheitscheck.
+- Prüfung: `npm run test:mobile`, Browserprüfung mit simulierten HA-Zuständen und Smartphone-/Tablet-Abmessungen.
+
 ### Einkaufsliste
+
+- Über 150 zweisprachige Katalogartikel und acht Einkaufssets stehen unter „Artikelkatalog & Einkaufssets“ bereit. Auswahl wird vor dem Speichern in der Eingabe gesammelt und ist frei anpassbar. Offene bzw. vorgemerkte Produkte werden auch mit üblichen führenden Mengenangaben übersprungen. Suche toleriert Umlaute/ASCII-Schreibweisen; persönliche Häufigkeit bleibt vorrangig.
+
+- Unter „Hintergrund & Immich-Album“ stehen dieselben Darstellungsoptionen wie im Kalender bereit. Anfangswerte stammen aus dem Kalender; danach bleiben sie getrennt pro Browser. Das Album stammt aus der vorhandenen Add-on-Konfiguration. Ohne Foto bleibt die normale Oberfläche bedienbar; keine Immich-Anfragen im Simulationsmodus.
 
 - Automatische Gruppierung in elf Warengruppen mit Icons. Mengen bleiben im Artikelnamen erhalten; lokale Korrekturen über das Etikett werden auch bei anderen Mengen wiederverwendet und können auf Automatik zurückgesetzt werden. Unbekannte Produkte stehen unter Sonstiges; Zuordnungen werden nicht mit Google synchronisiert.
 - Einkaufsmodus blendet Eingabe, Vorschläge und Einstellungen aus und vergrößert Abhakflächen. Fortschritt zählt alle offenen und erledigten Einträge der ausgewählten Liste, keine gesonderten Einkaufstouren.

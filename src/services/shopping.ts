@@ -1,4 +1,5 @@
 import type { HALike } from './haWebSocket';
+import { matchesShoppingSearch } from './shoppingPresets.ts';
 
 export interface ShoppingItem { uid: string; summary: string; status: 'needs_action' | 'completed' }
 export interface ShoppingList { id: string; name: string; features: number; available: boolean }
@@ -35,7 +36,7 @@ export function shoppingSuggestions(history: Purchase[], items: ShoppingItem[], 
   const seen = new Set<string>();
   return candidates.filter(name => {
     const key = itemKey(name);
-    if (seen.has(key) || open.has(key) || !key.includes(itemKey(query))) return false;
+    if (seen.has(key) || open.has(key) || !matchesShoppingSearch(name, query)) return false;
     seen.add(key); return true;
   }).slice(0, 8);
 }

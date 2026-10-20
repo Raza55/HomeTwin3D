@@ -8,16 +8,21 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { hasConfig, getConfig } from './services/configApi';
 import { getSetting } from './services/settingsStore';
 import { joinedSharedInstallation } from './services/sharedStore';
+import { loadStartPage, startPath } from './services/startPage';
 
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
 const ConfigEditor = lazy(() => import('./pages/ConfigEditor/ConfigEditor'));
 const Onboarding = lazy(() => import('./pages/Onboarding/Onboarding'));
 const ShoppingPage = lazy(() => import('./components/Shopping/ShoppingPage'));
+const MobileHome = lazy(() => import('./components/Mobile/MobileHome'));
 const loading = <div className="app-loading" role="status">HomeTwin3D …</div>;
 
 function AppRoutes() {
   const location = useLocation();
   const { simulationMode } = useSimulationMode();
+  if (location.pathname === '/' && startPath(loadStartPage(), window.matchMedia('(max-width: 600px)').matches, simulationMode) === '/mobile') {
+    return <Navigate to="/mobile" replace />;
+  }
 
   // No config at all → onboarding. Config exists but not completed → onboarding.
   const configExists = hasConfig();
@@ -29,14 +34,16 @@ function AppRoutes() {
 
   // Redirect to onboarding if not completed and not already there
   // (simulation mode bypasses onboarding)
-  if (!onboardingDone && !simulationMode && location.pathname !== '/onboarding' && location.pathname !== '/shopping') {
+  if (!onboardingDone && !simulationMode && location.pathname !== '/onboarding' && location.pathname !== '/shopping' && !location.pathname.startsWith('/mobile')) {
     return <Navigate to="/onboarding" replace />;
   }
 
   return (
     <Routes>
       <Route path="/shopping" element={<Suspense fallback={loading}><ShoppingPage /></Suspense>} />
+      <Route path="/board" element={<Suspense fallback={loading}><Dashboard /></Suspense>} />
       <Route path="/" element={<Suspense fallback={loading}><Dashboard /></Suspense>} />
+      <Route path="/mobile/*" element={<Suspense fallback={loading}><MobileHome /></Suspense>} />
       <Route path="/editor" element={<Suspense fallback={loading}><ConfigEditor /></Suspense>} />
       <Route path="/onboarding" element={<Suspense fallback={loading}><Onboarding /></Suspense>} />
     </Routes>

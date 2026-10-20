@@ -1,5 +1,23 @@
 # Änderungsverlauf
 
+## 0.5.87 · Handy-Startseite und Einkaufserweiterungen (21.10.2026)
+
+### Handy-Startseite
+
+- Kleine Bildschirme bis 600 px öffnen automatisch eine Startseite mit Einkaufsliste, Kalender, Hausstatus und 3D-Board. Die Startansicht ist pro Gerät wählbar; die Simulation bleibt beim Board.
+- Kalender und Hauswarnungen sind ohne 3D-Szene nutzbar. Verbindung, offene Einkäufe sowie gemeldete Licht- und Kontaktzustände werden angezeigt; fehlende Verbindung wird ausdrücklich kenntlich gemacht.
+- Direkte Adressen: `#/mobile`, `#/mobile/calendar`, `#/mobile/status` und `#/board`. Ein Smartphone-Button im Board führt zur Startseite.
+
+### Erweiterte Einkaufsvorschläge
+
+- Über 150 Artikel mit Warengruppen sowie acht prüfbare Einkaufssets. Katalog mit Suche und Gruppenfilter; Artikel werden zunächst in der Eingabe gesammelt, offene oder bereits vorbereitete Produkte auch mit Mengenangaben übersprungen.
+- Suche unterstützt Umlaute und alternative Schreibweisen wie „Kaese“. Persönlich häufig hinzugefügte Artikel behalten Vorrang vor Katalogvorschlägen.
+
+### Immich in der Einkaufsliste
+
+- Die Einkaufsliste verwendet das konfigurierte Immich-Album als Bildstreifen, Kopfbereich, Hintergrund oder Kopfbereich und Hintergrund. Bildstärke, Höhe, Ausschnitt und Wechselintervall sind einstellbar.
+- Kalenderwerte dienen als Anfangswerte; Änderungen der Einkaufsliste werden danach separat pro Browser gespeichert. Dieselbe geschützte Album-Anbindung wie im Kalender wird wiederverwendet.
+
 ## 0.5.86 · Einkaufsliste mit Warengruppen (19.10.2026)
 
 - Automatische Warengruppen mit farbigen Icons und Artikelanzahl; manuelle Korrekturen werden pro Liste und Gerät auch für geänderte Mengen gemerkt.

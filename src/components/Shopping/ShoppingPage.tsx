@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Check, Mic, Plus, RefreshCw, ShoppingCart, StopCircle, ListChecks, PencilLine } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSimulationMode } from '../../contexts/SimulationModeContext';
 import { parseShoppingInput, shoppingSuggestions } from '../../services/shopping';
 import { useShopping } from './useShopping';
 import ShoppingGroups, { ShoppingCategoryIcon } from './ShoppingGroups';
+import ShoppingPictures from './ShoppingPictures';
+import ShoppingPresets from './ShoppingPresets';
+import { shoppingProducts } from '../../services/shoppingPresets';
 import './ShoppingPage.css';
 
 interface Recognition {
@@ -17,6 +20,7 @@ interface Recognition {
 type SpeechWindow = Window & { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
 
 export default function ShoppingPage() {
+  const fromMobile = new URLSearchParams(useLocation().search).get('from') === 'mobile';
   const { language } = useLanguage();
   const de = language.startsWith('de');
   const txt = (german: string, english: string) => de ? german : english;
@@ -34,9 +38,10 @@ export default function ShoppingPage() {
   const open = data.items.filter(i => i.status === 'needs_action');
   const done = data.items.filter(i => i.status === 'completed');
   const parsed = parseShoppingInput(draft);
-  const suggestions = shoppingSuggestions(data.history, data.items, parsed.length <= 1 ? draft : '', de
+  const defaults = de
     ? ['Milch', 'Brot', 'Eier', 'Butter', 'Äpfel', 'Bananen', 'Kaffee', 'Tomaten']
-    : ['Milk', 'Bread', 'Eggs', 'Butter', 'Apples', 'Bananas', 'Coffee', 'Tomatoes']);
+    : ['Milk', 'Bread', 'Eggs', 'Butter', 'Apples', 'Bananas', 'Coffee', 'Tomatoes'];
+  const suggestions = shoppingSuggestions(data.history, data.items, parsed.length <= 1 ? draft : '', [...defaults, ...shoppingProducts.map(p => de ? p.de : p.en)]);
 
   useEffect(() => () => {
     const r = recognition.current;
@@ -69,8 +74,9 @@ export default function ShoppingPage() {
 
   return <main className={`shopping-page${shoppingMode ? ' shopping-mode' : ''}`}>
     <div className="shopping-shell">
+      <ShoppingPictures enabled={!simulationMode}>
       <header className="shopping-header">
-        <Link to="/" className="shopping-back" aria-label={txt('Zurück zum Board', 'Back to board')}><ArrowLeft size={22} /></Link>
+        <Link to={fromMobile ? '/mobile' : '/'} className="shopping-back" aria-label={fromMobile ? txt('Zur Startseite', 'Back to start') : txt('Zurück zum Board', 'Back to board')}><ArrowLeft size={22} /></Link>
         <div><div className="shopping-eyebrow">HOMETWIN3D</div><h1><ShoppingCart size={25} /> {txt('Einkaufsliste', 'Shopping list')}</h1></div>
         <button type="button" disabled={data.busy || listening || (!data.local && !data.connected)} onClick={() => void data.refresh()} aria-label={txt('Liste aktualisieren', 'Refresh list')}><RefreshCw size={21} /></button>
       </header>
@@ -119,6 +125,13 @@ export default function ShoppingPage() {
         <div>{suggestions.map(name => <button key={name} type="button" disabled={!data.canAdd || data.busy || listening} onClick={() => void submit(name, !!draft.trim() && parsed.length <= 1)}><ShoppingCategoryIcon name={name} />{name}<Plus size={14} aria-hidden="true" /></button>)}</div>
       </section>}
 
+      <ShoppingPresets de={de} items={data.items} draft={draft} disabled={data.busy || listening} onReview={() => {
+        input.current?.closest('form')?.scrollIntoView({ block: 'start' });
+        input.current?.focus({ preventScroll: true });
+      }} onPrepare={names => {
+        setDraft(current => parseShoppingInput([current, ...names].join('\n')).join('\n'));
+        setNotice(txt('In der Eingabe vorbereitet – prüfen und hinzufügen.', 'Prepared in the input — review and add.'));
+      }} />
       {data.error && <p className="shopping-error" role="alert">{data.error}</p>}
       <p className="shopping-notice" role="status">{data.busy ? txt('Wird gespeichert …', 'Saving …') : notice}</p>
       <section className="shopping-items" aria-label={txt('Einkäufe', 'Groceries')}>
@@ -139,6 +152,7 @@ export default function ShoppingPage() {
         <a href="https://www.home-assistant.io/integrations/google_tasks/" target="_blank" rel="noreferrer">{txt('Google Tasks einrichten', 'Set up Google Tasks')}</a>
         {' · '}<Link to="/onboarding">{txt('Board einrichten', 'Set up board')}</Link>
       </details>
+      </ShoppingPictures>
     </div>
   </main>;
 }

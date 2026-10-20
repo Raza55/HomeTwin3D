@@ -2456,6 +2456,7 @@ export default function Dashboard() {
           homeStatus={haStatus === 'connected' ? homeStatus : haStatus === 'connecting' ? 'unknown' : 'warning'}
           onSettings={() => setSettingsOpen(true)}
           onShopping={dayDemoController ? undefined : () => navigate('/shopping')}
+          onMobile={dayDemoController ? undefined : () => navigate('/mobile')}
           onCalendar={dayDemoController ? undefined : () => setCalendarOpen(true)}
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}
           longitude={(configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude)}

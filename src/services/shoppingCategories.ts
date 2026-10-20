@@ -1,4 +1,5 @@
 import type { ShoppingItem } from './shopping';
+import { shoppingProducts } from './shoppingPresets.ts';
 
 export const shoppingCategories = [
   { id: 'produce', de: 'Obst & Gemüse', en: 'Fruit & vegetables', color: '#65b97c' },
@@ -39,6 +40,9 @@ const rules: [ShoppingCategoryId, RegExp][] = [
 ];
 
 export function detectShoppingCategory(name: string): ShoppingCategoryId {
+  const product = shoppingProductKey(name);
+  const known = shoppingProducts.find(p => shoppingProductKey(p.de) === product || shoppingProductKey(p.en) === product);
+  if (known) return known.category;
   const key = normalize(name);
   return rules.find(([, pattern]) => pattern.test(key))?.[0] ?? 'other';
 }

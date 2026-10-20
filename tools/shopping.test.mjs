@@ -2,6 +2,30 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseShoppingInput, learnPurchase, shoppingSuggestions, fetchShoppingLists, fetchShoppingItems, addShoppingItem, readItems, readPurchases } from '../src/services/shopping.ts';
 import { detectShoppingCategory, categoryFor, shoppingProductKey, groupShoppingItems, validateCategoryOverrides } from '../src/services/shoppingCategories.ts';
+import { shoppingProducts, shoppingSets, presetNames, matchesShoppingSearch } from '../src/services/shoppingPresets.ts';
+
+test('expanded catalogue has unique bilingual products and matching categories', () => {
+  assert.ok(shoppingProducts.length >= 150);
+  for (const language of ['de', 'en']) {
+    assert.equal(new Set(shoppingProducts.map(p => p[language])).size, shoppingProducts.length);
+    for (const product of shoppingProducts) {
+      assert.ok(product[language]);
+      assert.equal(detectShoppingCategory(product[language]), product.category, product[language]);
+    }
+  }
+  for (const set of shoppingSets) {
+    assert.equal(presetNames(set, false).length, set.items.length);
+    assert.ok(presetNames(set, false).every(Boolean));
+  }
+});
+test('search supports umlauts, ASCII equivalents and multiple words without changing names', () => {
+  for (const query of ['Käse', 'Kaese', 'kase']) assert.ok(matchesShoppingSearch('Frischkäse', query));
+  assert.ok(matchesShoppingSearch('Äpfel', 'apfel'));
+  assert.ok(matchesShoppingSearch('Crème fraîche', 'creme'));
+  assert.ok(matchesShoppingSearch('Frozen vegetables', 'veg fro'));
+  assert.equal(matchesShoppingSearch('Milch', 'Brot'), false);
+  assert.deepEqual(shoppingSuggestions([], [], 'kaese', ['Frischkäse']), ['Frischkäse']);
+});
 
 test('categories recognize German and English products and avoid misleading substrings', () => {
   const examples = { '2 kg Äpfel': 'produce', 'Eisbergsalat': 'produce', 'Vollkornbrot': 'bakery', '6 Eier': 'chilled', 'Hafermilch': 'chilled', '500 g Hackfleisch': 'protein', 'Kokosmilch': 'pantry', 'Tomatenmark': 'pantry', 'TK-Spinat': 'frozen', 'Mineralwasser': 'drinks', 'Butterkekse': 'snacks', 'Milchschokolade': 'snacks', 'Spülmittel': 'household', 'Katzenfutter': 'pets', 'oat milk': 'chilled', 'ice cream': 'frozen', 'carrots': 'produce', 'toilet paper': 'household', 'Unbekanntes Markenprodukt': 'other' };

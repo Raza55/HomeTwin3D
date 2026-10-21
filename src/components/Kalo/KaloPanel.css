@@ -1,0 +1,40 @@
+.kalo-backdrop { z-index: 110; color: var(--text); }
+.kalo-modal { max-width: 460px; }
+.kalo-body { display: flex; flex-direction: column; gap: 16px; }
+
+.kalo-tabs { display: flex; gap: 8px; }
+.kalo-tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 10px; font: inherit; font-size: 13px; color: var(--muted);
+  background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+}
+.kalo-tab.active { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+.kalo-tile { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.kalo-value { font-size: 30px; font-weight: 600; line-height: 1.1; }
+.kalo-unit { font-size: 15px; font-weight: 400; color: var(--muted); }
+.kalo-est { color: var(--yellow); font-weight: 600; margin-left: 2px; }
+.kalo-period { margin-top: 2px; font-size: 12px; color: var(--muted); }
+.kalo-compare { text-align: right; font-size: 12px; display: grid; gap: 4px; }
+.kalo-compare p { margin: 0; }
+.kalo-good { color: var(--green); font-weight: 600; }
+.kalo-high { color: var(--orange); font-weight: 600; }
+.kalo-muted, .kalo-legend .kalo-muted { color: var(--muted); }
+
+.kalo-subhead { margin: 0; font-size: 13px; font-weight: 600; }
+.kalo-chart { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.kalo-chart li { display: grid; grid-template-columns: 64px 1fr 52px; align-items: center; gap: 8px; font-size: 12px; }
+.kalo-month { color: var(--muted); }
+.kalo-bars { position: relative; display: flex; flex-direction: column; gap: 2px; min-height: 14px; }
+.kalo-bar { height: 6px; border-radius: 3px; min-width: 2px; }
+.kalo-bar-now { background: var(--accent); }
+.kalo-bar-prev { background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.kalo-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.kalo-legend { display: flex; gap: 14px; align-items: center; font-size: 11px; color: var(--muted); }
+.kalo-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.kalo-sw-now { background: var(--accent); }
+.kalo-sw-prev { background: color-mix(in srgb, var(--muted) 55%, transparent); }
+
+.kalo-error { color: var(--red); }
+.kalo-actions { display: flex; justify-content: flex-end; }

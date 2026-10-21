@@ -1,6 +1,6 @@
 # Modified for HomeTwin3D: independent add-on identity and release series. See ../ORIGIN.md.
 name: "HomeTwin3D"
-version: "0.5.87"
+version: "0.5.88"
 slug: "hometwin3d"
 description: "Independent 3D home dashboard for Home Assistant"
 url: "https://github.com/Raza55/HomeTwin3D"
@@ -34,3 +34,8 @@ schema:
   immich_url: "url?"
   immich_api_key: "password?"
   immich_album_id: "str?"
+  kalo_refresh_token: "password?"
+  kalo_resident_id: "str?"
+  kalo_billing_unit: "str?"
+  kalo_occupancy_id: "str?"
+  kalo_residential_unit: "str?"

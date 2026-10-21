@@ -68,3 +68,19 @@ test('drip tray, water tank and bean alerts come from Home Connect event sensors
   assert.deepEqual(coffeeState(machine, data, false, now).alerts, []);
   assert.deepEqual(coffeeState(object, { ...data, ...states() }, true, now).alerts, []);
 });
+
+test('started at the machine: countdown from progress rate, program from the last selection', () => {
+  const machine = { ...object, id: 'machine-started', coffee: { ...c, activeProgramEntityId: 'select.coffee_active_program' } };
+  const selectedId = 'select.coffee_selected_program', t = sec => new Date(Date.parse('2026-10-20T06:06:00Z') + sec * 1000).toISOString();
+  const data = { ...states(), [machine.coffee.activeProgramEntityId]: s('unknown'), [selectedId]: s('consumer_products_coffee_maker_program_beverage_coffee'),
+    [c.remainingEntityId]: s('unknown', { device_class: 'timestamp' }), [c.progressEntityId]: s('unavailable') };
+  coffeeState(machine, data, true, Date.parse(t(0)));
+  data[selectedId] = s('unknown'); data[c.statusEntityId] = s('run');
+  let value = coffeeState(machine, data, true, Date.parse(t(1)));
+  assert.equal(value.program, 'Kaffee'); assert.equal(value.remaining, '');
+  for (const [sec, p] of [[2, 5], [3, 9], [4, 13], [5, 16], [6, 19], [7, 24]]) {
+    data[c.progressEntityId] = s(String(p), {}, t(sec)); value = coffeeState(machine, data, true, Date.parse(t(sec)));
+  }
+  assert.equal(value.remainingEstimated, true); assert.equal(value.remaining, '0:21');
+  assert.equal(coffeeState(machine, data, true, Date.parse(t(12))).remaining, '0:16', 'ticks down between samples');
+});

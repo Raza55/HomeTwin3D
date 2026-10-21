@@ -8,6 +8,8 @@
     "lock.current",
     "sensor.washer",
     "select.washer_program",
+    "select.coffee_active_program",
+    "select.coffee_selected_program",
     "button.washer_start",
     "button.washer_stop",
     "sensor.washer_connection",

@@ -22,3 +22,7 @@
 .appliance-control-hint { margin: 0; color: #9db2c2; font-size: .9em; line-height: 1.4; }
 .appliance-controls [role="status"] { margin: 0; line-height: 1.4; }
 .appliance-controls :focus-visible { outline: 2px solid #72e6ff; outline-offset: 2px; }
+.appliance-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.appliance-presets button { min-height: 40px; padding: 6px 8px; border: 1px solid #68899e; border-radius: 7px; background: #1b3242; color: #e6eef5; font: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appliance-presets button[aria-pressed=true] { background: #1d5a45; border-color: #6de9a3; color: #c9ffe0; }
+.appliance-presets button:disabled { opacity: .5; cursor: default; }

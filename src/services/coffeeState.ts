@@ -27,6 +27,38 @@ export function coffeeAlertEntityIds(statusEntityId: string): { key: string; ent
   return base ? COFFEE_ALERTS.map(alert => ({ key: alert.key, entityId: `sensor.${base}_${alert.suffix}`, label: alert.label })) : [];
 }
 
+/** Home Connect pairs `select.<device>_active_program` with `select.<device>_selected_program`. */
+export function coffeeSelectedProgramEntityId(activeProgramEntityId: string): string {
+  const swapped = activeProgramEntityId.replace(/_aktives_programm$/, '_ausgewahltes_programm').replace(/_active_program$/, '_selected_program');
+  return swapped === activeProgramEntityId ? '' : swapped;
+}
+export function coffeeCompanionEntityIds(c: NonNullable<FloorplanObject['coffee']>): string[] {
+  return [...coffeeAlertEntityIds(c.statusEntityId).map(alert => alert.entityId), coffeeSelectedProgramEntityId(c.activeProgramEntityId)].filter(Boolean);
+}
+
+/**
+ * The machine reports no end time, only progress (%) about once per second. The countdown
+ * extrapolates the progress rate of the last seconds and ticks down between samples.
+ */
+type Sample = { t: number; p: number };
+const progressRuns = new Map<string, Sample[]>();
+const lastPrograms = new Map<string, string>();
+function estimateRemaining(id: string, inProgress: boolean, percent: number, changed: number, now: number): number | null {
+  if (!inProgress || !Number.isFinite(percent) || !Number.isFinite(changed)) { if (!inProgress) progressRuns.delete(id); return null; }
+  let samples = progressRuns.get(id) ?? [];
+  const last = samples[samples.length - 1];
+  if (last && percent < last.p) samples = [];
+  if (!last || percent < last.p || changed > last.t) samples.push({ t: changed, p: percent });
+  samples = samples.filter((sample, i) => i === samples.length - 1 || sample.t >= changed - 30_000);
+  progressRuns.set(id, samples);
+  const head = samples[samples.length - 1];
+  const base = [...samples].reverse().find(sample => sample.t <= head.t - 3000 && head.t - sample.t <= 10_000) ?? samples[0];
+  if (head.p >= 100) return 0;
+  if (head.t - base.t < 3000 || head.p - base.p <= 0) return null;
+  const rate = (head.p - base.p) / (head.t - base.t);
+  return Math.max(0, (100 - head.p) / rate - Math.max(0, now - head.t));
+}
+
 export function coffeeState(object: FloorplanObject, states: Record<string, HAState>, connected: boolean, now = Date.now()) {
   const c = object.coffee!;
   const power = states[object.entityId], operation = states[c.statusEntityId], active = states[c.activeProgramEntityId];
@@ -36,14 +68,23 @@ export function coffeeState(object: FloorplanObject, states: Record<string, HASt
   const on = available && power?.state === 'on';
   const options: string[] = available && active && active.state !== 'unavailable' && Array.isArray(active.attributes.options)
     ? active.attributes.options.filter((x: unknown): x is string => typeof x === 'string' && !!x) : [];
-  const program = inProgress && valid(active) ? coffeeProgram(active.state) : '';
+  // Started at the machine, the active program often stays unknown; the selection shown on the
+  // display is reported until the start, so the last known one names the running drink.
+  const selectedProgram = states[coffeeSelectedProgramEntityId(c.activeProgramEntityId)];
+  const known = valid(active) ? active.state : valid(selectedProgram) ? selectedProgram.state : '';
+  if (available && known) lastPrograms.set(object.id, known);
+  const program = inProgress ? coffeeProgram(known || lastPrograms.get(object.id) || '') : '';
   const end = states[c.remainingEntityId];
   const endTime = valid(end) && end.attributes.device_class === 'timestamp' ? Date.parse(end.state) : NaN;
-  const remaining = running && Number.isFinite(endTime) && endTime >= now ? coffeeDuration((endTime - now) / 1000) : '';
-  const since = operation?.last_changed ? Date.parse(operation.last_changed) : NaN;
-  const elapsed = running && Number.isFinite(since) && since <= now ? coffeeDuration((now - since) / 1000) : '';
   const rawProgress = states[c.progressEntityId];
   const percent = valid(rawProgress) ? Number(rawProgress.state) : NaN;
+  const estimate = estimateRemaining(object.id, running, percent, rawProgress?.last_changed ? Date.parse(rawProgress.last_changed) : NaN, now);
+  const reported = running && Number.isFinite(endTime) && endTime >= now;
+  const remainingEstimated = !reported && running && estimate !== null;
+  const remaining = reported ? coffeeDuration((endTime - now) / 1000)
+    : estimate !== null ? coffeeDuration(Math.ceil(estimate / 1000)) : '';
+  const since = operation?.last_changed ? Date.parse(operation.last_changed) : NaN;
+  const elapsed = running && Number.isFinite(since) && since <= now ? coffeeDuration((now - since) / 1000) : '';
   const progress = inProgress && Number.isFinite(percent) && percent >= 0 && percent <= 100 ? percent : null;
   const local = states[c.localControlEntityId]?.state !== 'off';
   const remote = states[c.remoteStartEntityId]?.state === 'on';
@@ -51,7 +92,7 @@ export function coffeeState(object: FloorplanObject, states: Record<string, HASt
   const alerts = available ? coffeeAlertEntityIds(c.statusEntityId)
     .filter(alert => ['present', 'confirmed'].includes(states[alert.entityId]?.state ?? ''))
     .map(alert => alert.label) : [];
-  return { available, on, running, inProgress, options, program, remaining, elapsed, progress, alerts,
+  return { available, on, running, inProgress, options, program, remaining, remainingEstimated, elapsed, progress, alerts,
     label: !object.entityId ? 'Noch nicht zugeordnet' : !available ? 'Nicht verbunden' : labels[status] ?? 'Status nicht verfügbar',
     canPower: available && valid(power) && !local,
     canStart: available && on && remote && !local && ['ready', 'inactive', 'finished'].includes(status) && options.length > 0,

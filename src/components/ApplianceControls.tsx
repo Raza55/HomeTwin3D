@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ApplianceConfig, HAState } from '../types';
 import { getActiveHAConnection } from '../services/haWebSocket';
-import { applianceControlOffline, programOptions, rankPrograms, readProgramUsage, recordProgramStart, resolveApplianceControls, type ApplianceRegistryEntry } from '../services/applianceControls';
+import { applianceControlOffline, countProgramStarts, mergeProgramStarts, programLabel, programOptions, programStartsFromHistory, rankPrograms, readProgramUsage, recordProgramStart, resolveApplianceControls, type ApplianceRegistryEntry } from '../services/applianceControls';
+import { applianceRunning } from '../babylon/ApplianceAnimation';
+import { fetchHistory } from '../services/haHistoryApi';
 import { useEntityStatesVersion, watchEntityStates } from '../services/entityStateSignal';
 
 export default function ApplianceControls({ appliance, entityId, states, connected, running }: {
@@ -27,8 +29,25 @@ export default function ApplianceControls({ appliance, entityId, states, connect
     }).catch(() => { if (!cancelled) setFeedback('Automatische Zuordnung nicht verfügbar. Bitte über den Stift zuordnen.'); });
     return () => { cancelled = true; };
   }, [connected, entityId]);
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
   const program = states[controls.program ?? ''];
-  const options = rankPrograms(programOptions(program), readProgramUsage(controls.program ?? entityId));
+  // Starts at the machine count too: derived from the recorder, browser starts as fallback.
+  useEffect(() => {
+    let cancelled = false;
+    const programId = controls.program;
+    if (!connected || !programId || !entityId) return;
+    const unit = states[entityId]?.attributes.unit_of_measurement;
+    const isRunning = (state: string) => applianceRunning(appliance, { entity_id: entityId, state, attributes: unit ? { unit_of_measurement: unit } : {}, last_changed: '' });
+    void Promise.all([fetchHistory(programId, '30d'), fetchHistory(entityId, '30d')]).then(([programs, runs]) => {
+      if (!cancelled) setUsage(countProgramStarts(mergeProgramStarts(programId, programStartsFromHistory(programs, runs, isRunning))));
+    }).catch(() => { /* Ranking falls back to starts from this browser. */ });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, controls.program, entityId, running]);
+  const fromHistory = !!usage && Object.keys(usage).length > 0;
+  const counts = fromHistory ? usage! : readProgramUsage(controls.program ?? entityId);
+  const options = rankPrograms(programOptions(program), counts);
+  const presets = options.filter(option => (counts[option] ?? 0) > 0).slice(0, 4);
   const offline = applianceControlOffline(controls, states, connected);
   // Buttons report "unknown" until first use; this is not unavailability.
   const available = (id?: string) => !!id && !!states[id] && states[id].state !== 'unavailable';
@@ -60,9 +79,14 @@ export default function ApplianceControls({ appliance, entityId, states, connect
       disabled={busy || !!pendingProgram || offline || running || !available(controls.program) || !options.length}
       onChange={event => void command('program', event.target.value)}>
       <option value="" disabled>{options.length ? 'Programm wählen' : 'Keine Programmauswahl verfügbar'}</option>
-      {options.map(option => <option key={option} value={option}>{option}</option>)}
+      {options.map(option => <option key={option} value={option}>{programLabel(option)}{counts[option] > 0 ? ` (${counts[option]}×)` : ''}</option>)}
     </select></label>
-    <p className="appliance-control-hint">Häufig hier gestartete Programme zuerst; Zählung in diesem Browser.</p>
+    {presets.length > 0 && <div className="appliance-presets" role="group" aria-label="Häufige Programme">
+      {presets.map(option => <button key={option} aria-pressed={(pendingProgram || program?.state) === option} title={option}
+        disabled={busy || !!pendingProgram || offline || running || !available(controls.program)}
+        onClick={() => void command('program', option)}>{programLabel(option)}</button>)}
+    </div>}
+    <p className="appliance-control-hint">{fromHistory ? 'Sortiert nach Häufigkeit laut HA Verlauf, auch Starts am Gerät.' : 'Häufig hier gestartete Programme zuerst; Zählung in diesem Browser.'}</p>
     <div className="appliance-control-actions">
       <button disabled={busy || !!pendingProgram || offline || running || !available(controls.start)} onClick={() => void command('start')}>Start</button>
       <button disabled={busy || offline || !available(controls.stop)} onClick={() => void command('stop')}>Stopp / Reset</button>

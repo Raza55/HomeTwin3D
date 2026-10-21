@@ -25,7 +25,7 @@ import VacuumTracker from '../../components/VacuumTracker';
 import VacuumMarkers from '../../components/VacuumMarkers';
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Blinds, Crosshair, DoorOpen, Fan, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
+import { Blinds, Crosshair, DoorOpen, Fan, Flame, Footprints, Lightbulb, Move3d, Orbit, Image as ImageIcon, Tv, WashingMachine, Zap } from 'lucide-react';
 import { MarkerCategoryScope } from '../../components/useMapMarkers';
 import { MARKER_CATEGORIES, getMarkerLayer, type MarkerCategory } from '../../babylon/MarkerLayer';
 import { CHAPTER_MARKERS } from '../../services/dayDemo/story';
@@ -2459,7 +2459,6 @@ export default function Dashboard() {
           onSettings={() => setSettingsOpen(true)}
           onShopping={dayDemoController ? undefined : () => navigate('/shopping')}
           onCalendar={dayDemoController ? undefined : () => setCalendarOpen(true)}
-          onKalo={dayDemoController ? undefined : () => setKaloOpen(true)}
           latitude={(configRef.current?.location.latitude ?? SYSTEM_LOCATION.latitude)}
           longitude={(configRef.current?.location.longitude ?? SYSTEM_LOCATION.longitude)}
           northOffset={northOffset}
@@ -2498,6 +2497,14 @@ export default function Dashboard() {
                 title={!showTextures && energyView ? t('energy.hide') : t('energy.show')}
               >
                 <Zap size={18} strokeWidth={1.7} aria-hidden="true" />
+              </button>
+              <button
+                className="dashboard-icon-btn"
+                onClick={() => setKaloOpen(true)}
+                aria-label={t('kalo.open')}
+                title={t('kalo.open')}
+              >
+                <Flame size={18} strokeWidth={1.7} aria-hidden="true" />
               </button>
               <button
                 className={`dashboard-icon-btn${navigationMode !== 'normal' ? ' active' : ''}`}

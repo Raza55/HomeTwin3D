@@ -1,8 +1,9 @@
 # Änderungsverlauf
 
-## Noch nicht veröffentlicht · Automatischer Handy-Einstieg
+## 0.5.90 · Verbrauch in der Steuerleiste, Handy-Einstieg automatisch (21.10.2026)
 
 - Der zusätzliche Handy-Button im 3D-Board entfällt. Smartphones öffnen weiterhin automatisch die Handy-Startseite; dort bleibt die Kachel zum vollständigen 3D-Board verfügbar.
+- Das Verbrauchspanel (KALO) öffnet sich jetzt über die rechte Steuerleiste neben der Energieansicht, statt über einen eigenen Knopf oben im Board.
 
 ## 0.5.89 · KALO Anmeldung mit Benutzername und Passwort (21.10.2026)
 

@@ -1,15 +1,15 @@
 // KALO consumption bridge: reads monthly heating and hot-water values from the
 // KALO resident portal (api.kalo.de) and serves them as compact JSON to the board.
-// Credentials (an offline refresh token) and the apartment identifiers are server
+// Credentials (username and password) and the apartment identifiers are server
 // configuration only; they never reach the browser, and upstream errors are never
-// forwarded. Access is gated by a valid Home Assistant bearer token, like immich-api.
+// forwarded. For each (cached) fetch the add-on performs the portal's own browser
+// login over HTTP to obtain a short-lived access token. Access is gated by a valid
+// Home Assistant bearer token, like immich-api.
 import http from 'node:http';
-import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { authenticateHA } from './immich-api.mjs';
+import { login as kaloLogin } from './kalo-login-flow.mjs';
 
-const TOKEN_URL = 'https://meine.kalo.de/auth/realms/consumer/protocol/openid-connect/token';
 const API_BASE = 'https://api.kalo.de/resident/v2';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ID = /^[0-9]{1,15}$/;              // billing/residential unit ids are numeric
@@ -26,29 +26,6 @@ async function bounded(response, max) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
-}
-
-// The offline refresh token can rotate on every refresh (Keycloak "Revoke Refresh
-// Token"). The current one is persisted next to the shared install data so it
-// survives restarts; the configured token only seeds the very first run.
-export function createTokenStore(path, { readImpl = readFile, writeImpl = writeFile, renameImpl = rename, mkdirImpl = mkdir } = {}) {
-  return {
-    async load(seed) {
-      try {
-        const saved = JSON.parse(await readImpl(path, 'utf8'));
-        if (typeof saved?.refreshToken === 'string' && saved.refreshToken.length > 20) return saved.refreshToken;
-      } catch { /* no persisted token yet */ }
-      return seed;
-    },
-    async save(refreshToken) {
-      try {
-        await mkdirImpl(dirname(path), { recursive: true });
-        const tmp = path + '.tmp';
-        await writeImpl(tmp, JSON.stringify({ refreshToken }), { mode: 0o600 });
-        await renameImpl(tmp, path);
-      } catch (error) { console.warn('[kalo-api] could not persist rotated token: ' + (error?.code ?? 'error')); }
-    },
-  };
 }
 
 function compact(details, report) {
@@ -86,32 +63,24 @@ function compact(details, report) {
 }
 
 export function createKaloHandler({
-  refreshToken = '', residentId = '', billingUnit = '', occupancyId = '', residentialUnit = '8',
-  clientId = 'web', tokenUrl = TOKEN_URL, apiBase = API_BASE,
-  fetchImpl = fetch, authenticate, store, now = Date.now,
+  username = '', password = '', residentId = '', billingUnit = '', occupancyId = '', residentialUnit = '8',
+  apiBase = API_BASE, fetchImpl = fetch, authenticate, login = kaloLogin, now = Date.now,
 }) {
   const configured = UUID.test(residentId) && ID.test(String(billingUnit)) && UUID.test(occupancyId)
-    && ID.test(String(residentialUnit)) && !!refreshToken && !!store;
-  const state = { refreshToken: '', seeded: false, accessToken: '', accessExpiry: 0, data: null, dataAt: 0, loading: null };
+    && ID.test(String(residentialUnit)) && !!username && !!password;
+  const state = { accessToken: '', accessExpiry: 0, authing: null, data: null, dataAt: 0, loading: null };
 
   async function accessToken() {
-    if (!state.seeded) { state.refreshToken = await store.load(refreshToken); state.seeded = true; }
-    if (state.accessToken && state.accessExpiry - now() > 60000) return state.accessToken;
-    const body = new URLSearchParams({ grant_type: 'refresh_token', client_id: clientId, refresh_token: state.refreshToken });
-    const response = await fetchImpl(tokenUrl, {
-      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
-      headers: { 'content-type': 'application/x-www-form-urlencoded' }, body,
-    });
-    if (!response.ok) { await response.body?.cancel(); throw Error('token'); }
-    const token = JSON.parse((await bounded(response, 256 * 1024)).toString());
-    if (!token.access_token) throw Error('token');
-    state.accessToken = token.access_token;
-    state.accessExpiry = now() + (Number(token.expires_in) || 300) * 1000;
-    if (token.refresh_token && token.refresh_token !== state.refreshToken) {
-      state.refreshToken = token.refresh_token;
-      await store.save(state.refreshToken);
-    }
-    return state.accessToken;
+    if (state.accessToken && state.accessExpiry - now() > 30000) return state.accessToken;
+    if (state.authing) return state.authing;           // coalesce concurrent logins
+    state.authing = (async () => {
+      const token = await login({ username, password });
+      if (!token?.access_token) throw Error('login');
+      state.accessToken = token.access_token;
+      state.accessExpiry = now() + (Number(token.expires_in) || 300) * 1000;
+      return state.accessToken;
+    })();
+    try { return await state.authing; } finally { state.authing = null; }
   }
 
   async function upstream(route) {
@@ -159,7 +128,7 @@ export function createKaloHandler({
       if (request.pathname.endsWith('/status')) return reply(200, { configured: true });
       return reply(200, await consumption());
     } catch {
-      // Never forward remote error bodies, URLs, tokens or apartment identifiers.
+      // Never forward remote error bodies, URLs, credentials or apartment identifiers.
       if (!res.headersSent) reply(502, { error: 'unavailable' });
       else res.end();
     } finally { active--; }
@@ -167,14 +136,13 @@ export function createKaloHandler({
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const store = createTokenStore(process.env.KALO_TOKEN_STORE || '/config/shared/kalo-token.json');
   http.createServer(createKaloHandler({
-    refreshToken: process.env.KALO_REFRESH_TOKEN,
+    username: process.env.KALO_USERNAME,
+    password: process.env.KALO_PASSWORD,
     residentId: process.env.KALO_RESIDENT_ID,
     billingUnit: process.env.KALO_BILLING_UNIT,
     occupancyId: process.env.KALO_OCCUPANCY_ID,
     residentialUnit: process.env.KALO_RESIDENTIAL_UNIT || '8',
-    clientId: process.env.KALO_CLIENT_ID || 'web',
-    authenticate: authenticateHA, store,
+    authenticate: authenticateHA,
   })).listen(8102, '127.0.0.1');
 }

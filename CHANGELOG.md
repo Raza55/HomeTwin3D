@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.89 · KALO Anmeldung mit Benutzername und Passwort (21.10.2026)
+
+- Das Portal erlaubt für seinen Web-Client keine Offline-Token und nur kurzlebige Sitzungen. Der Add-on-Dienst meldet sich daher für jeden (sechs Stunden zwischengespeicherten) Abruf selbst beim Portal an, genau wie der Browser-Login, und braucht dafür nur Benutzername und Passwort.
+- Neue Optionen `kalo_username` und `kalo_password` ersetzen das frühere Token. Die Zugangsdaten sind reine Add-on-Konfiguration und verlassen den Container nicht. Der Login übersteht Neustarts und Sitzungsgrenzen, ein Nachpflegen von Hand entfällt.
+
 ## 0.5.88 · KALO Verbrauchsinformation (21.10.2026)
 
 ### Verbrauch aus dem KALO Bewohnerportal

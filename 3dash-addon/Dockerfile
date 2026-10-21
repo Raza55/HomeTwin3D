@@ -48,5 +48,6 @@ RUN chmod +x /etc/services.d/immich-api/run
 
 # KALO consumption bridge (kalo-api.mjs), reached through nginx at /api/kalo/.
 COPY kalo-api.mjs /opt/hometwin/kalo-api.mjs
+COPY kalo-login-flow.mjs /opt/hometwin/kalo-login-flow.mjs
 COPY kalo-api-run.sh /etc/services.d/kalo-api/run
 RUN chmod +x /etc/services.d/kalo-api/run

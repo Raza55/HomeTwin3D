@@ -28,36 +28,31 @@ const REPORT = {
   },
 };
 
-function memoryStore(seedSaved = null) {
-  let saved = seedSaved;
-  return { saves: () => saved, store: {
-    async load(seed) { return saved ?? seed; },
-    async save(token) { saved = token; },
-  } };
-}
-
 async function fixture(t, options = {}) {
   const calls = [];
-  let nextRefresh = 'rotated-refresh-token';
+  let logins = 0;
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
-    if (url === 'https://token.test/') return json({ access_token: 'access-xyz', expires_in: 300, refresh_token: nextRefresh, scope: 'openid offline_access' });
     if (url.endsWith('/consumption-details')) return json(DETAILS);
     if (url.endsWith('/consumptions-report')) return json(REPORT);
     throw Error('unexpected ' + url);
   };
-  const mem = memoryStore(options.seedSaved ?? null);
+  const login = async ({ username, password }) => {
+    logins++;
+    if (username !== 'tester' || password !== 'secret') throw Error('invalid_credentials');
+    return { access_token: 'access-xyz', expires_in: 300 };
+  };
   const handler = createKaloHandler({
-    refreshToken: 'seed-refresh-token', residentId, billingUnit, occupancyId, residentialUnit,
-    tokenUrl: 'https://token.test/', apiBase: 'https://api.test',
-    fetchImpl, authenticate: async auth => auth === 'Bearer viewer', store: mem.store,
+    username: 'tester', password: 'secret', residentId, billingUnit, occupancyId, residentialUnit,
+    apiBase: 'https://api.test',
+    fetchImpl, authenticate: async auth => auth === 'Bearer viewer', login,
     ...options.handler,
   });
   const server = http.createServer(handler);
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   t.after(() => { server.closeAllConnections(); server.close(); });
   const request = (route, init = {}) => fetch(`http://127.0.0.1:${server.address().port}/api/kalo/${route}`, { headers: { Authorization: 'Bearer viewer' }, ...init });
-  return { calls, request, mem, setNextRefresh: v => { nextRefresh = v; } };
+  return { calls, request, logins: () => logins };
 }
 
 test('requires a valid Home Assistant bearer before any upstream call', async t => {
@@ -75,8 +70,8 @@ test('answers not_configured when identifiers are missing', async t => {
   assert.equal(calls.length, 0);
 });
 
-test('refreshes the token, fetches both endpoints and returns a compact payload', async t => {
-  const { request, calls } = await fixture(t);
+test('logs in, fetches both endpoints and returns a compact payload', async t => {
+  const { request, calls, logins } = await fixture(t);
   const res = await request('consumption');
   assert.equal(res.status, 200);
   assert.match(res.headers.get('cache-control'), /no-store/);
@@ -88,33 +83,26 @@ test('refreshes the token, fetches both endpoints and returns a compact payload'
   assert.deepEqual(data.months.map(m => m.period), ['2026-08', '2026-09']); // sorted ascending
   assert.equal(data.months[0].estimated, true);
   assert.equal(data.months[1].heatReference, 113.98);
-  // token request carries the refresh grant; data requests carry the bearer and never the browser's token
-  const token = calls.find(c => c.url === 'https://token.test/');
-  assert.match(token.init.body.toString(), /grant_type=refresh_token/);
-  assert.ok(calls.filter(c => c.url.startsWith('https://api.test')).every(c => c.init.headers.Authorization === 'Bearer access-xyz' && c.init.redirect === 'error'));
-  // nothing in the response leaks the token
+  // one login, both data requests carry the resulting bearer, and the token never leaks
+  assert.equal(logins(), 1);
+  assert.ok(calls.every(c => c.url.startsWith('https://api.test') && c.init.headers.Authorization === 'Bearer access-xyz' && c.init.redirect === 'error'));
   assert.ok(!JSON.stringify(data).includes('access-xyz'));
 });
 
-test('persists a rotated refresh token and reuses it next time', async t => {
-  const { request, mem } = await fixture(t);
-  await request('consumption');
-  assert.equal(mem.saves(), 'rotated-refresh-token');
-});
-
-test('caches consumption so a second call does not hit the token or data endpoints again', async t => {
-  const { request, calls } = await fixture(t);
+test('caches consumption and the access token so a second call does not log in or refetch', async t => {
+  const { request, calls, logins } = await fixture(t);
   await request('consumption');
   const count = calls.length;
   await request('consumption');
   assert.equal(calls.length, count);
+  assert.equal(logins(), 1);
 });
 
 test('maps upstream failure to a sanitized 502', async t => {
-  const { request } = await fixture(t, { handler: { apiBase: 'https://api.test', fetchImpl: async (url) => {
-    if (url === 'https://token.test/') return new Response(JSON.stringify({ access_token: 'a', expires_in: 300 }), { headers: { 'content-type': 'application/json' } });
-    return new Response('nope', { status: 500 });
-  } } });
+  const { request } = await fixture(t, { handler: {
+    login: async () => ({ access_token: 'a', expires_in: 300 }),
+    fetchImpl: async () => new Response('nope', { status: 500 }),
+  } });
   const res = await request('consumption');
   assert.equal(res.status, 502);
   assert.deepEqual(await res.json(), { error: 'unavailable' });

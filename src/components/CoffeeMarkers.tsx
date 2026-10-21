@@ -82,7 +82,8 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
   };
   return <>{objects.map(o => {
     const state = coffeeState(o, states, connected, now);
-    const time = state.remaining ? `Noch ${state.remaining}` : state.elapsed ? `Seit ${state.elapsed}` : '';
+    const time = state.remaining ? `Noch ${state.remainingEstimated ? 'ca. ' : ''}${state.remaining}`
+      : state.progress !== null ? `${Math.round(state.progress)} %` : state.running ? 'Startet …' : '';
     return <button key={o.id} ref={el => { refs.current[o.id] = el; }}
       className={`coffee-marker ${state.running ? 'is-running' : ''} ${state.inProgress && !state.running ? 'needs-attention' : ''} ${state.alerts.length ? 'needs-service' : ''}`}
       title={[o.label, state.label, ...state.alerts].join(' · ')} aria-label={`${o.label} steuern${state.alerts.length ? ` · ${state.alerts.join(', ')}` : ''}`} aria-expanded={open === o.id} aria-haspopup="dialog"
@@ -98,7 +99,7 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     <p className={value.running ? 'coffee-running' : ''} role="status">{value.label}</p>
     {value.alerts.length > 0 && <ul className="coffee-alerts" role="alert">{value.alerts.map(alert => <li key={alert}><AlertTriangle size={15}/>{alert}</li>)}</ul>}
     {value.inProgress && <dl><dt>Programm</dt><dd>{value.program || 'Nicht gemeldet'}</dd>
-      <dt>Restzeit</dt><dd>{value.remaining || 'Nicht gemeldet'}</dd>
+      <dt>Restzeit</dt><dd>{value.remaining ? `${value.remainingEstimated ? 'ca. ' : ''}${value.remaining}` : value.running ? 'Wird berechnet …' : 'Nicht gemeldet'}</dd>
       {value.elapsed && <><dt>Läuft seit</dt><dd>{value.elapsed}</dd></>}
     </dl>}
     {value.progress !== null && <label className="coffee-progress">Fortschritt {Math.round(value.progress)} %<progress max={100} value={value.progress}/></label>}

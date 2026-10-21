@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { AppConfig } from '../types';
-import { coffeeAlertEntityIds } from './coffeeState';
+import { coffeeCompanionEntityIds } from './coffeeState';
 type PlanObject = NonNullable<NonNullable<AppConfig['model']>['floorplan']>['objects'][number];
 
 let version = 0;
@@ -69,7 +69,7 @@ export function useConfiguredEntityStates(config: AppConfig, select: (object: Pl
   // The selector is constant for each caller; config identity changes on edits.
   const ids = useMemo(() => {
     const objects = config.model?.floorplan?.objects.filter(select) ?? [];
-    return configuredEntityIds([objects, objects.flatMap(o => o.coffee ? coffeeAlertEntityIds(o.coffee.statusEntityId) : [])]);
+    return configuredEntityIds([objects, objects.flatMap(o => o.coffee ? coffeeCompanionEntityIds(o.coffee) : [])]);
   }, [config]);
   return useEntityStatesVersion(ids);
 }

@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## Noch nicht veröffentlicht · Automatischer Handy-Einstieg
+
+- Der zusätzliche Handy-Button im 3D-Board entfällt. Smartphones öffnen weiterhin automatisch die Handy-Startseite; dort bleibt die Kachel zum vollständigen 3D-Board verfügbar.
+
 ## 0.5.89 · KALO Anmeldung mit Benutzername und Passwort (21.10.2026)
 
 - Das Portal erlaubt für seinen Web-Client keine Offline-Token und nur kurzlebige Sitzungen. Der Add-on-Dienst meldet sich daher für jeden (sechs Stunden zwischengespeicherten) Abruf selbst beim Portal an, genau wie der Browser-Login, und braucht dafür nur Benutzername und Passwort.

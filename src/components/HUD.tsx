@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import {
   CalendarDays,
   ShoppingCart,
-  Smartphone,
   Flame,
   Cloud,
   CloudOff,
@@ -37,7 +36,6 @@ interface Props {
   /** Opens the calendar (tap on the date). */
   onCalendar?: () => void;
   onShopping?: () => void;
-  onMobile?: () => void;
   /** Opens the KALO consumption panel. */
   onKalo?: () => void;
   viewControls?: ReactNode;
@@ -93,7 +91,6 @@ export default function HUD({
   onSettings,
   onCalendar,
   onShopping,
-  onMobile,
   onKalo,
   viewControls,
   markerFilters,
@@ -240,7 +237,6 @@ export default function HUD({
           </button>
           {onSettings && <button type="button" className="hud-settings" onClick={onSettings} aria-label={t('settings.title')} title={t('settings.title')}><SettingsIcon size={19} strokeWidth={1.7} aria-hidden="true" /></button>}
           {onShopping && <button type="button" className="hud-settings hud-shopping" onClick={onShopping} aria-label={language.startsWith('de') ? 'Einkaufsliste öffnen' : 'Open shopping list'} title={language.startsWith('de') ? 'Einkaufsliste' : 'Shopping list'}><ShoppingCart size={21} aria-hidden="true" /></button>}
-          {onMobile && <button type="button" className="hud-settings hud-shopping" onClick={onMobile} aria-label={language.startsWith('de') ? 'Handy-Startseite öffnen' : 'Open mobile start page'} title={language.startsWith('de') ? 'Handy-Startseite' : 'Mobile start page'}><Smartphone size={21} aria-hidden="true" /></button>}
           {onKalo && <button type="button" className="hud-settings hud-shopping" onClick={onKalo} aria-label={t('kalo.open')} title={t('kalo.open')}><Flame size={21} aria-hidden="true" /></button>}
           {(simulationMode || demoMode) && (
             <div className="label">{simulationMode ? t('dashboard.simulation') : t('dashboard.demoView')}</div>

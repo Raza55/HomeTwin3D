@@ -29,6 +29,7 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ### Handy-Startseite
 
+- Der Einstieg erfolgt automatisch auf kleinen Bildschirmen, ohne zusätzlichen Handy-Button im Desktop-Board. Auf der Handy-Startseite führt die Kachel „3D-Board“ zur vollständigen Ansicht.
 - `#/mobile` bietet große Kacheln für Einkaufsliste, Kalender, Hauswarnungen und 3D-Board. Bei der normalen Startadresse wird sie bis 600 px Bildschirmbreite automatisch gewählt; unter „Startseite auf diesem Gerät“ lassen sich Automatik, Handy oder 3D festlegen.
 - `#/board` öffnet ausdrücklich die 3D-Ansicht. Desktop und Simulation behalten standardmäßig das Board. Kalender und Warnliste verwenden eine eigene HA-Verbindung und benötigen keine 3D-Szene.
 - Lokale Einkaufsanzahl ist auch ohne HA nutzbar. Die ausgewählte HA-Liste zeigt ihre vom Server gemeldete Anzahl offener Artikel. Hausstatus und Kontakt-/Lichtzahlen werden nur nach erfolgreichem Laden der HA-Zustände angezeigt; Wiederaufnahme nach Hintergrundbetrieb erneuert die Verbindung.

@@ -45,3 +45,8 @@ RUN chmod +x /etc/services.d/calendar-api/run
 COPY immich-api.mjs /opt/hometwin/immich-api.mjs
 COPY immich-api-run.sh /etc/services.d/immich-api/run
 RUN chmod +x /etc/services.d/immich-api/run
+
+# KALO consumption bridge (kalo-api.mjs), reached through nginx at /api/kalo/.
+COPY kalo-api.mjs /opt/hometwin/kalo-api.mjs
+COPY kalo-api-run.sh /etc/services.d/kalo-api/run
+RUN chmod +x /etc/services.d/kalo-api/run

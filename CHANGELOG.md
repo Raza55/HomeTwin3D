@@ -1,6 +1,14 @@
 # Änderungsverlauf
 
-## 0.5.87 · Handy-Startseite und Einkaufserweiterungen (21.10.2026)
+## 0.5.88 · KALO Verbrauchsinformation (21.10.2026)
+
+### Verbrauch aus dem KALO Bewohnerportal
+
+- Neues Verbrauchspanel im Board zeigt Heizung und Warmwasser: aktueller Monat, Vergleich mit dem Vorjahr und mit vergleichbaren Haushalten sowie ein Jahresrückblick über die letzten zwölf Monate.
+- Ein eigener Add-on-Dienst (`kalo-api.mjs`) ruft die Monatswerte über die geschützte Portal-Schnittstelle ab. Zugangsdaten und Wohnungskennungen sind reine Add-on-Konfiguration und verlassen den Container nicht; der Zugriff ist wie bei Immich mit einer gültigen Home-Assistant-Anmeldung abgesichert.
+- Die Anmeldung nutzt ein Offline-Token, das dauerhaft gültig bleibt und bei jeder Erneuerung automatisch im Add-on gespeichert wird. Ein Helfer (`tools/kalo-login.mjs`) erzeugt das Token einmalig lokal.
+
+
 
 ### Handy-Startseite
 

@@ -14,7 +14,11 @@ interface Props {
  onOpenCover:(id:string)=>Promise<unknown>;onCloseCover:(id:string)=>Promise<unknown>;onStopCover:(id:string)=>Promise<unknown>;onSetPosition:(id:string,position:number)=>Promise<unknown>;
 }
 export default function BlindQuickControls(props:Props){
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  // Include every mapped cover: room controls and the sleep action read other shutters too.
+  useEntityStatesVersion(props.visible ? [
+    props.entityId ?? '', ...(props.config.blinds ?? []).map(blind => blind.entityId),
+    ...(props.config.model?.floorplan?.objects ?? []).filter(object => object.domain === 'cover').map(object => object.entityId),
+  ].filter(Boolean) : []);
  if(!props.visible||!props.entityId)return null;
  return <Controls key={props.entityId} {...props} entityId={props.entityId}/>;
 }

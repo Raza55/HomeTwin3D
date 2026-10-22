@@ -11,7 +11,7 @@ const pending = new Set<string>();
 const entityVersions = new Map<string, number>();
 const listeners = new Set<() => void>();
 const interests = new Map<string, number>();
-export function watchEntityStates(ids: string[]): () => void {
+export function watchEntityStates(ids: readonly string[]): () => void {
   ids.forEach(id => interests.set(id, (interests.get(id) ?? 0) + 1));
   return () => ids.forEach(id => {
     const remaining = (interests.get(id) ?? 1) - 1;
@@ -61,7 +61,13 @@ export function useEntityStatesVersion(ids?: readonly string[]): number {
   const key = ids ? JSON.stringify(ids) : '';
   const stableIds = useMemo(() => key ? JSON.parse(key) as string[] : undefined, [key]);
   const getVersion = useCallback(() => entityStatesVersion(stableIds), [stableIds]);
-  return useSyncExternalStore(subscribe, getVersion, getVersion);
+  const subscribeToIds = useCallback((listener: () => void) => {
+    // Also route configured/custom entity IDs through the Dashboard notifier.
+    const unwatch = stableIds ? watchEntityStates(stableIds) : () => {};
+    const unsubscribe = subscribe(listener);
+    return () => { unsubscribe(); unwatch(); };
+  }, [stableIds]);
+  return useSyncExternalStore(subscribeToIds, getVersion, getVersion);
 }
 
 /** Cache dependency traversal across state updates. */

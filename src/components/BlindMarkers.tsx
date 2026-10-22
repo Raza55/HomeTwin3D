@@ -11,7 +11,7 @@ import './LightClusterControls.css';
 import './BlindQuickControls.css';
 import { useEntityStatesVersion } from '../services/entityStateSignal';
 export default function BlindMarkers({scene,meshes,config,states,onAssign,onOpen}:{scene:Scene;meshes:BlindMeshMap;config:AppConfig;states:Record<string,HAState>;onAssign:(id:string)=>void;onOpen:(id:string,x?:number,y?:number)=>void}){
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  useEntityStatesVersion(Object.keys(meshes));
  const buttons=useRef<Record<string,HTMLButtonElement|null>>({});
  const free=(config.model?.floorplan?.objects??[]).filter(o=>o.domain==='cover'&&!o.entityId);
  const latestStates=useLatest(states);

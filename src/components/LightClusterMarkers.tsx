@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useLatest, useMapMarkers } from './useMapMarkers';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import { Lightbulb, LockKeyhole } from 'lucide-react';
@@ -8,7 +8,7 @@ import type { MeshMap } from '../babylon/LightMeshFactory';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { quickLightCluster, isEnsis } from '../services/lightClusters';
 import './LightClusterControls.css';
-import { HUE_SYNC_COLOR, isHueSyncLocked } from '../services/hueSync';
+import { HUE_SYNC_AREA, HUE_SYNC_SWITCH, HUE_SYNC_COLOR, isHueSyncLocked } from '../services/hueSync';
 import { useEntityStatesVersion } from '../services/entityStateSignal';
 
 export default function LightClusterMarkers({scene,config,meshes,states,onOpen,onLeave,onAssign}:{
@@ -16,11 +16,24 @@ export default function LightClusterMarkers({scene,config,meshes,states,onOpen,o
   onAssign?:(objectId:string)=>void;
   onOpen:(entityId:string,x:number,y:number,pinned:boolean)=>void;onLeave:()=>void;
 }){
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
   const buttons=useRef<Record<string,HTMLButtonElement|null>>({});
   const touchGesture=useRef<{x:number;y:number;moved:boolean}|null>(null);
-  const groups:LightConfig[][]=[],seen=new Set<string>();
-  for(const l of config.lights){if(seen.has(l.entityId))continue;const group=quickLightCluster(config.lights,l.entityId);if(group.length===1 && !meshes[l.entityId]?.touchIconMesh)continue;group.forEach(m=>seen.add(m.entityId));groups.push(group);}
+  // Mesh maps are mutated in place during rebuilds. Track icon eligibility as well
+  // as the light configuration, so newly created/removed single markers stay correct.
+  const iconKey = config.lights.map(light => meshes[light.entityId]?.touchIconMesh ? '1' : '0').join('');
+  const groups = useMemo(() => {
+    const result: LightConfig[][] = [], seen = new Set<string>();
+    for (const light of config.lights) {
+      if (seen.has(light.entityId)) continue;
+      const group = quickLightCluster(config.lights, light.entityId);
+      if (group.length === 1 && !meshes[light.entityId]?.touchIconMesh) continue;
+      group.forEach(member => seen.add(member.entityId));
+      result.push(group);
+    }
+    return result;
+  }, [config, meshes, iconKey]);
+  const entityIds = useMemo(() => [HUE_SYNC_SWITCH, HUE_SYNC_AREA, ...groups.flatMap(group => group.map(light => light.entityId))], [groups]);
+  useEntityStatesVersion(entityIds);
   const unassigned=(config.model?.floorplan?.objects ?? []).filter(o=>o.domain==='light' && !o.entityId);
   const key=unassigned.map(o=>o.id).join(',')+groups.map(g=>g.map(l=>l.entityId).join(',')).join('|');
   // HA colors change with state updates, not with the render frame.

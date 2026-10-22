@@ -1,5 +1,13 @@
 # Änderungsverlauf
 
+## 0.5.92 · Gezielt aktualisierte Marker und ÜLs auf Stundenplanstunden (22.10.2026)
+
+- ÜLs lassen sich ganztägig oder mit Uhrzeit speichern. Passende geladene Fachstunden des gewählten Tages können direkt mit Beginn und Dauer übernommen werden. Bestehende zeitgebundene ÜLs behalten ihre Zeiten auch bei Notenänderungen.
+
+- Licht-, Rollo-, Geräte-, TV- und Wasserleckanzeigen abonnieren gezielt ihre benötigten HA-Zustände. Gruppensteuerungen und Hue-Sync-Abhängigkeiten bleiben berücksichtigt; Batterieanzeigen erkennen weiterhin auch neu auftauchende Sensoren.
+- Lichtmarker verwenden berechnete Gruppen bis zur nächsten Konfigurations- oder Icon-Verfügbarkeitsänderung erneut, auch bei einem Neuaufbau der Meshes im bestehenden Objekt.
+- Chromium-Regressionstest für Aktualisierungen, Zuordnungswechsel, Abmeldung, Warnungen und Gruppensteuerungen: `npm run test:markers` (benötigt den begrenzten Chromium-Launcher, optional über `SAFE_BROWSER_MODULE`).
+
 ## 0.5.91 · Kalender folgt Tageswechsel und Inaktivität (22.10.2026)
 
 - Nach drei Minuten ohne Bedienung kehrt die Ansicht zu heute zurück; die Wochenansicht zeigt dabei die aktuelle Uhrzeit. Eingaben und Scrollen erneuern die Frist, ein geöffneter Termin-Editor setzt sie aus.

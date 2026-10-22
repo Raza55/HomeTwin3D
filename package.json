@@ -22,6 +22,8 @@
     "test:echo": "node --test tools/echo.test.mjs",
     "test:lighting": "node tools/run-lighting-tests.mjs",
     "test:performance": "node tools/run-performance-tests.mjs",
+    "test:markers": "node tools/run-marker-react-tests.mjs",
+    "test:calendar-editor": "node tools/run-calendar-editor-tests.mjs",
     "test:walkthrough": "node tools/run-walkthrough-tests.mjs",
     "audit:high": "npm audit --audit-level=high",
     "test:battery": "node --test tools/battery-warning.test.mjs",

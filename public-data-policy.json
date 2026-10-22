@@ -1,6 +1,17 @@
 {
   "description": "Reviewed anonymous examples and unchanged binary assets. Review changes manually; never auto-regenerate to bypass a finding.",
   "entities": [
+    "sensor.first",
+    "sensor.unrelated",
+    "sensor.second",
+    "cover.unrelated",
+    "light.second",
+    "sensor.dryer",
+    "sensor.remaining",
+    "cover.other",
+    "automation.test_tv_control",
+    "media_player.test_receiver",
+    "media_player.test_tv",
     "cover.living_room_balcony",
     "cover.balcony",
     "cover.bedroom",

@@ -84,14 +84,23 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
     .map(e => lessonTitle(e.summary, knownPersons).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const [subject, setSubject] = useState(existing && eventKind(existing.summary, initialMeta.symbol) === 'ul'
     ? assessmentSubject(assessmentTitle(existing.summary, initialMeta.symbol)) : '');
-  useEffect(() => {
-    if (isUl) { setAllDay(true); setTimetable(false); setPersons(student ? [student] : []); }
-  }, [isUl, student]);
+  const matchingLessons = lessons.filter(lesson => !lesson.allDay && ymd(lesson.start) === date
+    && lesson.end > lesson.start
+    && readMeta(lesson.description, lesson.summary, knownPersons).persons.includes(student)
+    && lessonTitle(lesson.summary, knownPersons).trim() === subject)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
   const [personChoices, setPersonChoices] = useState(() => [...new Set([...knownPersons, ...initialMeta.persons])]);
   const [newPerson, setNewPerson] = useState<string | null>(null);
   const [more, setMore] = useState(!!(existing?.location || initialMeta.notes));
   // Date/time chosen by hand: typed or spoken phrases then no longer move it
   const [scheduleTouched, setScheduleTouched] = useState(!!existing || request.startMinutes !== undefined);
+  useEffect(() => {
+    if (isUl) {
+      // Keep existing times and explicitly chosen slots; new unscheduled ÜLs default to all-day.
+      if (!existing && !scheduleTouched) setAllDay(true);
+      setTimetable(false); setPersons(student ? [student] : []);
+    }
+  }, [isUl, student]);
   const [titleFocused, setTitleFocused] = useState(!existing);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -184,7 +193,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
     const summary = isUl ? `ÜL: ${subject}` : (p?.title || title).trim();
     if (!summary) return null;
     const day = p?.date ?? date;
-    const isAllDay = isUl || (p?.allDay ?? (p?.startMinutes !== undefined ? false : allDay));
+    const isAllDay = p?.allDay ?? (p?.startMinutes !== undefined ? false : allDay);
     const start = parseYmd(day);
     if (isAllDay) {
       const last = p?.date ? start : parseYmd(endDate < day ? day : endDate);
@@ -338,7 +347,7 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
           <div className="cal-row">
             <span className="cal-row-label">{t('calendar.time')}</span>
             <div className="cal-chips">
-              <button type="button" disabled={isUl} className={allDay ? 'active' : ''} onClick={() => { setAllDay(a => !a); touch(); }}>{t('calendar.allDay')}</button>
+              <button type="button" aria-pressed={allDay} className={allDay ? 'active' : ''} onClick={() => { setAllDay(a => !a); touch(); }}>{t('calendar.allDay')}</button>
               {!allDay && <input type="time" value={hhmm(startMin)} step={300} onChange={e => { const [h, m] = e.target.value.split(':').map(Number); if (!Number.isNaN(h)) { setStartMin(h * 60 + (m || 0)); touch(); } }} />}
               {allDay && (
                 <label className="cal-inline">{t('calendar.until')}
@@ -347,6 +356,23 @@ export default function EventEditor({ request, backend, calendars, defaultCalend
               )}
             </div>
           </div>
+
+          {isUl && subject && <div className="cal-row">
+            <span className="cal-row-label">{t('calendar.lessonSlot')}</span>
+            <div className="cal-chips">
+              {matchingLessons.map((lesson, index) => {
+                const minutes = minutesOfDay(lesson.start);
+                const length = Math.round((lesson.end.getTime() - lesson.start.getTime()) / 60000);
+                const selected = !allDay && startMin === minutes && duration === length;
+                return <button type="button" key={`${lesson.start.getTime()}-${index}`} disabled={busy}
+                  className={selected ? 'active' : ''} aria-pressed={selected}
+                  onClick={() => { setAllDay(false); setStartMin(minutes); setDuration(length); touch(); }}>
+                  {hhmm(minutes)}–{hhmm(minutesOfDay(lesson.end))} · {subject}
+                </button>;
+              })}
+              {!matchingLessons.length && <span className="cal-muted">{t('calendar.lessonSlotMissing')}</span>}
+            </div>
+          </div>}
 
           {!allDay && (
             <div className="cal-row">

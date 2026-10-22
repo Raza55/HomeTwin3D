@@ -7,7 +7,7 @@ import type {AppConfig,HAState} from '../types';
 import {applianceRunning,applianceRemaining} from '../babylon/ApplianceAnimation';
 import {floorplanId} from '../babylon/FloorplanBindings';
 import './ApplianceMarkers.css';
-import { useEntityStatesVersion } from '../services/entityStateSignal';
+import { useConfiguredEntityStates } from '../services/entityStateSignal';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import ApplianceControls from './ApplianceControls';
 
@@ -17,7 +17,7 @@ export function applianceDetail(state?:HAState):string {
  return `${state.state.replace(/_/g,' ')}${unit?' '+unit:''}`;
 }
 export default function ApplianceMarkers({scene,config,states,connected,onAssign}:{scene:Scene;config:AppConfig;states:Record<string,HAState>;connected:boolean;onAssign:(id:string)=>void}){
-  useEntityStatesVersion(); // re-render on state changes (see entityStateSignal)
+  useConfiguredEntityStates(config, object => !!object.appliance);
  const refs=useRef<Record<string,HTMLButtonElement|null>>({});
  const popup=useRef<HTMLElement|null>(null);
  const [open,setOpen]=useState<string|null>(null);

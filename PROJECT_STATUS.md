@@ -6,6 +6,10 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- ÜLs können ganztägig oder zeitgebunden angelegt und bearbeitet werden. Der Editor bietet passende geladene Stunden des Fachs, Tages und Stundenplaninhabers zur Übernahme von Beginn und Dauer an; eine eigene Uhrzeit ist ebenfalls möglich.
+
+- Marker abonnieren ihre benötigten HA-Entities einschließlich Hue Sync, Gruppenmitgliedern und Gerätesensoren. Batterieanzeigen behalten die dynamische Sensorsuche. Lichtgruppen werden zwischen Zustandsupdates wiederverwendet; Konfigurationsänderungen und veränderte Icon-Verfügbarkeit erneuern die Berechnung. React-Regressionstest: `npm run test:markers`.
+
 - Kalender: Nach drei Minuten ohne Bedienung Rückkehr zu heute (Wochenansicht auch zur aktuellen Uhrzeit); keine Rückkehr während der Terminbearbeitung. Lokaler Tageswechsel und Rückkehr zum Browser aktualisieren Heute-Markierung und Uhrzeit. Die aktuelle Tagesauswahl folgt über Monats- und Jahresgrenzen; andere gewählte Tage bleiben bestehen.
 
 - Diashow: Pro Bildfläche bleibt nur das aktuelle, vollständig dekodierte Foto im DOM; vorherige Bild-URLs werden beim Wechsel freigegeben.

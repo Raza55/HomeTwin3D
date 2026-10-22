@@ -43,10 +43,45 @@ export default function CalendarView({ onClose }: Props) {
   const [query, setQuery] = useState('');
   const [dayOpen, setDayOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const calendarRoot = useRef<HTMLDivElement>(null);
+
+  // A wall calendar returns to today after three minutes without interaction.
+  // Do not navigate away while the user is composing or editing an appointment.
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(timer);
-  }, []);
+    const root = calendarRoot.current;
+    if (!root || editor) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let deadline = 0;
+    const returnToNow = () => {
+      const time = new Date();
+      const day = startOfDay(time);
+      setFocus(day);
+      setToday(day);
+      setNow(time);
+      const weekScroll = root.querySelector<HTMLElement>('.cal-week-scroll');
+      if (weekScroll) weekScroll.scrollTop = Math.max(0, minutesOfDay(time) - 90) / 60 * HOUR_PX;
+    };
+    const reset = () => {
+      clearTimeout(timer);
+      deadline = Date.now() + 3 * 60 * 1000;
+      timer = setTimeout(returnToNow, 3 * 60 * 1000);
+    };
+    const resume = () => { if (!document.hidden && Date.now() >= deadline) returnToNow(); };
+    const events = ['pointerdown', 'keydown', 'input', 'wheel', 'scroll'];
+    for (const event of events) root.addEventListener(event, reset, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('focus', resume);
+    window.addEventListener('pageshow', resume);
+    reset();
+    return () => {
+      clearTimeout(timer);
+      for (const event of events) root.removeEventListener(event, reset, true);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('focus', resume);
+      window.removeEventListener('pageshow', resume);
+    };
+  }, [editor]);
+
   const monthPictures = useMonthPictures();
   const immich = useImmichPictures(!!prefs.immichEnabled, prefs.immichInterval ?? 30);
   const picture = immich.photo?.current ?? monthPictures.pictures[focus.getMonth()];
@@ -64,10 +99,37 @@ export default function CalendarView({ onClose }: Props) {
     });
   }, []);
 
-  // Midnight rollover while the calendar stays open on a wall tablet
+  // Follow the local date at midnight and immediately after a suspended tab resumes.
   useEffect(() => {
-    const id = setInterval(() => setToday(prev => (ymd(prev) === ymd(new Date()) ? prev : startOfDay(new Date()))), 60000);
-    return () => clearInterval(id);
+    let previousDay = ymd(new Date());
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      clearTimeout(timer);
+      const time = new Date();
+      const day = startOfDay(time);
+      const dayKey = ymd(day);
+      setNow(time);
+      setToday(current => ymd(current) === dayKey ? current : day);
+      if (dayKey !== previousDay) {
+        const oldDay = previousDay;
+        setFocus(current => ymd(current) === oldDay ? day : current);
+        previousDay = dayKey;
+      }
+      const midnight = new Date(time);
+      midnight.setHours(24, 0, 0, 0);
+      timer = setTimeout(refresh, Math.max(1, Math.min(30000, midnight.getTime() - time.getTime())));
+    };
+    const resume = () => { if (!document.hidden) refresh(); };
+    refresh();
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('focus', resume);
+    window.addEventListener('pageshow', resume);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('focus', resume);
+      window.removeEventListener('pageshow', resume);
+    };
   }, []);
 
   useEffect(() => {
@@ -265,7 +327,7 @@ export default function CalendarView({ onClose }: Props) {
   );
 
   return (
-    <div className={`cal-overlay${photoBackground ? ' cal-with-photo-background' : ''}`} style={{ ['--exam-color' as string]: prefs.examColor, ['--cal-photo-opacity' as string]: Math.max(10, Math.min(70, Number(prefs.pictureOpacity) || 40)) / 100 }} role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
+    <div ref={calendarRoot} className={`cal-overlay${photoBackground ? ' cal-with-photo-background' : ''}`} style={{ ['--exam-color' as string]: prefs.examColor, ['--cal-photo-opacity' as string]: Math.max(10, Math.min(70, Number(prefs.pictureOpacity) || 40)) / 100 }} role="dialog" aria-modal="true" aria-label={t('calendar.title')}>
       {photoBackground && decorativePhoto('cal-photo-background')}
       <header className={`cal-header${photoHeader ? ' cal-photo-header ' + prefs.pictureSize : ''}`}>
         {photoHeader && decorativePhoto('cal-photo-header-image')}

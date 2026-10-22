@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.91 · Kalender folgt Tageswechsel und Inaktivität (22.10.2026)
+
+- Nach drei Minuten ohne Bedienung kehrt die Ansicht zu heute zurück; die Wochenansicht zeigt dabei die aktuelle Uhrzeit. Eingaben und Scrollen erneuern die Frist, ein geöffneter Termin-Editor setzt sie aus.
+- Die Heute-Markierung aktualisiert sich bei lokaler Mitternacht sowie sofort nach Rückkehr aus einem ausgeblendeten oder ruhenden Browser.
+- Steht die Ansicht auf dem aktuellen Tag, wechseln Tagesauswahl, Monat und Jahr automatisch mit. Bewusst ausgewählte andere Tage bleiben erhalten.
+
 ## 0.5.90 · Verbrauch in der Steuerleiste, Handy-Einstieg automatisch (21.10.2026)
 
 - Der zusätzliche Handy-Button im 3D-Board entfällt. Smartphones öffnen weiterhin automatisch die Handy-Startseite; dort bleibt die Kachel zum vollständigen 3D-Board verfügbar.

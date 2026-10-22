@@ -6,6 +6,8 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- Kalender: Nach drei Minuten ohne Bedienung Rückkehr zu heute (Wochenansicht auch zur aktuellen Uhrzeit); keine Rückkehr während der Terminbearbeitung. Lokaler Tageswechsel und Rückkehr zum Browser aktualisieren Heute-Markierung und Uhrzeit. Die aktuelle Tagesauswahl folgt über Monats- und Jahresgrenzen; andere gewählte Tage bleiben bestehen.
+
 - Diashow: Pro Bildfläche bleibt nur das aktuelle, vollständig dekodierte Foto im DOM; vorherige Bild-URLs werden beim Wechsel freigegeben.
 
 - Kalenderfotos: Bildstreifen, Kopfbereich, Hintergrund oder Kopfbereich und Hintergrund sind pro Browser wählbar. Hintergrund-Bildstärke, Bildhöhe und Einpassen/Ausfüllen bleiben einstellbar. Immich und lokale Monatsbilder verwenden dieselbe Darstellung.

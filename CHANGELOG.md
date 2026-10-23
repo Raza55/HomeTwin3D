@@ -1,5 +1,9 @@
 # Änderungsverlauf
 
+## 0.5.93 · Kalender-Rückkehr mit Tagesbeginn um 06:00 (23.10.2026)
+
+- Beim automatischen Rücksprung zu heute nach drei Minuten ohne Bedienung beginnt der sichtbare Zeitbereich in Woche und 7-Tage-Ansicht um 06:00 Uhr.
+
 ## 0.5.92 · Gezielt aktualisierte Marker und ÜLs auf Stundenplanstunden (22.10.2026)
 
 - ÜLs lassen sich ganztägig oder mit Uhrzeit speichern. Passende geladene Fachstunden des gewählten Tages können direkt mit Beginn und Dauer übernommen werden. Bestehende zeitgebundene ÜLs behalten ihre Zeiten auch bei Notenänderungen.

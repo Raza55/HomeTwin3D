@@ -59,7 +59,7 @@ export default function CalendarView({ onClose }: Props) {
       setToday(day);
       setNow(time);
       const weekScroll = root.querySelector<HTMLElement>('.cal-week-scroll');
-      if (weekScroll) weekScroll.scrollTop = Math.max(0, minutesOfDay(time) - 90) / 60 * HOUR_PX;
+      if (weekScroll) weekScroll.scrollTop = 6 * HOUR_PX;
     };
     const reset = () => {
       clearTimeout(timer);

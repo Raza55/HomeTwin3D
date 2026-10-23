@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.94 · Lichtauswahl je Oberfläche erhalten (23.10.2026)
+
+- Die Auswahl der räumlich stärksten Lampen erfolgt wieder für jede ursprüngliche Oberfläche. Die bisherige Auswahl am Mittelpunkt zusammengefasster Geometrie konnte nahe Lichtquellen verdrängen und Teile des Modells zu dunkel darstellen.
+- Vor der Lichtauswahl werden die aktuellen Weltpositionen der Oberflächen berechnet, auch vor dem ersten Rendern oder nach einer Transformation im selben Frame.
+- Flächen mit identischer Lichtauswahl bleiben zusammengefasst. Unterschiedlich beleuchtete Flächen werden einzeln gezeichnet; das kann mehr Zeichenaufrufe benötigen, erhält aber die Beleuchtung beim Schalten und Dimmen.
+- Regressionstest für getrennte Lichtquellen und erneutes Zusammenfassen sowie WebGL-Bildvergleich gegen die Darstellung ohne Geometriezusammenfassung (`npm run test:light-render`).
+
 ## 0.5.93 · Kalender-Rückkehr mit Tagesbeginn um 06:00 (23.10.2026)
 
 - Beim automatischen Rücksprung zu heute nach drei Minuten ohne Bedienung beginnt der sichtbare Zeitbereich der Wochenansicht um 06:00 Uhr.

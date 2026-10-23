@@ -155,7 +155,7 @@ test('color batches keep every source in place, including mirrored ones', () => 
 import { ShadowGenerator } from '@babylonjs/core';
 import { configureFloorplanLightInfluence, type FloorplanLightRig } from '../src/babylon/FloorplanLighting';
 
-test('sources of one batch share the lamps chosen for the whole batch', () => {
+test('render batching preserves each surface nearest lamp and rejoins only with identical lighting', () => {
   const engine = new NullEngine(); const scene = new Scene(engine);
   try {
     new ArcRotateCamera('camera', 0, 1, 10, Vector3.Zero(), scene);
@@ -168,14 +168,26 @@ test('sources of one batch share the lamps chosen for the whole batch', () => {
       new ShadowGenerator(64, lamp);
       return lamp;
     });
+    const rig = { lights: lamps, sources: [], shadows: [] } as unknown as FloorplanLightRig;
+    configureFloorplanLightInfluence(scene, [rig], strips, 1);
+    assert.ok(lamps[1].includedOnlyMeshes.includes(strips[1]), 'initial selection uses current world positions before the first render');
     batchStaticRendering(scene, strips, lamps);
     const proxy = scene.meshes.find(m => m.metadata?.renderBatch)!;
-    configureFloorplanLightInfluence(scene, [{ lights: lamps, sources: [], shadows: [] } as unknown as FloorplanLightRig], strips, 1);
+    configureFloorplanLightInfluence(scene, [rig], strips, 1);
     const lit = lamps.filter(l => l.includedOnlyMeshes.includes(strips[0]));
     assert.equal(lit.length, 1);
-    assert.ok(lit[0].includedOnlyMeshes.includes(strips[1]), 'both strips get the same lamp');
-    assert.ok(lit[0].includedOnlyMeshes.includes(proxy));
-    assert.ok(candidates(scene).includes(proxy) && !candidates(scene).includes(strips[0]), 'the batch stays merged');
+    assert.equal(lit[0], lamps[0]);
+    assert.ok(lamps[1].includedOnlyMeshes.includes(strips[1]), 'the second surface keeps its nearby emitter');
+    assert.ok(!lamps[0].includedOnlyMeshes.includes(strips[1]), 'a distant batch-center choice must not replace the nearby lamp');
+    assert.ok(!candidates(scene).includes(proxy) && strips.every(s => candidates(scene).includes(s)), 'different lighting uses original surfaces');
+    lamps[1].setEnabled(false);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.ok(lamps[0].includedOnlyMeshes.includes(proxy));
+    assert.ok(candidates(scene).includes(proxy), 'identical lighting still batches');
+    lamps[1].setEnabled(true);
+    scene.onBeforeRenderObservable.notifyObservers(scene);
+    assert.ok(lamps[1].includedOnlyMeshes.includes(strips[1]));
+    assert.ok(!candidates(scene).includes(proxy), 'switching on restores independent lighting');
   } finally { scene.dispose(); engine.dispose(); }
 });
 

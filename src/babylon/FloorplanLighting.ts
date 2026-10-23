@@ -132,25 +132,16 @@ export function configureFloorplanLightInfluence(scene: Scene, rigs: FloorplanLi
     const active = lights.filter(l => l.isEnabled() && (stable || l.intensity > 0) && l.getShadowGenerator())
       .map(light => ({ light, position: light.getAbsolutePosition(), rangeSquared: light.range * light.range }));
     type Candidate = { light: PointLight | SpotLight; contribution: number };
-    // Sources of one render batch share the lamps chosen for the whole batch
-    // (its proxy's bounds). Chosen per source, neighbouring parts (e.g. parquet
-    // strips) picked different pairs of a strip light's emitters, and a batch
-    // with differing lamps falls back to one draw per source.
-    const perBatch = new Map<AbstractMesh, Candidate[]>();
+    // Rank lamps at each original surface. Ranking at a merged proxy's centre
+    // can discard a nearby emitter and leave part of the batch dim or unlit.
+    // resolveLights keeps batches only where every source receives the same lamps.
     let candidates: Candidate[] = [];
     for (const mesh of meshes) {
-      const proxy = batches?.proxyOf(mesh);
-      const shared = proxy && perBatch.get(proxy);
-      if (shared) {
-        shared.forEach(c => selected.get(c.light)!.push(mesh));
-        batches!.recordLights(mesh, shared.map(c => c.light));
-        continue;
-      }
-      const bounds = proxy ?? mesh;
-      bounds.computeWorldMatrix();
-      const b = bounds.getBoundingInfo().boundingBox;
+      // Selection can run before the first render or in the same render-id as
+      // a transform edit. Do not rank against a cached pre-transform centre.
+      mesh.computeWorldMatrix(true);
+      const b = mesh.getBoundingInfo().boundingBox;
       candidates = [];
-      if (proxy) perBatch.set(proxy, candidates);
       for (const { light, position, rangeSquared } of active) {
         Vector3.ClampToRef(position, b.minimumWorld, b.maximumWorld, nearest);
         if (Vector3.DistanceSquared(position, nearest) > rangeSquared) continue;

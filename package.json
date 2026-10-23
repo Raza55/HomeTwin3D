@@ -21,6 +21,7 @@
     "test:it": "node --test tools/it.test.mjs",
     "test:echo": "node --test tools/echo.test.mjs",
     "test:lighting": "node tools/run-lighting-tests.mjs",
+    "test:light-render": "node tools/run-light-render-tests.mjs",
     "test:performance": "node tools/run-performance-tests.mjs",
     "test:markers": "node tools/run-marker-react-tests.mjs",
     "test:calendar-editor": "node tools/run-calendar-editor-tests.mjs",

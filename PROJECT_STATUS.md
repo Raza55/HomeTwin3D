@@ -6,6 +6,8 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- Die Lampenauswahl berücksichtigt jede ursprüngliche Modelloberfläche. Render-Batches bleiben nur bei übereinstimmender Lichtauswahl aktiv, damit nahe Lampen beim Zusammenfassen nicht verloren gehen. Bei unterschiedlichen Lichtquellen sind zusätzliche Zeichenaufrufe zugunsten korrekter Beleuchtung möglich.
+
 - ÜLs können ganztägig oder zeitgebunden angelegt und bearbeitet werden. Der Editor bietet passende geladene Stunden des Fachs, Tages und Stundenplaninhabers zur Übernahme von Beginn und Dauer an; eine eigene Uhrzeit ist ebenfalls möglich.
 
 - Marker abonnieren ihre benötigten HA-Entities einschließlich Hue Sync, Gruppenmitgliedern und Gerätesensoren. Batterieanzeigen behalten die dynamische Sensorsuche. Lichtgruppen werden zwischen Zustandsupdates wiederverwendet; Konfigurationsänderungen und veränderte Icon-Verfügbarkeit erneuern die Berechnung. React-Regressionstest: `npm run test:markers`.

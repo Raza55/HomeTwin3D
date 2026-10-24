@@ -16,7 +16,7 @@ import { displayStateDependencies } from '../../services/tvMedia';
 import { createLivingRoomTVDisplay } from '../../babylon/LivingRoomTVDisplay';
 import { hueSyncDisplayState, isHueSyncLocked, isHueSyncControl, isHueSyncMember, HUE_SYNC_SWITCH, HUE_SYNC_MEMBERS } from '../../services/hueSync';
 import HueSyncControls from '../../components/HueSyncControls';
-import { coffeeAlertEntityIds } from '../../services/coffeeState';
+import { coffeeAlertEntityIds, coffeeCupWarmerEntityIds } from '../../services/coffeeState';
 import { notifyEntityStates, isEntityStateWatched } from '../../services/entityStateSignal';
 import ApplianceMarkers from '../../components/ApplianceMarkers';
 import DoorStatus, { type HaDoorClicks } from '../../components/DoorStatus';
@@ -343,6 +343,7 @@ export default function Dashboard() {
         if (o.entityId) ids.add(o.entityId);
         Object.values(o.coffee).forEach(id => { if (typeof id === 'string') ids.add(id); });
         coffeeAlertEntityIds(o.coffee.statusEntityId).forEach(alert => ids.add(alert.entityId));
+        coffeeCupWarmerEntityIds(o.coffee.statusEntityId).forEach(id => ids.add(id));
       }
     }
     floorplanMarkerIdsRef.current = { objects, ids };

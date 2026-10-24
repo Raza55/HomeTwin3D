@@ -84,3 +84,15 @@ test('started at the machine: countdown from progress rate, program from the las
   assert.equal(value.remainingEstimated, true); assert.equal(value.remaining, '0:21');
   assert.equal(coffeeState(machine, data, true, Date.parse(t(12))).remaining, '0:16', 'ticks down between samples');
 });
+test('cup warmer switch is derived from the device name and blocked by local control', () => {
+  const machine = { ...object, id: 'machine-warmer', coffee: { ...c, statusEntityId: 'sensor.kaffee_operation_state' } };
+  const data = { ...states(), [machine.coffee.statusEntityId]: s('ready') };
+  assert.equal(coffeeState(machine, data, true, now).cupWarmer, null);
+  data['switch.kaffee_tassenwarmer'] = s('off');
+  assert.deepEqual(coffeeState(machine, data, true, now).cupWarmer, { entityId: 'switch.kaffee_tassenwarmer', on: false, canToggle: true });
+  data['switch.kaffee_tassenwarmer'] = s('on');
+  assert.equal(coffeeState(machine, data, true, now).cupWarmer.on, true);
+  data[c.localControlEntityId] = s('on');
+  assert.equal(coffeeState(machine, data, true, now).cupWarmer.canToggle, false);
+  assert.equal(coffeeState(machine, data, false, now).cupWarmer.on, false);
+});

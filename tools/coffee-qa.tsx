@@ -21,6 +21,7 @@ const model = await loadModel(scene, blob, undefined, { showTextures: true });
 bindFloorplanMeshes(scene, model.meshes, initial, {});
 const machine = manifest.objects.find(o => o.coffee)!;
 const c = machine.coffee!;
+const warmerId = c.statusEntityId.replace(/_operation_state$/,'_tassenwarmer').replace(/^sensor\./,'switch.');
 const programs = ['espresso', 'coffee', 'cappuccino', 'latte_macchiato', 'hot_water'].map(p => 'consumer_products_coffee_maker_program_beverage_' + p);
 const state = (entity_id: string, value: string, attributes: Record<string, unknown> = {}): HAState => ({entity_id,state:value,attributes,last_changed:new Date(Date.now()-30000).toISOString(),last_updated:new Date().toISOString()});
 function QA() {
@@ -32,6 +33,7 @@ function QA() {
     [c.connectivityEntityId]:state(c.connectivityEntityId,'on'),[c.localControlEntityId]:state(c.localControlEntityId,'off'),
     [c.remoteStartEntityId]:state(c.remoteStartEntityId,'on'),[c.stopEntityId]:state(c.stopEntityId,'unknown'),
     [c.activeProgramEntityId]:state(c.activeProgramEntityId,'unknown',{options:programs}),
+    [warmerId]:state(warmerId,'off'),
   });
   scene.onPointerPick = (_event,pick) => {
     if(pick.pickedMesh?.metadata?.smartDeviceId === 'blender:'+machine.id) setOpen(machine.id);
@@ -48,6 +50,7 @@ function QA() {
     setStates(s=> {
       if(service==='select_option') return {...s,[c.activeProgramEntityId]:state(c.activeProgramEntityId,String(data?.option),{options:programs}),[c.statusEntityId]:state(c.statusEntityId,'run'),[c.remainingEntityId]:state(c.remainingEntityId,new Date(Date.now()+90000).toISOString(),{device_class:'timestamp'}),[c.progressEntityId]:state(c.progressEntityId,'25')};
       if(service==='press') return {...s,[c.statusEntityId]:state(c.statusEntityId,'ready')};
+      if(entityId===warmerId) return {...s,[warmerId]:state(warmerId,service==='turn_on'?'on':'off')};
       return {...s,[machine.entityId]:state(machine.entityId,service==='turn_on'?'on':'off')};
     });
   }}/>}

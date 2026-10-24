@@ -32,8 +32,14 @@ export function coffeeSelectedProgramEntityId(activeProgramEntityId: string): st
   const swapped = activeProgramEntityId.replace(/_aktives_programm$/, '_ausgewahltes_programm').replace(/_active_program$/, '_selected_program');
   return swapped === activeProgramEntityId ? '' : swapped;
 }
+/** Cup warmer setting: `switch.<device>_cup_warmer` (English) or `switch.<device>_tassenwarmer` (German entity names). */
+export function coffeeCupWarmerEntityIds(statusEntityId: string): string[] {
+  const base = /^sensor\.(.+)_operation_state$/.exec(statusEntityId)?.[1];
+  return base ? [`switch.${base}_cup_warmer`, `switch.${base}_tassenwarmer`] : [];
+}
 export function coffeeCompanionEntityIds(c: NonNullable<FloorplanObject['coffee']>): string[] {
-  return [...coffeeAlertEntityIds(c.statusEntityId).map(alert => alert.entityId), coffeeSelectedProgramEntityId(c.activeProgramEntityId)].filter(Boolean);
+  return [...coffeeAlertEntityIds(c.statusEntityId).map(alert => alert.entityId), coffeeSelectedProgramEntityId(c.activeProgramEntityId),
+    ...coffeeCupWarmerEntityIds(c.statusEntityId)].filter(Boolean);
 }
 
 /**
@@ -92,7 +98,10 @@ export function coffeeState(object: FloorplanObject, states: Record<string, HASt
   const alerts = available ? coffeeAlertEntityIds(c.statusEntityId)
     .filter(alert => ['present', 'confirmed'].includes(states[alert.entityId]?.state ?? ''))
     .map(alert => alert.label) : [];
-  return { available, on, running, inProgress, options, program, remaining, remainingEstimated, elapsed, progress, alerts,
+  const warmerId = coffeeCupWarmerEntityIds(c.statusEntityId).find(id => states[id]);
+  const warmer = warmerId ? states[warmerId] : undefined;
+  const cupWarmer = warmerId ? { entityId: warmerId, on: available && warmer?.state === 'on', canToggle: available && valid(warmer) && !local } : null;
+  return { available, on, running, inProgress, options, program, remaining, remainingEstimated, elapsed, progress, alerts, cupWarmer,
     label: !object.entityId ? 'Noch nicht zugeordnet' : !available ? 'Nicht verbunden' : labels[status] ?? 'Status nicht verfügbar',
     canPower: available && valid(power) && !local,
     canStart: available && on && remote && !local && ['ready', 'inactive', 'finished'].includes(status) && options.length > 0,

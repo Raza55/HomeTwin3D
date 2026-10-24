@@ -62,16 +62,19 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     setMarkerStyle(element, 'top', `${Math.max(8, Math.min(window.innerHeight - element.offsetHeight - 8, y - 60))}px`);
   });
 
-  const send = async (action: 'on' | 'off' | 'start' | 'stop') => {
+  const send = async (action: 'on' | 'off' | 'start' | 'stop' | 'warmer') => {
     const ha = getActiveHAConnection();
     if (!current || !value || pending.current || (!onCommand && !ha?.isConnected)) return;
     const c = current.coffee!;
     if ((action === 'on' || action === 'off') && (!value.canPower || value.inProgress)) return;
     if (action === 'start' && (!value.canStart || !value.options.includes(selected))) return;
     if (action === 'stop' && !value.canStop) return;
+    if (action === 'warmer' && !value.cupWarmer?.canToggle) return;
     const domain = action === 'start' ? 'select' : action === 'stop' ? 'button' : 'switch';
-    const service = action === 'start' ? 'select_option' : action === 'stop' ? 'press' : action === 'on' ? 'turn_on' : 'turn_off';
-    const entityId = action === 'start' ? c.activeProgramEntityId : action === 'stop' ? c.stopEntityId : current.entityId;
+    const service = action === 'start' ? 'select_option' : action === 'stop' ? 'press'
+      : action === 'warmer' ? (value.cupWarmer!.on ? 'turn_off' : 'turn_on') : action === 'on' ? 'turn_on' : 'turn_off';
+    const entityId = action === 'start' ? c.activeProgramEntityId : action === 'stop' ? c.stopEntityId
+      : action === 'warmer' ? value.cupWarmer!.entityId : current.entityId;
     const data = action === 'start' ? { option: selected } : undefined;
     pending.current = true; setBusy(true); setError('');
     try {
@@ -104,6 +107,8 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     </dl>}
     {value.progress !== null && <label className="coffee-progress">Fortschritt {Math.round(value.progress)} %<progress max={100} value={value.progress}/></label>}
     <div className="coffee-actions"><button disabled={busy || !value.canPower || value.inProgress || value.on} onClick={() => void send('on')}>Einschalten</button><button disabled={busy || !value.canPower || value.inProgress || !value.on} onClick={() => void send('off')}>Ausschalten</button></div>
+    {value.cupWarmer && <label className="coffee-warmer">Tassenwärmer<input type="checkbox" role="switch" aria-label="Tassenwärmer" checked={value.cupWarmer.on}
+      disabled={busy || !value.cupWarmer.canToggle} onChange={() => void send('warmer')}/></label>}
     {!value.inProgress && <><label className="coffee-program">Getränk<select aria-label="Kaffeeprogramm" value={value.options.includes(selected) ? selected : ''} disabled={busy || !value.available || !value.options.length} onChange={e => setSelected(e.target.value)}>
       <option value="">Programm wählen</option>{value.options.map(option => <option key={option} value={option}>{coffeeProgram(option)}</option>)}
     </select></label><button className="coffee-start" disabled={busy || !value.canStart || !value.options.includes(selected)} onClick={() => void send('start')}>Getränk starten</button>

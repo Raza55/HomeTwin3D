@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.96 · Tassenwärmer im Popup der Kaffeemaschine (24.10.2026)
+
+- Das Popup der Kaffeemaschine hat einen Schalter für den Tassenwärmer. Die Home Connect Einstellung wird über den Gerätenamen gefunden (deutsche und englische Entity Namen), eine eigene Zuordnung ist nicht nötig.
+- Der Schalter ist gesperrt, solange das Gerät nicht verbunden ist oder lokal bedient wird, und erscheint nur, wenn Home Assistant die Einstellung meldet.
+
 ## 0.5.95 · 3D Ansicht kehrt nach Verlust des Grafikkontexts zurück (24.10.2026)
 
 - Verwirft der Browser den WebGL Kontext (etwa Safari auf dem iPad bei knappem Grafikspeicher, nach der Bildschirmsperre oder im Hintergrund), zeichnet das Board nach der Wiederherstellung sofort neu, statt eine leere Fläche zu zeigen.

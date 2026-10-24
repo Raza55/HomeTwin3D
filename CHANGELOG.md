@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.95 · 3D Ansicht kehrt nach Verlust des Grafikkontexts zurück (24.10.2026)
+
+- Verwirft der Browser den WebGL Kontext (etwa Safari auf dem iPad bei knappem Grafikspeicher, nach der Bildschirmsperre oder im Hintergrund), zeichnet das Board nach der Wiederherstellung sofort neu, statt eine leere Fläche zu zeigen.
+- Kommt der Kontext innerhalb von vier Sekunden nicht zurück, lädt die sichtbare Seite neu; höchstens dreimal in zehn Minuten, damit ein Gerät nicht dauerhaft neu lädt.
+- Das Overlay mit `?perf` zeigt verlorene und wiederhergestellte Kontexte sowie Neuladevorgänge der laufenden Browsersitzung.
+
 ## 0.5.94 · Lichtauswahl je Oberfläche erhalten (23.10.2026)
 
 - Die Auswahl der räumlich stärksten Lampen erfolgt wieder für jede ursprüngliche Oberfläche. Die bisherige Auswahl am Mittelpunkt zusammengefasster Geometrie konnte nahe Lichtquellen verdrängen und Teile des Modells zu dunkel darstellen.

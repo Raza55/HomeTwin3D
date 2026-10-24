@@ -6,6 +6,8 @@ Einrichtung: [Erste Schritte](docs/GETTING_STARTED.md). Eigenes Modell: [Blender
 
 ## Funktionsweise
 
+- Verliert der Browser den WebGL Kontext, zeichnet die Szene nach der Wiederherstellung sofort neu. Bleibt die Wiederherstellung aus (häufig in WebKit), lädt die sichtbare Seite nach vier Sekunden neu, begrenzt auf drei Neuladevorgänge in zehn Minuten. Zähler im Overlay mit `?perf`.
+
 - Die Lampenauswahl berücksichtigt jede ursprüngliche Modelloberfläche. Render-Batches bleiben nur bei übereinstimmender Lichtauswahl aktiv, damit nahe Lampen beim Zusammenfassen nicht verloren gehen. Bei unterschiedlichen Lichtquellen sind zusätzliche Zeichenaufrufe zugunsten korrekter Beleuchtung möglich.
 
 - ÜLs können ganztägig oder zeitgebunden angelegt und bearbeitet werden. Der Editor bietet passende geladene Stunden des Fachs, Tages und Stundenplaninhabers zur Übernahme von Beginn und Dauer an; eine eigene Uhrzeit ist ebenfalls möglich.

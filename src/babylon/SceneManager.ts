@@ -18,6 +18,7 @@ import {
 } from '@babylonjs/core';
 import type { Node as SceneNode } from '@babylonjs/core';
 import { batchStaticSunShadows } from './ShadowCasterBatch';
+import { installContextLossRecovery } from './ContextLossRecovery';
 import { refreshGlowOnChange } from './GlowRefresh';
 import { createPerfOverlay } from './PerfOverlay';
 import { SceneChangeMonitor } from './SceneChangeMonitor';
@@ -398,6 +399,10 @@ export function createScene(
   };
   document.addEventListener('visibilitychange', onVisibilityChange);
 
+  // Babylon rebuilt every resource; draw the scene again right away instead of
+  // waiting for the next floor frame (see ContextLossRecovery).
+  const disposeContextLossRecovery = installContextLossRecovery(engine, () => { markActive(); requestRender(); });
+
   function dispose() {
     disposed = true;
     if (sleepTimer) clearTimeout(sleepTimer);
@@ -405,6 +410,7 @@ export function createScene(
     activityEvents.forEach(type => window.removeEventListener(type, markActive, { capture: true }));
     window.removeEventListener('resize', markActive);
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    disposeContextLossRecovery();
     stopRenderLoop();
     disposePerfOverlay?.();
     snapshot?.dispose();

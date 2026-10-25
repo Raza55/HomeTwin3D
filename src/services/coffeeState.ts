@@ -37,6 +37,7 @@ export function coffeeCupWarmerEntityIds(statusEntityId: string): string[] {
   const base = /^sensor\.(.+)_operation_state$/.exec(statusEntityId)?.[1];
   return base ? [`switch.${base}_cup_warmer`, `switch.${base}_tassenwarmer`] : [];
 }
+export const COFFEE_CUP_WARMER_KEY = 'ConsumerProducts.CoffeeMaker.Setting.CupWarmer';
 export function coffeeCompanionEntityIds(c: NonNullable<FloorplanObject['coffee']>): string[] {
   return [...coffeeAlertEntityIds(c.statusEntityId).map(alert => alert.entityId), coffeeSelectedProgramEntityId(c.activeProgramEntityId),
     ...coffeeCupWarmerEntityIds(c.statusEntityId)].filter(Boolean);
@@ -98,9 +99,11 @@ export function coffeeState(object: FloorplanObject, states: Record<string, HASt
   const alerts = available ? coffeeAlertEntityIds(c.statusEntityId)
     .filter(alert => ['present', 'confirmed'].includes(states[alert.entityId]?.state ?? ''))
     .map(alert => alert.label) : [];
+  // Home Connect sometimes drops the setting and leaves the switch unavailable although the machine
+  // still accepts it; `on: null` = state unknown, switched through home_connect.change_setting instead.
   const warmerId = coffeeCupWarmerEntityIds(c.statusEntityId).find(id => states[id]);
   const warmer = warmerId ? states[warmerId] : undefined;
-  const cupWarmer = warmerId ? { entityId: warmerId, on: available && warmer?.state === 'on', canToggle: available && valid(warmer) && !local } : null;
+  const cupWarmer = warmerId ? { entityId: warmerId, on: available && valid(warmer) ? warmer!.state === 'on' : null, canToggle: available && !local } : null;
   return { available, on, running, inProgress, options, program, remaining, remainingEstimated, elapsed, progress, alerts, cupWarmer,
     label: !object.entityId ? 'Noch nicht zugeordnet' : !available ? 'Nicht verbunden' : labels[status] ?? 'Status nicht verfügbar',
     canPower: available && valid(power) && !local,

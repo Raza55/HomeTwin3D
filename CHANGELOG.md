@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.97 · Tassenwärmer schaltet auch bei hängender Entity (25.10.2026)
+
+- Home Connect führt den Tassenwärmer zeitweise als nicht verfügbar, obwohl die Maschine die Einstellung annimmt; Home Assistant ignoriert dann das Schalten der Entity. Das Popup zeigt in diesem Fall die Knöpfe An und Aus und setzt die Einstellung direkt über `home_connect.change_setting` am Gerät.
+- Meldet Home Assistant den Zustand, bleibt der Schalter wie bisher. Lehnt die Maschine die Einstellung ab, zeigt das Popup die Fehlermeldung.
+
 ## 0.5.96 · Tassenwärmer im Popup der Kaffeemaschine (24.10.2026)
 
 - Das Popup der Kaffeemaschine hat einen Schalter für den Tassenwärmer. Die Home Connect Einstellung wird über den Gerätenamen gefunden (deutsche und englische Entity Namen), eine eigene Zuordnung ist nicht nötig.

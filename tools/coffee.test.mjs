@@ -92,7 +92,11 @@ test('cup warmer switch is derived from the device name and blocked by local con
   assert.deepEqual(coffeeState(machine, data, true, now).cupWarmer, { entityId: 'switch.kaffee_tassenwarmer', on: false, canToggle: true });
   data['switch.kaffee_tassenwarmer'] = s('on');
   assert.equal(coffeeState(machine, data, true, now).cupWarmer.on, true);
+  // Home Connect leaves the switch unavailable while the machine still accepts the setting.
+  data['switch.kaffee_tassenwarmer'] = s('unavailable');
+  assert.deepEqual(coffeeState(machine, data, true, now).cupWarmer, { entityId: 'switch.kaffee_tassenwarmer', on: null, canToggle: true });
   data[c.localControlEntityId] = s('on');
   assert.equal(coffeeState(machine, data, true, now).cupWarmer.canToggle, false);
-  assert.equal(coffeeState(machine, data, false, now).cupWarmer.on, false);
+  assert.equal(coffeeState(machine, data, false, now).cupWarmer.on, null);
+  assert.equal(coffeeState(machine, data, false, now).cupWarmer.canToggle, false);
 });

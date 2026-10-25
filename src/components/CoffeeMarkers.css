@@ -21,3 +21,4 @@
 .coffee-warmer input::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#a5b9c6;transition:transform .15s,background .15s}
 .coffee-warmer input:checked{background:#7a4a1c;border-color:#e0a03c}.coffee-warmer input:checked::after{transform:translateX(18px);background:#ffd28a}
 .coffee-warmer input:disabled{opacity:.4;cursor:default}
+div.coffee-warmer{flex-wrap:wrap;gap:6px;cursor:default}.coffee-warmer-buttons{display:flex;gap:6px}.coffee-warmer-buttons button{padding:4px 12px}.coffee-warmer small{flex-basis:100%}

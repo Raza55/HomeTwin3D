@@ -5,7 +5,7 @@ import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';
 import { useLatest, useMapMarkers, useMarkerPlacement } from './useMapMarkers';
-import { coffeeState, coffeeProgram } from '../services/coffeeState';
+import { coffeeState, coffeeProgram, COFFEE_CUP_WARMER_KEY } from '../services/coffeeState';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import './CoffeeMarkers.css';
 import { useConfiguredEntityStates } from '../services/entityStateSignal';
@@ -24,7 +24,8 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
   const current = objects.find(o => o.id === open);
   const value = current ? coffeeState(current, states, connected, now) : null;
   const anyRunning = objects.some(o => coffeeState(o, states, connected, now).running);
-  useEffect(() => { setError(''); setSelected(''); }, [open]);
+  const [warmerNote, setWarmerNote] = useState('');
+  useEffect(() => { setError(''); setSelected(''); setWarmerNote(''); }, [open]);
   useEffect(() => {
     setNow(Date.now());
     if (!anyRunning) return;
@@ -62,23 +63,31 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     setMarkerStyle(element, 'top', `${Math.max(8, Math.min(window.innerHeight - element.offsetHeight - 8, y - 60))}px`);
   });
 
-  const send = async (action: 'on' | 'off' | 'start' | 'stop' | 'warmer') => {
+  const send = async (action: 'on' | 'off' | 'start' | 'stop' | 'warmerOn' | 'warmerOff') => {
     const ha = getActiveHAConnection();
     if (!current || !value || pending.current || (!onCommand && !ha?.isConnected)) return;
-    const c = current.coffee!;
+    const c = current.coffee!, warmer = action === 'warmerOn' || action === 'warmerOff' ? value.cupWarmer : null;
     if ((action === 'on' || action === 'off') && (!value.canPower || value.inProgress)) return;
     if (action === 'start' && (!value.canStart || !value.options.includes(selected))) return;
     if (action === 'stop' && !value.canStop) return;
-    if (action === 'warmer' && !value.cupWarmer?.canToggle) return;
+    if ((action === 'warmerOn' || action === 'warmerOff') && !warmer?.canToggle) return;
     const domain = action === 'start' ? 'select' : action === 'stop' ? 'button' : 'switch';
-    const service = action === 'start' ? 'select_option' : action === 'stop' ? 'press'
-      : action === 'warmer' ? (value.cupWarmer!.on ? 'turn_off' : 'turn_on') : action === 'on' ? 'turn_on' : 'turn_off';
-    const entityId = action === 'start' ? c.activeProgramEntityId : action === 'stop' ? c.stopEntityId
-      : action === 'warmer' ? value.cupWarmer!.entityId : current.entityId;
+    const service = action === 'start' ? 'select_option' : action === 'stop' ? 'press' : action === 'on' || action === 'warmerOn' ? 'turn_on' : 'turn_off';
+    const entityId = action === 'start' ? c.activeProgramEntityId : action === 'stop' ? c.stopEntityId : warmer ? warmer.entityId : current.entityId;
     const data = action === 'start' ? { option: selected } : undefined;
     pending.current = true; setBusy(true); setError('');
     try {
-      if (onCommand) await onCommand(domain, service, entityId, data);
+      if (warmer && warmer.on === null) {
+        // HA ignores services on the unavailable switch: set the Home Connect setting on the device directly.
+        const setting = { key: COFFEE_CUP_WARMER_KEY, value: action === 'warmerOn' };
+        if (onCommand) await onCommand('home_connect', 'change_setting', entityId, setting);
+        else {
+          const entry = await ha!.request({ type: 'config/entity_registry/get', entity_id: entityId }) as { device_id?: string } | undefined;
+          if (!entry?.device_id) throw new Error('Gerät des Tassenwärmers nicht gefunden.');
+          await ha!.request({ type: 'call_service', domain: 'home_connect', service: 'change_setting', service_data: { device_id: entry.device_id, ...setting } });
+        }
+        setWarmerNote(setting.value ? 'Tassenwärmer eingeschaltet.' : 'Tassenwärmer ausgeschaltet.');
+      } else if (onCommand) await onCommand(domain, service, entityId, data);
       else await ha!.callService(domain, service, entityId, data);
     } catch (e) { setError(e instanceof Error ? e.message : 'Befehl fehlgeschlagen.'); }
     finally { pending.current = false; setBusy(false); }
@@ -107,8 +116,13 @@ export default function CoffeeMarkers({ scene, config, states, connected, open, 
     </dl>}
     {value.progress !== null && <label className="coffee-progress">Fortschritt {Math.round(value.progress)} %<progress max={100} value={value.progress}/></label>}
     <div className="coffee-actions"><button disabled={busy || !value.canPower || value.inProgress || value.on} onClick={() => void send('on')}>Einschalten</button><button disabled={busy || !value.canPower || value.inProgress || !value.on} onClick={() => void send('off')}>Ausschalten</button></div>
-    {value.cupWarmer && <label className="coffee-warmer">Tassenwärmer<input type="checkbox" role="switch" aria-label="Tassenwärmer" checked={value.cupWarmer.on}
-      disabled={busy || !value.cupWarmer.canToggle} onChange={() => void send('warmer')}/></label>}
+    {value.cupWarmer && (value.cupWarmer.on !== null
+      ? <label className="coffee-warmer">Tassenwärmer<input type="checkbox" role="switch" aria-label="Tassenwärmer" checked={value.cupWarmer.on}
+        disabled={busy || !value.cupWarmer.canToggle} onChange={() => void send(value.cupWarmer!.on ? 'warmerOff' : 'warmerOn')}/></label>
+      : <div className="coffee-warmer"><span>Tassenwärmer</span><div className="coffee-warmer-buttons">
+        <button disabled={busy || !value.cupWarmer.canToggle} onClick={() => void send('warmerOn')}>An</button>
+        <button disabled={busy || !value.cupWarmer.canToggle} onClick={() => void send('warmerOff')}>Aus</button></div>
+        <small>{warmerNote || 'Zustand wird von Home Assistant gerade nicht gemeldet.'}</small></div>)}
     {!value.inProgress && <><label className="coffee-program">Getränk<select aria-label="Kaffeeprogramm" value={value.options.includes(selected) ? selected : ''} disabled={busy || !value.available || !value.options.length} onChange={e => setSelected(e.target.value)}>
       <option value="">Programm wählen</option>{value.options.map(option => <option key={option} value={option}>{coffeeProgram(option)}</option>)}
     </select></label><button className="coffee-start" disabled={busy || !value.canStart || !value.options.includes(selected)} onClick={() => void send('start')}>Getränk starten</button>

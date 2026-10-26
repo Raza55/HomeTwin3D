@@ -290,6 +290,59 @@ test('blind shadow invalidation follows actual geometry, not repeated or unavail
   } finally { scene.dispose(); engine.dispose(); }
 });
 
+test('blinds animate between sparse HA reports, reconcile measurements and stop safely', (t) => {
+  const engine = new NullEngine(), scene = new Scene(engine);
+  let now = 0, renders = 0;
+  t.mock.method(performance, 'now', () => now);
+  try {
+    const noop = () => {};
+    const ctx = {clearRect:noop,beginPath:noop,moveTo:noop,lineTo:noop,quadraticCurveTo:noop,closePath:noop,fill:noop,fillText:noop};
+    const entry = {panel:MeshBuilder.CreateBox('panel',{},scene),label:MeshBuilder.CreateBox('label',{},scene),slats:[],panelMat:new StandardMaterial('panel',scene),labelTexture:{getContext:()=>ctx,update:noop},config:{position:{x:0,y:1,z:0},size:{width:1,height:2,depth:.1}}} as unknown as BlindMeshEntry;
+    const apply = (state: string, position?: number) => updateBlindState(entry, {entity_id:'cover.test',state,attributes:position === undefined ? {} : {current_position:position}}, () => { renders++; });
+    const tick = (ms: number) => { now += ms; scene.onBeforeRenderObservable.notifyObservers(scene); };
+    apply('open', 100);
+    apply('closing', 100);
+    tick(5000);
+    assert.ok(entry.visualPosition! < 100 && entry.visualPosition! > 1);
+    assert.ok(entry.panel.scaling.y > .02, 'panel extends before the closed event');
+    assert.ok(renders >= 2, 'moving geometry keeps the idle renderer awake');
+    const progress = entry.visualPosition;
+    apply('closing', 100);
+    assert.equal(entry.visualPosition, progress, 'stale position does not rewind the panel');
+    apply('closing', 40);
+    assert.equal(entry.visualPosition, 40, 'actual measurements override the estimate');
+    tick(1000);
+    assert.ok(entry.visualPosition! < 40);
+    apply('open', 35);
+    tick(5000);
+    assert.equal(entry.visualPosition, 35, 'stop at partial position cancels animation');
+    assert.equal(entry.motion, undefined);
+    apply('opening');
+    tick(5000);
+    assert.ok(entry.visualPosition! > 35, 'opening without positions animates too');
+    apply('closing');
+    const reversed = entry.visualPosition!;
+    tick(1000);
+    assert.ok(entry.visualPosition! < reversed, 'direction can change during travel');
+    apply('unavailable');
+    const disconnected = entry.visualPosition;
+    tick(5000);
+    assert.equal(entry.visualPosition, disconnected);
+    assert.equal(entry.motion, undefined);
+    apply('closing');
+    tick(31000);
+    assert.equal(entry.visualPosition, 1, 'estimated travel never claims the end state');
+    const boundedRenders = renders;
+    tick(1000);
+    assert.equal(renders, boundedRenders, 'missing end event does not render forever');
+    apply('closed', 0);
+    assert.equal(entry.visualPosition, 0);
+    assert.equal(entry.panel.scaling.y, 1);
+    assert.equal(entry.motion, undefined);
+    assert.equal(entry.renderedEstimate, false);
+  } finally { scene.dispose(); engine.dispose(); }
+});
+
 test('glow pass draws emissive and moving meshes plus merged static occluders only', async () => {
   const { RenderTargetTexture } = await import('@babylonjs/core');
   const { setupGlowOccluders } = await import('../src/babylon/GlowOccluder');

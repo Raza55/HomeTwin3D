@@ -7,6 +7,7 @@ import {
   type Node,
   type Mesh,
   type Scene,
+  type Observer,
 } from '@babylonjs/core';
 import type { BlindConfig, HAState } from '../types';
 
@@ -21,6 +22,9 @@ export interface BlindMeshEntry {
   labelTexture: DynamicTexture;
   config: BlindConfig;
   renderedPosition?: number;
+  renderedEstimate?: boolean;
+  visualPosition?: number;
+  motion?: { direction: number; reported?: number; observer: Observer<Scene> };
 }
 
 export type BlindMeshMap = Record<string, BlindMeshEntry>;
@@ -125,22 +129,59 @@ export function createBlindMesh(
   return entry;
 }
 
-export function updateBlindState(entry: BlindMeshEntry, state: HAState): boolean {
+export function updateBlindState(entry: BlindMeshEntry, state: HAState, requestRender?: () => void): boolean {
+  const previousMotion = entry.motion;
   if (state.state === 'unknown' || state.state === 'unavailable') {
+    stopBlindMotion(entry);
     drawLabel(entry, null);
     entry.renderedPosition = undefined;
-    return false; // Preserve the last known geometry; do not invent a closed position.
+    return !!previousMotion; // Preserve geometry, but refresh shadows after an interrupted trip.
   }
-  if (['opening', 'closing'].includes(state.state) && state.attributes.current_position == null && state.attributes.current_cover_position == null && state.attributes.position == null) return false;
+  const moving = state.state === 'opening' || state.state === 'closing';
+  const raw = state.attributes.current_position ?? state.attributes.current_cover_position ?? state.attributes.position;
+  const reported = raw != null && raw !== '' && Number.isFinite(Number(raw)) ? clamp(Number(raw), 0, 100) : undefined;
   const { x, y, z } = entry.panel.position;
   const height = entry.panel.scaling.y;
-  updateBlindPosition(entry, getCoverPosition(state));
-  return x !== entry.panel.position.x || y !== entry.panel.position.y || z !== entry.panel.position.z || height !== entry.panel.scaling.y;
+  // Repeated motor messages often carry the old position. Do not rewind the
+  // animation on those; new measured positions always take precedence.
+  if (!moving || !previousMotion || reported !== previousMotion.reported) {
+    const position = reported ?? (moving || previousMotion && state.state !== 'closed'
+      ? entry.visualPosition : getCoverPosition(state));
+    if (position !== undefined) updateBlindPosition(entry, position);
+  }
+  if (moving && requestRender) {
+    const direction = state.state === 'closing' ? -1 : 1;
+    if (!previousMotion || previousMotion.direction !== direction || previousMotion.reported !== reported) {
+      stopBlindMotion(entry);
+      const scene = entry.panel.getScene();
+      const started = performance.now(), from = entry.visualPosition ?? (direction < 0 ? 100 : 0);
+      const observer = scene.onBeforeRenderObservable.add(() => {
+        // Integrations without intermediate measurements need a visual estimate.
+        // Never claim an end position before HA confirms it, or keep rendering forever.
+        const progress = Math.min(1, (performance.now() - started) / 30000);
+        const target = direction < 0 ? Math.min(from, 1) : Math.max(from, 99);
+        updateBlindPosition(entry, from + (target - from) * progress, true);
+        requestRender();
+        if (progress === 1) scene.onBeforeRenderObservable.remove(observer);
+      });
+      entry.motion = { direction, reported, observer };
+      requestRender();
+    }
+  } else if (!moving) {
+    stopBlindMotion(entry);
+  }
+  return !!previousMotion && !moving || x !== entry.panel.position.x || y !== entry.panel.position.y || z !== entry.panel.position.z || height !== entry.panel.scaling.y;
 }
 
-export function updateBlindPosition(entry: BlindMeshEntry, openPercent: number): void {
+function stopBlindMotion(entry: BlindMeshEntry): void {
+  if (entry.motion) entry.panel.getScene().onBeforeRenderObservable.remove(entry.motion.observer);
+  entry.motion = undefined;
+}
+
+export function updateBlindPosition(entry: BlindMeshEntry, openPercent: number, estimated = false): void {
   const cfg = entry.config;
   const open = clamp(openPercent, 0, 100);
+  entry.visualPosition = open;
   const closedRatio = 1 - open / 100;
   const visibleHeight = Math.max(MIN_VISIBLE_HEIGHT, cfg.size.height * closedRatio);
   const topY = cfg.position.y + cfg.size.height / 2;
@@ -177,15 +218,17 @@ export function updateBlindPosition(entry: BlindMeshEntry, openPercent: number):
 
   const brightness = 0.08 + closedRatio * 0.18;
   entry.panelMat.emissiveColor = cfg.floorplanIds?.length ? Color3.Black() : new Color3(brightness, brightness * 1.1, brightness * 1.25);
-  if (entry.renderedPosition !== Math.round(open)) {
+  if (entry.renderedPosition !== Math.round(open) || entry.renderedEstimate !== estimated) {
     entry.renderedPosition = Math.round(open);
-    drawLabel(entry, open);
+    entry.renderedEstimate = estimated;
+    drawLabel(entry, open, estimated);
   }
 }
 
 export function removeBlindMesh(meshMap: BlindMeshMap, id: string): void {
   const entry = meshMap[id];
   if (!entry) return;
+  stopBlindMotion(entry);
   entry.frame.dispose();
   entry.panel.dispose();
   entry.slats.forEach((slat) => slat.dispose());
@@ -221,7 +264,7 @@ export function getCoverPosition(state?: HAState | null): number {
   return 0;
 }
 
-function drawLabel(entry: BlindMeshEntry, open: number | null): void {
+function drawLabel(entry: BlindMeshEntry, open: number | null, estimated = false): void {
   const texture = entry.labelTexture;
   const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
   ctx.clearRect(0, 0, 256, 96);
@@ -232,7 +275,7 @@ function drawLabel(entry: BlindMeshEntry, open: number | null): void {
   ctx.font = 'bold 30px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(open === null ? '—' : `${Math.round(open)}%`, 128, 40);
+  ctx.fillText(open === null ? '—' : `${estimated ? '≈' : ''}${Math.round(open)}%`, 128, 40);
   ctx.fillStyle = 'rgba(148, 163, 184, 0.95)';
   ctx.font = '14px monospace';
   ctx.fillText(open === null ? 'unavailable' : 'open', 128, 68);

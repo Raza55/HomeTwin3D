@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.98 · Rollos während der Fahrt animieren (26.10.2026)
+
+- Beim Öffnen und Schließen bewegt sich das 3D-Rollo auch dann, wenn Home Assistant keine Zwischenpositionen oder weiterhin den alten Positionswert meldet. Die Animation hält den Renderer bis zum Ende der Bewegung aktiv.
+- Fehlende Zwischenwerte werden visuell über höchstens 30 Sekunden angenähert und an der Modellbeschriftung mit ≈ gekennzeichnet. Gemeldete Positionen haben Vorrang; Stopps, Richtungswechsel und Nichtverfügbarkeit werden berücksichtigt. Vollständig offen/geschlossen wird erst nach einer Rückmeldung angezeigt.
+- Regressionstest prüft sichtbare Zwischengeometrie, wiederholte Zustände, Positionskorrekturen, Stopps, Richtungswechsel und das Ende der Renderanforderungen.
+
 ## 0.5.97 · Tassenwärmer schaltet auch bei hängender Entity (25.10.2026)
 
 - Home Connect führt den Tassenwärmer zeitweise als nicht verfügbar, obwohl die Maschine die Einstellung annimmt; Home Assistant ignoriert dann das Schalten der Entity. Das Popup zeigt in diesem Fall die Knöpfe An und Aus und setzt die Einstellung direkt über `home_connect.change_setting` am Gerät.

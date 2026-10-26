@@ -1636,7 +1636,7 @@ export default function Dashboard() {
           // The day demo moves many blinds in a row and refreshes all lamp maps once when it ends.
           const moving = state.state === 'opening' || state.state === 'closing';
           const scene = sceneCtxRef.current?.scene;
-          if (updateBlindState(blind, state) && !moving && scene && !scene.metadata?.steadyLamps) invalidateShadowsNear(scene, [blind.frame, blind.panel]);
+          if (updateBlindState(blind, state, sceneCtxRef.current?.requestRender) && !moving && scene && !scene.metadata?.steadyLamps) invalidateShadowsNear(scene, [blind.frame, blind.panel]);
         }
         for (const entry of smartDevicesByEntityRef.current.get(entityId) ?? []) updateSmartDeviceState(entry, state);
         if (entityId === modalEntityIdRef.current) setModalState(state);
@@ -1698,7 +1698,7 @@ export default function Dashboard() {
           if (meshMapRef.current[state.entity_id]) applyLightState(state.entity_id, state);
           if (blindMeshMapRef.current[state.entity_id]) {
             const blind = blindMeshMapRef.current[state.entity_id];
-            if (updateBlindState(blind, state) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
+            if (updateBlindState(blind, state, sceneCtxRef.current?.requestRender) && sceneCtxRef.current) invalidateShadowsNear(sceneCtxRef.current.scene, [blind.frame, blind.panel]);
           }
           for (const entry of smartDevicesByEntityRef.current.get(state.entity_id) ?? []) updateSmartDeviceState(entry, state);
         });

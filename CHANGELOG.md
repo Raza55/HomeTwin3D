@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.99 · Schulstunden während Reflitagen sichtbar (03.11.2026)
+
+- Reflitage blenden reguläre Schulstunden nicht mehr aus, auch bei mehrtägigen oder zeitgebundenen Einträgen. Die Schreibweisen Reflitage, Refli-Tage und Refli Tage werden erkannt.
+- Ferien, unterrichtsfreie Tage und andere überschneidende Termine werden weiterhin berücksichtigt. Kalender-Regressionstests sichern die Ausnahme ab.
+
 ## 0.5.98 · Rollos während der Fahrt animieren (26.10.2026)
 
 - Beim Öffnen und Schließen bewegt sich das 3D-Rollo auch dann, wenn Home Assistant keine Zwischenpositionen oder weiterhin den alten Positionswert meldet. Die Animation hält den Renderer bis zum Ende der Bewegung aktiv.

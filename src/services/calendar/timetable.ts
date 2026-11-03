@@ -5,7 +5,8 @@
 import type { CalEvent } from './haCalendar';
 
 const NO_SCHOOL = /unterrichtsfrei|ferientag/i;
-const AWAY = /praktikum|fahrt|reflitage|refli-tage|austausch|exkursion/i;
+const AWAY = /praktikum|fahrt|austausch|exkursion/i;
+const REFLECTION_DAYS = /\brefli[\s-]*tage\b/i;
 const DAY = 86400000;
 
 function overlaps(a: { start: Date; end: Date }, b: { start: Date; end: Date }): boolean {
@@ -33,6 +34,8 @@ export function schoolLessons(
     .filter(lesson => {
       const who = personsOf(lesson);
       return !events.some(e => {
+        // Reflection days are school activities, not an absence from regular lessons.
+        if (REFLECTION_DAYS.test(e.summary)) return false;
         if (!overlaps(e, lesson)) return false;
         const theirs = !who.length || personsOf(e).some(p => who.includes(p));
         if (!theirs) return false;

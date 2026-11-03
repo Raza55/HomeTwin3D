@@ -122,7 +122,15 @@ test('timetable lessons: only on school days, not while away or writing an exam'
   assert.equal(schoolLessons(monday, lessons, [{ ...exam, description: 'Für: Ben' }], {}, persons).length, 2);
   // Away: internship (all day) or a multi-day trip
   assert.equal(schoolLessons(monday, lessons, [ev('Anna: Berufspraktikum', '2026-11-02T00:00', '2026-11-14T00:00', '', true)], {}, persons).length, 0);
-  assert.deepEqual(schoolLessons(monday, lessons, [ev('Reflitage', '2026-10-30T12:10', '2026-11-02T09:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: E1']);
+  assert.deepEqual(schoolLessons(monday, lessons, [ev('Klassenfahrt', '2026-10-30T12:10', '2026-11-02T09:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: E1']);
+  // Reflection days must not hide lessons, including multi-day and timed entries.
+  for (const title of ['Anna: Reflitage', 'Anna: Refli-Tage', 'Anna: Refli Tage']) {
+    const reflection = ev(title, '2026-11-02T00:00', '2026-11-06T00:00', '', true);
+    assert.equal(schoolLessons(monday, lessons, [reflection], {}, persons).length, 2, title);
+    assert.equal(schoolLessons(monday, lessons, [{ ...reflection, allDay: false }], {}, persons).length, 2, title);
+    assert.deepEqual(schoolLessons(monday, lessons, [reflection, exam], {}, persons).map(l => l.summary), ['Anna: E1']);
+    assert.equal(schoolLessons(monday, lessons, [reflection], { school: {} }, persons).length, 0);
+  }
   // Any appointment of the same person overrides the lesson; others' and general school events do not
   assert.deepEqual(schoolLessons(monday, lessons, [ev('Kieferorthopäde', '2026-11-02T10:00', '2026-11-02T10:30', 'Für: Anna')], {}, persons).map(l => l.summary), ['Anna: M1']);
   assert.equal(schoolLessons(monday, lessons, [ev('Zahnarzt', '2026-11-02T08:00', '2026-11-02T09:00', 'Für: Ben')], {}, persons).length, 2);

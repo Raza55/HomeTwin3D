@@ -1,19 +1,16 @@
-import {
-  ParticleSystem,
-  Vector3,
-  Color4,
-  Color3,
-  DynamicTexture,
-  MeshBuilder,
-  StandardMaterial,
-  HemisphericLight,
-  DirectionalLight,
-  Mesh,
-  Texture,
-  type Scene,
-  type ShadowGenerator,
-  type Observer,
-} from '@babylonjs/core';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import type { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
+import { Color4, Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { WeatherData } from '../services/weatherApi';
 import { isRaining, isSnowing, isThunderstorm } from '../services/weatherApi';
 import { attachWindSway, type WindState } from './WindSway';

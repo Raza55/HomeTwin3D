@@ -24,6 +24,9 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 # No service worker: a cached app shell kept wall tablets on old versions.
 ENV VITE_HA_WS_PROXY=1 HOMETWIN_NO_SERVICE_WORKER=1
 RUN npm run build -- --mode addon
+# Compress text assets once (nginx gzip_static): best ratio and no compression
+# work on the Home Assistant host for every request.
+RUN find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' \) -size +1k -exec gzip -9 -k {} +
 
 # Stage 2: serve with nginx on the HA base image of the target architecture.
 FROM ghcr.io/home-assistant/${BUILD_ARCH}-base:3.20

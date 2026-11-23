@@ -1,7 +1,12 @@
-import {
-  Constants, PBRMaterial, RawCubeTexture, Texture, Vector3,
-  type AbstractMesh, type HemisphericLight, type Observer, type Scene,
-} from '@babylonjs/core';
+import { Constants } from '@babylonjs/core/Engines/constants.js';
+import type { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { RawCubeTexture } from '@babylonjs/core/Materials/Textures/rawCubeTexture.js';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { setupMirrorProbes } from './MirrorProbes';
 
 /**

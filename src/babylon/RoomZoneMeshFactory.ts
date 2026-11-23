@@ -1,16 +1,14 @@
-import {
-  Color3,
-  DynamicTexture,
-  LinesMesh,
-  Mesh,
-  MeshBuilder,
-  StandardMaterial,
-  Tools,
-  VertexData,
-  Vector3,
-  type Scene,
-  type TransformNode,
-} from '@babylonjs/core';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { LinesMesh } from '@babylonjs/core/Meshes/linesMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
+import { Tools } from '@babylonjs/core/Misc/tools.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import * as polygonClippingModule from 'polygon-clipping';
 import type { MultiPolygon, Polygon } from 'polygon-clipping';
 import type { RoomConfig, RoomZone, RoomZonePoint } from '../types';

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Coffee, Pencil, X } from 'lucide-react';
-import { Vector3, type Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { setMarkerStyle, markerCenterToRef } from '../babylon/MarkerProjection';

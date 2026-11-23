@@ -1,4 +1,7 @@
-import { TransformNode, Vector3, type Node, type Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { LightPosition, ModelConfig } from '../types';
 
 export const MODEL_SCALE_DEFAULT = 1;

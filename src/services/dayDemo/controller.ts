@@ -3,7 +3,14 @@
  * maps the virtual day onto the 3D scene — sun, weather, lightning, an optional
  * camera tour — while measuring frame times per chapter (benchmark).
  */
-import { ArcRotateCamera, SceneInstrumentation, Vector3, type AbstractEngine, type DirectionalLight, type Engine, type HemisphericLight, type Scene } from '@babylonjs/core';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
+import type { Engine } from '@babylonjs/core/Engines/engine.js';
+import { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation.js';
+import type { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import type { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { setSunDateOverride, updateSunPosition } from '../../babylon/SunController';
 import type { WeatherData } from '../weatherApi';
 import { DayDemoEngine, type DayDemoHooks, type DayDemoSnapshot } from './engine';
@@ -13,7 +20,7 @@ import type { DayDemoCast } from './cast';
 import { loadNewsImage, renderDemoScreen } from './screens';
 import { ShotDirector, type WalkControl } from './shots';
 import { CHAPTER_FRAMING, SHOTS, shotAt, type Shot } from './story';
-import type { AbstractMesh } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
 
 export interface DayDemoSceneDeps {
   scene: Scene;

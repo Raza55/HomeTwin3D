@@ -1,22 +1,20 @@
-import {
-  Engine,
-  WebGPUEngine,
-  Scene,
-  ArcRotateCamera,
-  HemisphericLight,
-  DirectionalLight,
-  ShadowGenerator,
-  Vector3,
-  Color3,
-  Color4,
-  Tools,
-  Logger,
-  GlowLayer,
-  HighlightLayer,
-  type AbstractEngine,
-  type AbstractMesh,
-} from '@babylonjs/core';
-import type { Node as SceneNode } from '@babylonjs/core';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
+import { Engine } from '@babylonjs/core/Engines/engine.js';
+import { WebGPUEngine } from '@babylonjs/core/Engines/webgpuEngine.js';
+import { GlowLayer } from '@babylonjs/core/Layers/glowLayer.js';
+import { HighlightLayer } from '@babylonjs/core/Layers/highlightLayer.js';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Logger } from '@babylonjs/core/Misc/logger.js';
+import { Tools } from '@babylonjs/core/Misc/tools.js';
+import { Scene } from '@babylonjs/core/scene.js';
+import type { Node as SceneNode } from '@babylonjs/core/node.js';
+import './babylonSideEffects';
 import { batchStaticSunShadows } from './ShadowCasterBatch';
 import { installContextLossRecovery } from './ContextLossRecovery';
 import { refreshGlowOnChange } from './GlowRefresh';
@@ -108,8 +106,13 @@ export function applyCameraControlSensitivity(camera: ArcRotateCamera): void {
  */
 function uniformBufferLights(engine: AbstractEngine): number {
   if (engine.isWebGPU) {
-    const blocks = (engine as WebGPUEngine).currentLimits?.maxUniformBuffersPerShaderStage ?? 12;
-    return Math.max(4, Math.min(8, blocks - 4));
+    const limits = (engine as WebGPUEngine).currentLimits;
+    const blocks = limits?.maxUniformBuffersPerShaderStage ?? 12;
+    // Every shadow light passes two varyings to the fragment shader, and a pipeline over the limit is
+    // invalid (its draws are dropped). About eight varyings go to position, normal, UVs, color, fog
+    // and view depth; the ambient light and the clustered container cast no shadows.
+    const varyings = limits?.maxInterStageShaderVariables ?? 16;
+    return Math.max(4, Math.min(8, blocks - 4, Math.floor((varyings - 8) / 2) + 2));
   }
   const webgl = engine as Engine;
   if (new URLSearchParams(location.search).get('ubo') !== '1' || webgl.webGLVersion < 2) return 0;

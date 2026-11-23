@@ -1,4 +1,4 @@
-import type { Mesh } from '@babylonjs/core';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
 
 /** Keep the last uploaded Float32 values; layout and hit testing still run every frame. */
 export class MarkerVertexBuffers {

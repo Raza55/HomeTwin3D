@@ -1,6 +1,13 @@
-import {
-  Color3, DynamicTexture, Mesh, MeshBuilder, StandardMaterial, Texture, Vector3, type AbstractMesh, type Observer, type Scene,
-} from '@babylonjs/core';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, DisplayConfig, FloorplanObject, RoomConfig } from '../types';
 import { floorplanId } from './FloorplanBindings';
 import { deviceKinds, isSupplyName, matchScore, type EnergyConsumer, type EnergyRegistry } from '../services/energyFlow';

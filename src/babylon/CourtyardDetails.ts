@@ -1,4 +1,10 @@
-import {Mesh,MeshBuilder,StandardMaterial,Vector3,DynamicTexture,VertexData,type Scene} from '@babylonjs/core';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 /** On top of the leaf clusters that reach furthest out (and up) from the trunk. */
 function outerPerches(leaves:{m:Mesh;r:number}[],x:number,z:number,count:number):Vector3[]{

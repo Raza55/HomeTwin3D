@@ -1,5 +1,15 @@
 import { METAL_ROUGH_KIND, metalRoughOf, useVertexMetalRough } from './VertexMetalRough';
-import { Color3, HighlightLayer, Mesh, PBRMaterial, StandardMaterial, Vector3, type AbstractMesh, type Material, type Matrix, type Light, type Node, type Scene } from '@babylonjs/core';
+import { HighlightLayer } from '@babylonjs/core/Layers/highlightLayer.js';
+import type { Light } from '@babylonjs/core/Lights/light.js';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3, type Matrix } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 /**
  * Render-only batches for static model geometry.

@@ -1,4 +1,11 @@
-import { Color3, Constants, Mesh, StandardMaterial, VertexBuffer, type Observer, type RenderTargetTexture, type Scene } from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import { Constants } from '@babylonjs/core/Engines/constants.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 /**
  * Light touch zones (a faint tint around each lamp: its color when on, dim blue

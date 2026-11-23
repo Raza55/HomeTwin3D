@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Monitor, Server, Pencil, X, Power } from 'lucide-react';
-import { Vector3, type Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, HAState, ITConfig, ITDevice, ITAction } from '../types';
 import { useLatest, useMapMarkers } from './useMapMarkers';
 import { itStatus, itStatusLabel, itMetric, itActionAvailable, itCommand, validateIT } from '../services/itState';

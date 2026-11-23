@@ -1,4 +1,4 @@
-import type { Scene } from '@babylonjs/core';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { getRenderBatchSet } from './RenderBatch';
 import { SceneChangeMonitor } from './SceneChangeMonitor';
 

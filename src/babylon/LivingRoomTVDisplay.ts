@@ -1,4 +1,5 @@
-import type { Scene, AbstractMesh } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { createDisplayMesh, updateDisplayTexture, type DisplayMeshEntry } from './DisplayMeshFactory';
 import { floorplanId } from './FloorplanBindings';
 import { LIVING_ROOM_TV } from '../services/tvMedia';

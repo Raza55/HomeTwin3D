@@ -1,4 +1,6 @@
-import { Quaternion, Vector3, type AbstractMesh, type Node } from '@babylonjs/core';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Node } from '@babylonjs/core/node.js';
 import { requestShadowRefresh } from './ShadowRange';
 
 interface RoomDoorSpec { id: string; hinge: number[]; closedDegrees: number; openDegrees: number }

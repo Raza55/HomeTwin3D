@@ -1,17 +1,15 @@
-import {
-  MeshBuilder,
-  StandardMaterial,
-  HighlightLayer,
-  Color3,
-  Vector3,
-  DynamicTexture,
-  Mesh,
-  VertexBuffer,
-  type Scene,
-  type GlowLayer,
-  type Node,
-  type Observer,
-} from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import type { GlowLayer } from '@babylonjs/core/Layers/glowLayer.js';
+import { HighlightLayer } from '@babylonjs/core/Layers/highlightLayer.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { getLucideIconImage } from '../services/lucideIcons';
 import type { TubeConfig, TubeInputUnit } from '../types';
 import { GRID_RADIUS } from './GroundGrid';

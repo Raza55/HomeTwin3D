@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CircleDot, House, Pause, Play, Square, X } from 'lucide-react';
-import { Vector3, type Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, FloorplanObject, HAState } from '../types';
 import { floorplanId } from '../babylon/FloorplanBindings';
 import { markerCenterToRef, setMarkerStyle } from '../babylon/MarkerProjection';

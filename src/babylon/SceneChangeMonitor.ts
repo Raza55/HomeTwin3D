@@ -1,4 +1,8 @@
-import { DynamicTexture, type AbstractMesh, type Light, type Material, type Scene } from '@babylonjs/core';
+import type { Light } from '@babylonjs/core/Lights/light.js';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 /**
  * Detects whether the rendered image can have changed since the last check.

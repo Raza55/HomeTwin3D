@@ -1,4 +1,8 @@
-import { Camera, Matrix, Ray, Vector3, type AbstractMesh, type Scene } from '@babylonjs/core';
+import { Camera } from '@babylonjs/core/Cameras/camera.js';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { OcclusionBVHCache } from './OcclusionBVH';
 
 type Entry = { point: Vector3; visible: boolean; checked: number; seen: number; revision: number };

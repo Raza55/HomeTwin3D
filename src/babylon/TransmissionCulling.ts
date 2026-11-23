@@ -1,4 +1,9 @@
-import { Frustum, Mesh, Vector3, type AbstractMesh, type Matrix, type RenderTargetTexture, type Scene } from '@babylonjs/core';
+import type { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import { Frustum } from '@babylonjs/core/Maths/math.frustum.js';
+import { Vector3, type Matrix } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { isReplacedByRenderBatch } from './RenderBatch';
 
 const installed = new WeakSet<Scene>();

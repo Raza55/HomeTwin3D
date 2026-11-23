@@ -1,4 +1,11 @@
-import { DirectionalLight, Light, Vector3, type AbstractMesh, type Observer, type RenderTargetTexture, type Scene, type ShadowGenerator } from '@babylonjs/core';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import { Light } from '@babylonjs/core/Lights/light.js';
+import type { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import type { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { reducedEffects } from './DeviceClass';
 
 /**

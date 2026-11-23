@@ -5,19 +5,17 @@ import { getSetting } from '../services/settingsStore';
 import { buildWsUrl } from '../services/haWebSocket';
 import { drawTVMediaScreen } from './TVMediaScreen';
 import { VisibleScreenUpdates } from './VisibleScreenUpdates';
-import {
-  Scene,
-  MeshBuilder,
-  StandardMaterial,
-  DynamicTexture,
-  Vector3,
-  Color3 as BABYLON_Color3,
-  type Node,
-  type Mesh,
-} from '@babylonjs/core';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Color3 as BABYLON_Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Node } from '@babylonjs/core/node.js';
+import { Scene } from '@babylonjs/core/scene.js';
 import { getLucideIconImage } from '../services/lucideIcons';
 import type { DisplayAnimation, DisplayConfig, DisplayKind, HAState, TextAlign } from '../types';
-import type { Observer } from '@babylonjs/core';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
 
 export interface DisplayMeshEntry {
   plane: Mesh;

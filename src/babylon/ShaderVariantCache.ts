@@ -1,4 +1,4 @@
-import { MaterialDefines } from '@babylonjs/core';
+import { MaterialDefines } from '@babylonjs/core/Materials/materialDefines.js';
 
 /**
  * Babylon builds the shader cache key from a material's #define lines in the

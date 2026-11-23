@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
-import { Vector3, type Scene } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, HAState } from '../types';
 import { getActiveHAConnection } from '../services/haWebSocket';
 import { batteryWarnings, type BatteryRegistryEntry } from '../services/batteryWarning';

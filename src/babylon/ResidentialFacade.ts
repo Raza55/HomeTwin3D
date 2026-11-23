@@ -1,4 +1,6 @@
-import { DynamicTexture, Texture, type Scene } from '@babylonjs/core';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 /** Four bays/floors per tile, drawn from the courtyard photo proportions. */
 export function createResidentialFacadeTexture(scene:Scene){
  const texture=new DynamicTexture('residential-plaster-windows',{width:1024,height:1024},scene,true);

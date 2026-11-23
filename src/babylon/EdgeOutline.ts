@@ -1,15 +1,13 @@
-import {
-  type Scene,
-  type Camera,
-  type AbstractMesh,
-  PostProcess,
-  Effect,
-  GeometryBufferRenderer,
-  type DepthRenderer,
-  Constants,
-  ShaderLanguage,
-  ShaderStore,
-} from '@babylonjs/core';
+import type { Camera } from '@babylonjs/core/Cameras/camera.js';
+import { Constants } from '@babylonjs/core/Engines/constants.js';
+import { ShaderStore } from '@babylonjs/core/Engines/shaderStore.js';
+import { Effect } from '@babylonjs/core/Materials/effect.js';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { PostProcess } from '@babylonjs/core/PostProcesses/postProcess.js';
+import type { DepthRenderer } from '@babylonjs/core/Rendering/depthRenderer.js';
+import { GeometryBufferRenderer } from '@babylonjs/core/Rendering/geometryBufferRenderer.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 const SHADER_NAME = 'edgeOutline';
 

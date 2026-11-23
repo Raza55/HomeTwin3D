@@ -1,6 +1,10 @@
 import EchoIcon from './EchoIcon';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArcRotateCamera, Color3, Matrix, Mesh, Vector3, type Scene } from '@babylonjs/core';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { Check, Coffee, Fan, Cigarette, DoorOpen, LockKeyhole, Lightbulb, Crosshair, X } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 import type { AppConfig, FloorplanObject } from '../types';

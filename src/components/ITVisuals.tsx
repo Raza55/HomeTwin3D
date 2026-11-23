@@ -1,6 +1,8 @@
 import { createITMaterialUpdater } from '../babylon/ITMaterialUpdates';
 import { useEffect, useRef } from 'react';
-import { PBRMaterial, StandardMaterial, type Scene } from '@babylonjs/core';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, HAState } from '../types';
 import { itStatus } from '../services/itState';
 import { attachITCamera } from '../babylon/ITCameraScreen';

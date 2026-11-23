@@ -1,4 +1,6 @@
-import { Color3, PBRMaterial, StandardMaterial } from '@babylonjs/core';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
 
 /** Dedicated IT materials: active RGB only needs a write when its animation step changes. */
 export function createITMaterialUpdater(material: PBRMaterial | StandardMaterial, rgb: boolean, color: Color3, zone: number) {

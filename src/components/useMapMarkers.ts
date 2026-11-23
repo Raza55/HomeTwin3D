@@ -1,5 +1,5 @@
 import { createContext, createElement, useContext, useEffect, useRef, type DependencyList, type ReactNode } from 'react';
-import type { Scene } from '@babylonjs/core';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { getMarkerLayer, type MapMarkerSpec, type MarkerCategory, type MarkerGroup, type MarkerPlacement } from '../babylon/MarkerLayer';
 import './MapMarkers.css';
 

@@ -1,4 +1,9 @@
-import {DynamicTexture,Frustum,PBRMaterial,StandardMaterial,type AbstractMesh,type Scene} from '@babylonjs/core';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Frustum } from '@babylonjs/core/Maths/math.frustum.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type {HAState,ITDevice} from '../types';
 import {itStatus,knownITState} from '../services/itState';
 import {itCameraUrl} from '../services/itCamera';

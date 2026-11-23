@@ -47,6 +47,22 @@ Neue Demo-Kapitel brauchen mindestens 5 s Echtzeit (Test) und verschieben die no
   Flächen.
 - Leistung immer auf dem Zielgerät messen; NullEngine-Tests ersetzen keine GPU-Messung.
 
+## Babylon Importe und Bundle
+
+- Babylon nie aus dem Sammelpaket `@babylonjs/core` importieren, sondern pro Modul mit Endung
+  (`@babylonjs/core/Maths/math.vector.js`). Das Sammelpaket zieht alles in das Bundle (zuvor 8 MB statt rund 3 MB).
+  Dasselbe gilt für `@babylonjs/materials`.
+- Einzelimporte registrieren keine Zusatzfunktionen. Methoden wie `scene.beginAnimation`, `mesh.enableEdgesRendering`,
+  `showBoundingBox` oder die Komponenten hinter GlowLayer und Clustered Lights kommen aus eigenen Modulen; TypeScript
+  bemerkt ihr Fehlen nicht. Diese Module stehen gesammelt in `src/babylon/babylonSideEffects.ts`. Neue Babylon
+  Funktionen dort ergänzen, sobald Babylon „needs to be imported before" meldet oder ein Aufruf wirkungslos bleibt.
+- Die Tests unter `tools/` importieren weiterhin das Sammelpaket und decken fehlende Registrierungen deshalb nicht auf.
+  Nach Änderungen an Babylon Importen einen Produktionsbuild im Browser prüfen (`?daydemo&qa&perf`, Editor).
+- `vite.config.ts` legt nur statisch erreichbare Babylon Module in `vendor-babylon`. Shader liegen je Sprache in
+  `vendor-babylon-glsl` und `vendor-babylon-wgsl` und werden beim ersten Material nachgeladen; seltene Teile
+  (Texturformate, OpenPBR, glTF Interaktivität) folgen bei Bedarf.
+- Das Add-on Image komprimiert Textdateien beim Build (`gzip -9`), Nginx liefert sie mit `gzip_static` aus.
+
 ## Offene Grenzen
 
 - Die gemeinsame Version ist kein atomarer Serverspeicher: Das Nginx/DAV-Protokoll hat kein Compare-and-Swap, Modell und
@@ -56,7 +72,9 @@ Neue Demo-Kapitel brauchen mindestens 5 s Echtzeit (Test) und verschieben die no
   zwischen beiden Schritten nicht.
 - Hue Sync, Wasserleck, TV-Medien und TV Dial hängen an Beispiel-Entities (Installationswerte); eine Zuordnung im Editor fehlt.
 - Die Außenumgebung ist auf die Referenzwohnung zugeschnitten.
-- Der Babylon-Chunk ist groß (mehrere MB); Vite meldet große Chunks.
+- Der Babylon Kern bleibt mit rund 3 MB (gzip unter 0,8 MB) der größte Chunk; Vite meldet ihn weiterhin als groß. Die glTF
+  Erweiterungen werden noch vollständig statisch eingebunden (`@babylonjs/loaders/glTF`); Babylons dynamische
+  Registrierung (`@babylonjs/loaders/dynamic`) wäre der nächste Schritt.
 
 ## Lokale Artefakte
 

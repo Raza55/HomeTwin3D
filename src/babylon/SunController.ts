@@ -1,4 +1,7 @@
-import { DirectionalLight, HemisphericLight, Vector3, Color3 } from '@babylonjs/core';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
 
 /**
  * Equation of time in minutes — correction for Earth's elliptical orbit

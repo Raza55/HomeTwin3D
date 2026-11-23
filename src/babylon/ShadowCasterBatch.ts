@@ -1,4 +1,12 @@
-import { Material, Mesh, PBRMaterial, StandardMaterial, VertexBuffer, VertexData, type AbstractMesh, type Node, type ShadowGenerator } from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import type { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { Material } from '@babylonjs/core/Materials/material.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import type { Node } from '@babylonjs/core/node.js';
 
 /** Shadow-only batches: original meshes, picking, materials and animations stay intact. */
 export function batchStaticSunShadows(generator: ShadowGenerator): (() => void) | undefined {

@@ -1,12 +1,10 @@
 import { useState, useCallback, useEffect, type RefObject } from 'react';
-import {
-  ShadowGenerator,
-  MeshBuilder,
-  StandardMaterial,
-  Vector3,
-  type AbstractMesh,
-  type Mesh,
-} from '@babylonjs/core';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
 import type { SceneContext } from '../babylon/SceneManager';
 import type { MeshMap } from '../babylon/LightMeshFactory';
 import type { StripConfig } from '../babylon/LightMeshFactory';

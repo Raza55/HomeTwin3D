@@ -1,4 +1,6 @@
-import { PBRMaterial, Material, type AbstractMesh } from '@babylonjs/core';
+import { Material } from '@babylonjs/core/Materials/material.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
 export const isWindowGlassName=(name:string)=>/^(Wohnzimmer_Fensterglas_klar|Film_B37_Fenster_Klarglas|SZ_Neues_Fensterglas|SZ_Fenster_Klarglas)(?:$|\.)/.test(name);
 /** Window panes transmit daylight; frames, walls and cover panels remain shadow casters. */
 export function prepareWindowGlass(mesh:AbstractMesh):boolean {

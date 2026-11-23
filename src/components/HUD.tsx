@@ -15,7 +15,8 @@ import {
   type LucideIcon,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import type { DirectionalLight, HemisphericLight } from '@babylonjs/core';
+import type { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import type { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
 import { updateSunPosition, minutesToLabel, getSunPosition } from '../babylon/SunController';
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { useSimulationMode } from '../contexts/SimulationModeContext';

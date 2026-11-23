@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Tv,Monitor,Gamepad2,Play,Power,X} from 'lucide-react';
-import {type Scene,type Vector3} from '@babylonjs/core';
+import type { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type {HAState} from '../types';
 import {floorplanId} from '../babylon/FloorplanBindings';
 import {useLatest,useMapMarkers} from './useMapMarkers';

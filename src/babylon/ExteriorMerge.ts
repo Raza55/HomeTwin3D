@@ -1,4 +1,9 @@
-import { InstancedMesh, Mesh, VertexData, type AbstractMesh, type Material, type Node } from '@babylonjs/core';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import type { Node } from '@babylonjs/core/node.js';
 
 /**
  * Bakes the static decorative exterior (paths, neighbouring houses, parapets,

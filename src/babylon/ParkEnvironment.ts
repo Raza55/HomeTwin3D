@@ -1,4 +1,14 @@
-import {MeshBuilder,Mesh,StandardMaterial,ShaderMaterial,ShaderLanguage,Color3,Vector3,VertexData,Curve3,Scene,type AbstractMesh} from '@babylonjs/core';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
+import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Curve3 } from '@babylonjs/core/Maths/math.path.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import { Scene } from '@babylonjs/core/scene.js';
 import {mapToModel,hostBuildingLayout,SITE_SCALE,type FrontFacade} from './SiteLayout';
 import {createResidentialFacadeTexture} from './ResidentialFacade';
 import {referenceBuildings,referencePaths,referenceTrees,referenceRoundabouts,referenceTransform,triangulateFootprint,REFERENCE_GROVE,REFERENCE_PLAYGROUND} from './SiteReference';

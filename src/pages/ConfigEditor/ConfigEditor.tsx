@@ -2,30 +2,25 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Activity, Box, BrickWall, Crosshair, Eraser, House, Image as ImageIcon, ImageOff, LampCeiling, MapPin, Minus, Monitor, Move3d, PanelTopClose, Plus, Rotate3d, Scale3d, Scissors, Square, Trash2, Cpu } from 'lucide-react';
 import { generateUUID } from '../../utils/uuid';
-import {
-  Vector3,
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  PositionGizmo,
-  UtilityLayerRenderer,
-  Color4,
-  Animation,
-  CubicEase,
-  EasingFunction,
-  GizmoAnchorPoint,
-  Tools,
-  RotationGizmo,
-  ScaleGizmo,
-  Space,
-  Mesh,
-  Matrix,
-  type AbstractMesh,
-  type LinesMesh,
-  type Observer,
-  type Scene,
-  type TransformNode,
-} from '@babylonjs/core';
+import { Animation } from '@babylonjs/core/Animations/animation.js';
+import { CubicEase, EasingFunction } from '@babylonjs/core/Animations/easing.js';
+import { GizmoAnchorPoint } from '@babylonjs/core/Gizmos/gizmo.js';
+import { PositionGizmo } from '@babylonjs/core/Gizmos/positionGizmo.js';
+import { RotationGizmo } from '@babylonjs/core/Gizmos/rotationGizmo.js';
+import { ScaleGizmo } from '@babylonjs/core/Gizmos/scaleGizmo.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Space } from '@babylonjs/core/Maths/math.axis.js';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3, Matrix } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import { Tools } from '@babylonjs/core/Misc/tools.js';
+import { UtilityLayerRenderer } from '@babylonjs/core/Rendering/utilityLayerRenderer.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { applyCameraControlSensitivity, createScene, type SceneContext } from '../../babylon/SceneManager';
 import { applyModelObjectTransform, getOriginalModelObjectTransform, loadModel, readModelObjectTransform, setTexturesEnabled } from '../../babylon/ModelLoader';
 import {

@@ -1,14 +1,12 @@
-import {
-  Color3,
-  MeshBuilder,
-  StandardMaterial,
-  Tools,
-  Vector3,
-  type AnimationGroup,
-  type Mesh,
-  type Node,
-  type Scene,
-} from '@babylonjs/core';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import { Tools } from '@babylonjs/core/Misc/tools.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { HAState, SmartDeviceConfig } from '../types';
 
 import { applianceRunning } from './ApplianceAnimation';

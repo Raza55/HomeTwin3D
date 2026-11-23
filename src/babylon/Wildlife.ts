@@ -1,8 +1,19 @@
-import {
-  Color3, Frustum, MaterialPluginBase, Matrix, Mesh, MeshBuilder, Quaternion, Ray, ShaderLanguage, StandardMaterial, Vector3, VertexData,
-  type Material, type MaterialDefines, type Observer, type Scene, type UniformBuffer,
-} from '@babylonjs/core';
-import type { AbstractMesh } from '@babylonjs/core';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import type { MaterialDefines } from '@babylonjs/core/Materials/materialDefines.js';
+import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { UniformBuffer } from '@babylonjs/core/Materials/uniformBuffer.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Frustum } from '@babylonjs/core/Maths/math.frustum.js';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
 import { OcclusionBVHCache } from './OcclusionBVH';
 
 /**
@@ -13,7 +24,7 @@ import { OcclusionBVHCache } from './OcclusionBVH';
  *
  * Everything is built in code (no assets): the cat is one mesh, the birds one
  * thin-instanced mesh, so the whole feature costs three draw calls. Legs, tail and
- * wings move in the vertex shader (GLSL; under WebGPU they glide unanimated).
+ * wings move in the vertex shader (GLSL for WebGL, WGSL for WebGPU).
  * The render loop is only kept awake while something visible moves.
  */
 
@@ -47,12 +58,39 @@ class BirdFlapPlugin extends MaterialPluginBase {
   constructor(material: Material) { super(material, 'HomeTwinBirdFlap', 220, { HT_BIRD: false }); this._enable(true); }
   override prepareDefines(defines: MaterialDefines): void { defines.HT_BIRD = true; }
   override getClassName(): string { return 'HomeTwinBirdFlapPlugin'; }
-  override isCompatible(language: ShaderLanguage): boolean { return language === ShaderLanguage.GLSL; }
+  override isCompatible(language: ShaderLanguage): boolean { return language === ShaderLanguage.GLSL || language === ShaderLanguage.WGSL; }
   override getAttributes(attributes: string[]): void { attributes.push('htFlap'); }
-  override getUniforms() { return { ubo: [{ name: 'htBirdTime', size: 1, type: 'float' }], vertex: '#ifdef HT_BIRD\nuniform float htBirdTime;\n#endif' }; }
+  override getUniforms(language = ShaderLanguage.GLSL) {
+    // WGSL reads the value from the material's uniform block; the GLSL line serves engines without uniform buffers.
+    const ubo = [{ name: 'htBirdTime', size: 1, type: 'float' }];
+    return language === ShaderLanguage.WGSL ? { ubo } : { ubo, vertex: '#ifdef HT_BIRD\nuniform float htBirdTime;\n#endif' };
+  }
   override bindForSubMesh(buffer: UniformBuffer): void { buffer.updateFloat('htBirdTime', this.time); }
   override getCustomCode(shaderType: string, language = ShaderLanguage.GLSL): { [point: string]: string } | null {
-    if (shaderType !== 'vertex' || language !== ShaderLanguage.GLSL) return null;
+    if (shaderType !== 'vertex') return null;
+    // Same motion as the GLSL code below.
+    if (language === ShaderLanguage.WGSL) return {
+      CUSTOM_VERTEX_DEFINITIONS: '#ifdef HT_BIRD\nattribute htFlap: vec4f;\n#endif',
+      CUSTOM_VERTEX_UPDATE_POSITION: `#ifdef HT_BIRD
+        {
+          let htFlap = vertexInputs.htFlap;
+          let htSide = select(1.0, -1.0, positionUpdated.x < 0.0);
+          let htOut = max(0.0, abs(positionUpdated.x) - 0.03) * step(-0.09, positionUpdated.z);
+          if (htOut > 0.0) {
+            let htFold = mix(1.0, 0.25, htFlap.z);
+            let htReach = htOut * htFold;
+            positionUpdated.z -= htOut * 0.6 * htFlap.z;
+            let htAngle = htFlap.y * (sin(uniforms.htBirdTime * htFlap.w + htFlap.x) + 0.15);
+            let htOuterAngle = htAngle * 1.55 - 0.08 * htFlap.y;
+            let htInner = min(htReach, 0.06 * htFold);
+            let htOuter = htReach - htInner;
+            let htTip = htInner * vec2f(cos(htAngle), sin(htAngle)) + htOuter * vec2f(cos(htOuterAngle), sin(htOuterAngle));
+            positionUpdated.x = htSide * (0.03 + htTip.x);
+            positionUpdated.y += htTip.y;
+          }
+        }
+        #endif`,
+    };
     return {
       CUSTOM_VERTEX_DEFINITIONS: '#ifdef HT_BIRD\nattribute vec4 htFlap;\n#endif',
       CUSTOM_VERTEX_UPDATE_POSITION: `#ifdef HT_BIRD
@@ -87,13 +125,11 @@ class CatGaitPlugin extends MaterialPluginBase {
   constructor(material: Material) { super(material, 'HomeTwinCatGait', 220, { HT_CAT: false }); this._enable(true); }
   override prepareDefines(defines: MaterialDefines): void { defines.HT_CAT = true; }
   override getClassName(): string { return 'HomeTwinCatGaitPlugin'; }
-  override isCompatible(language: ShaderLanguage): boolean { return language === ShaderLanguage.GLSL; }
+  override isCompatible(language: ShaderLanguage): boolean { return language === ShaderLanguage.GLSL || language === ShaderLanguage.WGSL; }
   override getAttributes(attributes: string[]): void { attributes.push('htPart'); }
-  override getUniforms() {
-    return {
-      ubo: [{ name: 'htCat', size: 4, type: 'vec4' }, { name: 'htLegs', size: 4, type: 'vec4' }, { name: 'htPose', size: 4, type: 'vec4' }],
-      vertex: '#ifdef HT_CAT\nuniform vec4 htCat;\nuniform vec4 htLegs;\nuniform vec4 htPose;\n#endif',
-    };
+  override getUniforms(language = ShaderLanguage.GLSL) {
+    const ubo = [{ name: 'htCat', size: 4, type: 'vec4' }, { name: 'htLegs', size: 4, type: 'vec4' }, { name: 'htPose', size: 4, type: 'vec4' }];
+    return language === ShaderLanguage.WGSL ? { ubo } : { ubo, vertex: '#ifdef HT_CAT\nuniform vec4 htCat;\nuniform vec4 htLegs;\nuniform vec4 htPose;\n#endif' };
   }
   override bindForSubMesh(buffer: UniformBuffer): void {
     const c = this.cat, l = this.legs;
@@ -102,7 +138,41 @@ class CatGaitPlugin extends MaterialPluginBase {
     buffer.updateFloat4('htPose', c.lie, 0, 0, 0);
   }
   override getCustomCode(shaderType: string, language = ShaderLanguage.GLSL): { [point: string]: string } | null {
-    if (shaderType !== 'vertex' || language !== ShaderLanguage.GLSL) return null;
+    if (shaderType !== 'vertex') return null;
+    // Same motion as the GLSL code below.
+    if (language === ShaderLanguage.WGSL) return {
+      CUSTOM_VERTEX_DEFINITIONS: '#ifdef HT_CAT\nattribute htPart: f32;\n#endif',
+      CUSTOM_VERTEX_UPDATE_POSITION: `#ifdef HT_CAT
+        {
+          let htPart = vertexInputs.htPart;
+          let htCat = uniforms.htCat;
+          let htLegs = uniforms.htLegs;
+          let htLie = uniforms.htPose.x;
+          if (htPart > 0.5 && htPart < 4.5) {
+            var htOff = htLegs.w;
+            if (htPart < 1.5) { htOff = htLegs.x; } else if (htPart < 2.5) { htOff = htLegs.y; } else if (htPart < 3.5) { htOff = htLegs.z; }
+            let htDown = clamp((0.21 - positionUpdated.y) / 0.21, 0.0, 1.0);
+            positionUpdated.z += sin(htCat.x + htOff) * htCat.y * htDown * 0.12;
+            positionUpdated.y += max(0.0, cos(htCat.x + htOff)) * htCat.y * htDown * 0.04;
+            if (htPart > 2.5) {
+              positionUpdated.y = mix(positionUpdated.y, 0.21 - (0.21 - positionUpdated.y) * 0.3, htCat.w);
+              positionUpdated.z += htCat.w * htDown * 0.08;
+            } else {
+              positionUpdated.y -= htCat.w * htDown * 0.12;
+              positionUpdated.z -= htCat.w * htDown * 0.05;
+            }
+            positionUpdated.y = mix(positionUpdated.y, 0.21 - (0.21 - positionUpdated.y) * 0.12, htLie);
+            positionUpdated.z += htLie * htDown * select(0.04, 0.11, htPart < 2.5);
+          } else if (htPart > 4.5) {
+            let htT = clamp(length(positionUpdated - vec3f(0.0, 0.29, -0.19)) / 0.34, 0.0, 1.0);
+            positionUpdated.x += sin(htCat.z - htT * 2.6) * 0.1 * htT * htT * (1.0 - 0.6 * htLie);
+            positionUpdated.x += htLie * 0.2 * htT;
+            positionUpdated.y -= htLie * 0.17 * htT;
+            positionUpdated.z += htLie * 0.14 * htT * htT;
+          }
+        }
+        #endif`,
+    };
     return {
       CUSTOM_VERTEX_DEFINITIONS: '#ifdef HT_CAT\nattribute float htPart;\n#endif',
       CUSTOM_VERTEX_UPDATE_POSITION: `#ifdef HT_CAT

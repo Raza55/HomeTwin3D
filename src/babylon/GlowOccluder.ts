@@ -1,4 +1,12 @@
-import { Matrix, Mesh, StandardMaterial, Vector3, VertexData, type AbstractMesh, type GlowLayer, type Node, type RenderTargetTexture, type Scene } from '@babylonjs/core';
+import type { GlowLayer } from '@babylonjs/core/Layers/glowLayer.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { DYNAMIC_EXTRAS, getRenderBatchSet } from './RenderBatch';
 
 /**

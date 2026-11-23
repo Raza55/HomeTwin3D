@@ -1,4 +1,8 @@
-import { Constants, RenderTargetTexture, type AbstractEngine, type Scene, type WebGPUEngine } from '@babylonjs/core';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
+import { Constants } from '@babylonjs/core/Engines/constants.js';
+import type { WebGPUEngine } from '@babylonjs/core/Engines/webgpuEngine.js';
+import { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 
 /**
  * WebGPU snapshot rendering: the frame's GPU commands are recorded once as

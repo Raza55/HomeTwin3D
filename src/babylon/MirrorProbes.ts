@@ -1,7 +1,11 @@
-import {
-  Ray, ReflectionProbe, Vector3,
-  type AbstractMesh, type BaseTexture, type Observer, type PBRMaterial, type Scene,
-} from '@babylonjs/core';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import type { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import { ReflectionProbe } from '@babylonjs/core/Probes/reflectionProbe.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { isReplacedByRenderBatch } from './RenderBatch';
 import { reducedEffects } from './DeviceClass';
 

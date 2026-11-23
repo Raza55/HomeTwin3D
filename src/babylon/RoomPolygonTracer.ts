@@ -1,4 +1,9 @@
-import { Ray, Vector3, VertexBuffer, type AbstractMesh, type PickingInfo, type Scene } from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import type { PickingInfo } from '@babylonjs/core/Collisions/pickingInfo.js';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { RoomVirtualWall, RoomZonePoint } from '../types';
 
 export interface RoomPolygonTraceResult {

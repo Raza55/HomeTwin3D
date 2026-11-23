@@ -1,4 +1,7 @@
-import { Quaternion, Vector3, type AbstractMesh, type Observer, type Scene } from '@babylonjs/core';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Observer } from '@babylonjs/core/Misc/observable.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { FloorplanObject } from '../types';
 import type { VacuumPose } from '../services/vacuumPosition';
 import { floorplanId } from './FloorplanBindings';

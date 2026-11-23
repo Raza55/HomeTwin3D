@@ -1,4 +1,7 @@
-import { Matrix, Vector3, Viewport, type Scene, type AbstractMesh } from '@babylonjs/core';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Viewport } from '@babylonjs/core/Maths/math.viewport.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { getMarkerOcclusion, type MarkerOcclusion } from './MarkerOcclusion';
 import { isDisabledForDebug } from './DebugFlags';
 

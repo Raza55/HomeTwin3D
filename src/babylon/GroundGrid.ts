@@ -1,5 +1,13 @@
-import { MeshBuilder, type Scene, type Mesh, Color3, StandardMaterial, DynamicTexture, Vector3, ShaderMaterial, ShaderLanguage, Vector4 } from '@babylonjs/core';
-import { GridMaterial } from '@babylonjs/materials';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
+import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3, Vector4 } from '@babylonjs/core/Maths/math.vector.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Scene } from '@babylonjs/core/scene.js';
+import { GridMaterial } from '@babylonjs/materials/grid/gridMaterial.js';
 
 let groundMesh: Mesh | null = null;
 let gridMat: GridMaterial | ShaderMaterial | null = null;

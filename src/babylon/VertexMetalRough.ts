@@ -1,4 +1,8 @@
-import { MaterialPluginBase, PBRMaterial, ShaderLanguage, type Material, type MaterialDefines } from '@babylonjs/core';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import type { MaterialDefines } from '@babylonjs/core/Materials/materialDefines.js';
+import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
 
 /**
  * Per-vertex metallic and roughness for merged render batches.

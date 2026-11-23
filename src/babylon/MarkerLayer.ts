@@ -1,7 +1,16 @@
-import {
-  Constants, Effect, Mesh, Observable, RawTexture, ShaderMaterial, UtilityLayerRenderer, Vector3, VertexBuffer,
-  type InternalTexture, type Observer, type Scene,
-} from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import { Constants } from '@babylonjs/core/Engines/constants.js';
+import { ShaderStore } from '@babylonjs/core/Engines/shaderStore.js';
+import { Effect } from '@babylonjs/core/Materials/effect.js';
+import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
+import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial.js';
+import type { InternalTexture } from '@babylonjs/core/Materials/Textures/internalTexture.js';
+import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { Observable, type Observer } from '@babylonjs/core/Misc/observable.js';
+import { UtilityLayerRenderer } from '@babylonjs/core/Rendering/utilityLayerRenderer.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { getMarkerProjection, setMarkerStyle } from './MarkerProjection';
 import { rasterizeMarker, type MarkerRaster } from './MarkerRaster';
 import { markerSizeScale } from './DeviceClass';
@@ -279,6 +288,28 @@ uniform sampler2D atlas;
 void main(void) {
   gl_FragColor = texture2D(atlas, vUV) * vAlpha;
 }`;
+// Same shader for the WebGPU engine, which takes no GLSL here.
+ShaderStore.ShadersStoreWGSL.mapMarkerVertexShader = `
+attribute position: vec3f;
+attribute uv: vec2f;
+attribute color: vec4f;
+varying vUV: vec2f;
+varying vAlpha: f32;
+@vertex
+fn main(input: VertexInputs) -> FragmentInputs {
+  vertexOutputs.vUV = vertexInputs.uv;
+  vertexOutputs.vAlpha = vertexInputs.color.a;
+  vertexOutputs.position = vec4f(vertexInputs.position.xy, 0.0, 1.0);
+}`;
+ShaderStore.ShadersStoreWGSL.mapMarkerFragmentShader = `
+varying vUV: vec2f;
+varying vAlpha: f32;
+var atlasSampler: sampler;
+var atlas: texture_2d<f32>;
+@fragment
+fn main(input: FragmentInputs) -> FragmentOutputs {
+  fragmentOutputs.color = textureSample(atlas, atlasSampler, fragmentInputs.vUV) * fragmentInputs.vAlpha;
+}`;
 
 /** Both engines implement sub-rectangle uploads (texSubImage2D / writeTexture); AbstractEngine does not declare it. */
 function uploadTexels(scene: Scene, texture: InternalTexture, data: Uint8Array, x: number, y: number, width: number, height: number): void {
@@ -338,6 +369,7 @@ class MarkerOverlay {
     this.texture = this.createTexture(1024);
     this.material = new ShaderMaterial('map-markers', overlayScene, { vertex: 'mapMarker', fragment: 'mapMarker' }, {
       attributes: ['position', 'uv', 'color'], uniforms: [], samplers: ['atlas'], needAlphaBlending: true,
+      shaderLanguage: scene.getEngine().isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
     });
     this.material.alphaMode = Constants.ALPHA_PREMULTIPLIED;
     this.material.backFaceCulling = false;

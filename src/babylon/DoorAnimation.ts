@@ -1,4 +1,6 @@
-import { Matrix, Quaternion, Vector3, type TransformNode, type Scene } from '@babylonjs/core';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { DoorPose } from '../services/doorState';
 
 interface DoorGeometry { hinge: number[]; swingAxis: number[]; tiltAxis: number[]; swingDegrees: number; tiltDegrees: number }

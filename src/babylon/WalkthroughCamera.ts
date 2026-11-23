@@ -1,4 +1,10 @@
-import { ArcRotateCamera, Camera, Ray, Vector3, type AbstractMesh, type Scene, type Node } from '@babylonjs/core';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
+import { Camera } from '@babylonjs/core/Cameras/camera.js';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Node } from '@babylonjs/core/node.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { HaDoorClicks } from '../components/DoorStatus';
 import { RoomDoors } from './RoomDoors';
 

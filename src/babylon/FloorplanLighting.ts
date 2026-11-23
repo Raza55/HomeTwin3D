@@ -1,4 +1,14 @@
-import { ClusteredLightContainer, Color3, Light, PointLight, SpotLight, ShadowGenerator, Vector3, PBRMaterial, StandardMaterial, type AbstractMesh, type Scene } from '@babylonjs/core';
+import { ClusteredLightContainer } from '@babylonjs/core/Lights/Clustered/clusteredLightContainer.js';
+import { Light } from '@babylonjs/core/Lights/light.js';
+import { PointLight } from '@babylonjs/core/Lights/pointLight.js';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { SpotLight } from '@babylonjs/core/Lights/spotLight.js';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { FloorplanEmitter, HAState, LightConfig } from '../types';
 import { kelvinToRGB } from '../utils/color';
 import { getRenderBatchSet } from './RenderBatch';

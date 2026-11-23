@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## 0.5.102 · Kleineres Bundle und schnellerer Start (23.11.2026)
+
+- Babylon wird pro Modul statt aus dem Sammelpaket importiert. Der Babylon Kern schrumpft von rund 8 MB auf rund 3 MB; Shader liegen je Grafikschnittstelle in eigenen Dateien (GLSL für WebGL, WGSL für WebGPU) und werden erst beim ersten Material geladen, seltene Teile folgen bei Bedarf.
+- Module, die nur Funktionen registrieren (Animationen, Picking, Glow, Kanten, Bounding Boxes und weitere), sind gesammelt in `src/babylon/babylonSideEffects.ts` eingebunden. Die Kartenmarker haben einen eigenen WGSL Shader für WebGPU.
+- Das Add-on Image komprimiert Textdateien schon beim Build (`gzip -9`); Nginx liefert sie mit `gzip_static` aus und rechnet nicht mehr bei jeder Anfrage.
+- PC Bildschirmhelfer (`tools/pc-screen`): neuer MQTT Schalter **Screenshots** am selben Gerät. Er ist nach der Einrichtung aus, der Zustand bleibt über Neustarts erhalten; die Kamera ist nur verfügbar, solange der Helfer läuft und Bilder liefert.
+
 ## 0.5.101 · Rollo per langem Druck fahren (23.11.2026)
 
 - Ein langer Druck auf ein Rollo im 3D-Modell fährt es direkt: ein geschlossenes Rollo öffnet, ein offenes oder teilweise offenes schließt, ein fahrendes hält an. Das gilt für Maus und Touch; ein kurzer Tipp öffnet weiterhin das Rollo-Popup, Ziehen dreht wie bisher die Kamera.

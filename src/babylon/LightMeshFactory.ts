@@ -1,18 +1,15 @@
-import {
-  Scene,
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Vector3,
-  PointLight,
-  SpotLight,
-  ShadowGenerator,
-  Quaternion,
-  Mesh,
-  DynamicTexture,
-  type AbstractMesh,
-  type Node,
-} from '@babylonjs/core';
+import { PointLight } from '@babylonjs/core/Lights/pointLight.js';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
+import { SpotLight } from '@babylonjs/core/Lights/spotLight.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3, Quaternion } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import type { Node } from '@babylonjs/core/node.js';
+import { Scene } from '@babylonjs/core/scene.js';
 import type { LightConfig, LightPart, LightPosition, LightSize } from '../types';
 import { createFloorplanLightRig, type FloorplanLightRig } from './FloorplanLighting';
 import { limitShadowCastersToRange } from './ShadowRange';

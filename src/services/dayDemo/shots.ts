@@ -3,7 +3,11 @@
  * PC monitor and the TV in the loaded model and turns a shot (see story.ts)
  * into an eye position and a look-at point for every moment.
  */
-import { Ray, Vector3, VertexBuffer, type AbstractMesh, type Scene } from '@babylonjs/core';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import { Ray } from '@babylonjs/core/Culling/ray.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { DayDemoCast, RoomRole } from './cast';
 import type { Framing, Shot, ShotAnchor } from './story';
 import { floorplanId } from '../../babylon/FloorplanBindings';

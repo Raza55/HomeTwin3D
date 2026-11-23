@@ -1,4 +1,4 @@
-import { Vector3 } from '@babylonjs/core';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
 
 /** Interpolate into existing particle storage without allocating a vector per frame. */
 export function positionAtDistanceToRef(path: Vector3[], distances: number[], distance: number, result: Vector3): Vector3 {

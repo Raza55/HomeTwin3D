@@ -1,4 +1,5 @@
-import { UniformBuffer, type Effect } from '@babylonjs/core';
+import type { Effect } from '@babylonjs/core/Materials/effect.js';
+import { UniformBuffer } from '@babylonjs/core/Materials/uniformBuffer.js';
 
 /**
  * Uniform buffers stay off on WebGL (see SceneManager). Babylon then sets light

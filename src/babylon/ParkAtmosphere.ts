@@ -1,4 +1,7 @@
-import { Color3, Scene, type ShaderMaterial, type StandardMaterial } from '@babylonjs/core';
+import type { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial.js';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Scene } from '@babylonjs/core/scene.js';
 
 /** Cache atmospheric calculations while still restoring fog after weather updates. */
 export function createParkAtmosphereUpdater(

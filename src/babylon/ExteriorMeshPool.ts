@@ -1,4 +1,5 @@
-import { type Mesh, type InstancedMesh } from '@babylonjs/core';
+import type { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
 
 /** One geometry/material source for each identical decorative shape. */
 export class ExteriorMeshPool {

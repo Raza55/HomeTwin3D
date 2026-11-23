@@ -1,4 +1,4 @@
-import type { AbstractEngine } from '@babylonjs/core';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
 
 /**
  * Safari on iPadOS drops the WebGL context under GPU memory pressure, after the

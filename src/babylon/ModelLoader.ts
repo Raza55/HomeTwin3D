@@ -1,17 +1,13 @@
-import {
-  Scene,
-  SceneLoader,
-  Vector3,
-  Color3,
-  Color4,
-  MeshBuilder,
-  StandardMaterial,
-  AbstractMesh,
-  Tools,
-  type Node,
-  type Mesh,
-  type ISceneLoaderProgressEvent,
-} from '@babylonjs/core';
+import { SceneLoader, type ISceneLoaderProgressEvent } from '@babylonjs/core/Loading/sceneLoader.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import { Tools } from '@babylonjs/core/Misc/tools.js';
+import type { Node } from '@babylonjs/core/node.js';
+import { Scene } from '@babylonjs/core/scene.js';
 import '@babylonjs/loaders/glTF';
 import type { ModelObjectOverride, ModelObjectTransform } from '../types';
 import { prepareWindowGlass, simplifyRefractiveGlass } from './WindowGlass';

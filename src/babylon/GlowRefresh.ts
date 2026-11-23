@@ -1,4 +1,8 @@
-import { type AbstractMesh, type GlowLayer, type Material, type RenderTargetTexture, type Scene } from '@babylonjs/core';
+import type { GlowLayer } from '@babylonjs/core/Layers/glowLayer.js';
+import type { Material } from '@babylonjs/core/Materials/material.js';
+import type { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { MATERIAL_STATE_SIZE, getDynamicTextureVersion, readMaterialState } from './SceneChangeMonitor';
 
 /**

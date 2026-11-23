@@ -1,4 +1,6 @@
-import { Matrix, Vector3, type AbstractMesh, type Mesh } from '@babylonjs/core';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh.js';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh.js';
 
 /**
  * Bounding-volume hierarchy over a mesh's triangles in local space, for

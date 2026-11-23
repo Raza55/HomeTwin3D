@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Scene } from '@babylonjs/core';
+import type { Scene } from '@babylonjs/core/scene.js';
 import type { AppConfig, HAState } from '../types';
 import { VacuumRig } from '../babylon/VacuumRig';
 import { getActiveHAConnection } from '../services/haWebSocket';

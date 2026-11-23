@@ -1,4 +1,8 @@
-import { EngineInstrumentation, SceneInstrumentation, type AbstractEngine, type Engine, type Scene } from '@babylonjs/core';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
+import type { Engine } from '@babylonjs/core/Engines/engine.js';
+import { EngineInstrumentation } from '@babylonjs/core/Instrumentation/engineInstrumentation.js';
+import { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation.js';
+import type { Scene } from '@babylonjs/core/scene.js';
 import { clusteredLightingMode } from './FloorplanLighting';
 import { isTabletClass } from './DeviceClass';
 import { markStartup, startupPhase, startupSummary } from './StartupTiming';

@@ -5,7 +5,32 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { createSharedStoreMiddleware } from './tools/shared-store-middleware.mjs';
 
+const normalizePath = (id: string) => id.split('\\').join('/');
+const isBabylon = (id: string) => normalizePath(id).includes('node_modules/@babylonjs/');
+
+/**
+ * Babylon modules the app needs at start: everything reachable through static
+ * imports. Babylon loads the rest with import() on demand (shaders of the
+ * active graphics API, glTF features a model really uses, texture formats).
+ */
+function staticBabylonModules(meta: { getModuleIds(): IterableIterator<string>; getModuleInfo(id: string): { importedIds: readonly string[] } | null }): Set<string> {
+  const reached = new Set<string>();
+  const stack: string[] = [];
+  for (const id of meta.getModuleIds()) {
+    if (isBabylon(id)) continue;
+    for (const dep of meta.getModuleInfo(id)?.importedIds ?? []) if (isBabylon(dep)) stack.push(dep);
+  }
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (reached.has(id)) continue;
+    reached.add(id);
+    for (const dep of meta.getModuleInfo(id)?.importedIds ?? []) if (isBabylon(dep)) stack.push(dep);
+  }
+  return reached;
+}
+
 export default defineConfig(({ mode, command }) => {
+  let babylonAtStart: Set<string> | undefined;
   // Personal settings are never included in the default public production build.
   const privatePath = '.private/installation.json';
   const local = (command === 'serve' || process.env.HOMETWIN_PRIVATE_BUILD === '1') && existsSync(privatePath)
@@ -79,7 +104,7 @@ export default defineConfig(({ mode, command }) => {
               options: {
                 cacheName: 'js-chunk-cache',
                 expiration: {
-                  maxEntries: 20,
+                  maxEntries: 60,
                   maxAgeSeconds: 7 * 24 * 60 * 60,
                 },
                 cacheableResponse: { statuses: [0, 200] },
@@ -117,13 +142,25 @@ export default defineConfig(({ mode, command }) => {
         output: {
           chunkFileNames(chunk) {
             const id = chunk.facadeModuleId?.replace(/\\/g, '/') ?? '';
-            return chunk.isDynamicEntry && id.includes('/lucide-react/')
-              ? 'assets/lucide-[name]-[hash].js'
+            if (chunk.isDynamicEntry && id.includes('/lucide-react/')) return 'assets/lucide-[name]-[hash].js';
+            // On-demand Babylon parts share the vendor-babylon- prefix (preload and precache rules above).
+            return !chunk.name.startsWith('vendor-babylon') && chunk.moduleIds.length > 0 && chunk.moduleIds.every(isBabylon)
+              ? 'assets/vendor-babylon-[name]-[hash].js'
               : 'assets/[name]-[hash].js';
           },
-          manualChunks(id) {
-            if (id.includes('node_modules/@babylonjs/')) {
-              return 'vendor-babylon';
+          manualChunks(id, meta) {
+            if (isBabylon(id)) {
+              babylonAtStart ??= staticBabylonModules(meta);
+              if (babylonAtStart.has(id)) return 'vendor-babylon';
+              // One chunk per shader language: a device only fetches the one its engine uses.
+              const path = normalizePath(id);
+              if (path.includes('/ShadersWGSL/') || path.includes('/wgsl/')) return 'vendor-babylon-wgsl';
+              if (path.includes('/Shaders/') || /\.(vertex|fragment)\.js$/.test(path)) return 'vendor-babylon-glsl';
+              // glTF interactivity graphs: dozens of tiny block modules, one request instead.
+              if (path.includes('/FlowGraph/')) return 'vendor-babylon-flowgraph';
+              // Animation groups of a model: kept apart, otherwise they would land in the flow graph chunk.
+              if (path.includes('/Animations/')) return 'vendor-babylon-animations';
+              return undefined;
             }
             if (
               id.includes('node_modules/react/') ||

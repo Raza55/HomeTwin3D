@@ -32,3 +32,28 @@ test('demo expands every second week, not every week', async () => {
   assert.deepEqual(events.map(e => e.start.getDate()), [5, 19]);
   delete globalThis.localStorage;
 });
+test('calendars without update support are edited by create and delete', async () => {
+  const { canEditEvent } = await import('../src/services/calendar/haCalendar.ts');
+  const sent = [];
+  const conn = {
+    subscribe: () => () => {},
+    request: async msg => {
+      sent.push(msg);
+      return msg.type === 'get_states' ? [{ entity_id: 'calendar.cloud', attributes: { supported_features: 3 } }, { entity_id: 'calendar.local', attributes: { supported_features: 7 } }] : null;
+    },
+  };
+  const backend = calendarBackend(conn);
+  const [cloud, local] = await backend.calendars();
+  const single = { calendar: 'calendar.cloud', uid: 'a1', summary: 'Dentist', start: new Date(2026, 11, 4, 10, 30), end: new Date(2026, 11, 4, 12), allDay: false };
+  assert.equal(canEditEvent(cloud, single), true);
+  assert.equal(canEditEvent(cloud, { ...single, rrule: 'FREQ=WEEKLY', recurrenceId: '20261204T103000' }), false);
+  assert.equal(canEditEvent(local, { ...single, calendar: 'calendar.local', rrule: 'FREQ=WEEKLY' }), true);
+  sent.length = 0;
+  await backend.update(single, { ...single, summary: 'Dentist Finthen' });
+  assert.deepEqual(sent.map(m => m.type), ['calendar/event/create', 'calendar/event/delete']);
+  assert.equal(sent[0].event.summary, 'Dentist Finthen');
+  assert.equal(sent[1].uid, 'a1');
+  sent.length = 0;
+  await backend.update({ ...single, calendar: 'calendar.local' }, single);
+  assert.deepEqual(sent.map(m => m.type), ['calendar/event/update']);
+});

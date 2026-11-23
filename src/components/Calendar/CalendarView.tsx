@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type
 import { ChevronLeft, ChevronRight, Clock3, Circle, MapPin, Moon, Plus, Repeat, Search, Settings2, Sparkles, Sun, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { addDays, addMonths, hhmm, isoWeek, minutesOfDay, monthGrid, parseYmd, startOfDay, startOfWeek, weekViewStart, ymd } from '../../services/calendar/dates';
-import type { CalEvent } from '../../services/calendar/haCalendar';
+import { canEditEvent, type CalEvent } from '../../services/calendar/haCalendar';
 import { gradeTone, personInitials, readMeta } from '../../services/calendar/eventMeta';
 import { buildProfiles, loadLocalSamples } from '../../services/calendar/learning';
 import { loadCalendarPrefs, saveCalendarPrefs, type CalendarPrefs } from '../../services/calendar/prefs';
@@ -142,7 +142,7 @@ export default function CalendarView({ onClose }: Props) {
   const year = focus.getFullYear();
   const rangeStart = useMemo(() => addDays(new Date(year, 0, 1), -14), [year]);
   const rangeEnd = useMemo(() => addDays(new Date(year + 1, 0, 1), 14), [year]);
-  const { backend, calendars, events: loadedEvents, status } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
+  const { backend, calendars, events: loadedEvents, status, refresh } = useCalendarData(rangeStart, rangeEnd, prefs.hiddenCalendars);
   const everything = useMemo(() => loadedEvents.map(e => ({ ...e, summary: assessmentTitle(e.summary, readMeta(e.description).symbol) })), [loadedEvents]);
   const holidayNames = useMemo(() => {
     const names = new Map<string, Set<string>>();
@@ -253,7 +253,7 @@ export default function CalendarView({ onClose }: Props) {
   const examMarked = useCallback((e: CalEvent) => prefs.highlightExams && hasGrade(kindOf(e)), [prefs.highlightExams, kindOf]);
   const colorOf = (e: CalEvent) => (examMarked(e) ? prefs.examColor : calendarColor(calendarIds, e.calendar));
   const timeLabel = (e: CalEvent) => e.allDay ? t('calendar.allDay') : `${hhmm(minutesOfDay(e.start))}–${hhmm(minutesOfDay(e.end))}`;
-  const editable = (e: CalEvent) => !!e.uid && !!calendars.find(c => c.entityId === e.calendar)?.canUpdate;
+  const editable = (e: CalEvent) => canEditEvent(calendars.find(c => c.entityId === e.calendar), e);
   const gradeBadge = (e: CalEvent) => {
     const points = hasGrade(kindOf(e)) ? readMeta(e.description).grade : undefined;
     const ps = personsOf(e);
@@ -462,8 +462,13 @@ export default function CalendarView({ onClose }: Props) {
 
       {dayOpen && <DayDialog label={t('calendar.dayOverview')} closeLabel={t('calendar.close')} onClose={() => setDayOpen(false)}>{dayPanel}</DayDialog>}
 
+      {settingsOpen && <div className="cal-settings-backdrop" aria-hidden="true" onPointerDown={() => setSettingsOpen(false)} />}
       {settingsOpen && (
         <div className="cal-settings" role="dialog" aria-label={t('calendar.settings')}>
+          <div className="cal-settings-head">
+            <h3>{t('calendar.settings')}</h3>
+            <button type="button" className="cal-icon-btn cal-settings-close" onClick={() => setSettingsOpen(false)} aria-label={t('calendar.close')}><X size={24} /></button>
+          </div>
           <label className="cal-field">{t('calendar.picturePlacement')}<select aria-label={t('calendar.picturePlacement')} value={prefs.picturePlacement} onChange={e => updatePrefs({ picturePlacement: e.target.value as CalendarPrefs['picturePlacement'] })}>
             {(['banner', 'header', 'background', 'both'] as const).map(mode => <option key={mode} value={mode}>{t('calendar.picturePlacement.' + mode)}</option>)}
           </select></label>
@@ -545,6 +550,7 @@ export default function CalendarView({ onClose }: Props) {
           onClose={() => setEditor(null)}
           onSaved={(date, saved) => {
             setEditor(null);
+            refresh();
             if (date) setFocus(startOfDay(date));
             // Names typed in the dialog stay available on this device
             const added = (saved ?? []).filter(p => !prefs.persons.includes(p));

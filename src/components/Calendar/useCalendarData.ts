@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getActiveHAConnection, type HALike } from '../../services/haWebSocket';
 import { calendarBackend, type CalEvent, type CalendarBackend, type CalendarInfo } from '../../services/calendar/haCalendar';
 import { installation } from '../../services/installationConfig';
@@ -46,6 +46,15 @@ export function useCalendarData(start: Date, end: Date, hidden: string[] = [], e
     return () => { cancelled = true; clearTimeout(timer); };
   }, [backend]);
 
+  // Some integrations (Google) do not push their own changes to existing subscriptions,
+  // so the board subscribes again after it saved something: now and once the integration
+  // has had time to sync.
+  const [generation, setGeneration] = useState(0);
+  const refresh = useCallback(() => {
+    setGeneration(g => g + 1);
+    setTimeout(() => setGeneration(g => g + 1), 4000);
+  }, []);
+
   const startMs = start.getTime(), endMs = end.getTime();
   const hiddenKey = hidden.join('|');
   useEffect(() => {
@@ -57,11 +66,11 @@ export function useCalendarData(start: Date, end: Date, hidden: string[] = [], e
     }));
     return () => unsubs.forEach(u => u());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backend, calendars, startMs, endMs, hiddenKey]);
+  }, [backend, calendars, startMs, endMs, hiddenKey, generation]);
 
   const events = useMemo(
     () => presentCalendarEvents(Object.values(byCalendar).flat(), installation.calendarOwners),
     [byCalendar],
   );
-  return { backend, calendars, events, status };
+  return { backend, calendars, events, status, refresh };
 }

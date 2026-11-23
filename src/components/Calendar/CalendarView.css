@@ -274,6 +274,15 @@
 .cal-body-month ~ .cal-fab, .cal-body-week ~ .cal-fab { display: none; }
 
 /* ── Settings popover ── */
+.cal-settings-backdrop { position: absolute; inset: 0; z-index: 2; }
+.cal-settings-head {
+  position: sticky; top: -16px; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -16px -16px 0; padding: 10px 8px 6px 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.cal-settings-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.cal-settings-close { width: 48px; height: 48px; }
 .cal-settings {
   position: absolute; top: 70px; right: 14px; z-index: 3;
   width: min(340px, calc(100vw - 28px));

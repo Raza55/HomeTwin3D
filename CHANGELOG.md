@@ -1,5 +1,11 @@
 # Änderungsverlauf
 
+## 0.5.100 · Google-Termine sofort sichtbar und bearbeitbar (23.11.2026)
+
+- Nach dem Speichern, Ändern oder Löschen lädt der Kalender die Termine neu, sofort und nach einigen Sekunden noch einmal. Kalender wie Google melden eigene Änderungen nicht an bestehende Abos, neue Termine erschienen dort erst nach dem Neuladen.
+- Termine aus Kalendern ohne Bearbeitungsfunktion in Home Assistant (Google bietet nur Anlegen und Löschen) lassen sich jetzt ändern und löschen. Das Board legt die neue Fassung an und löscht danach die alte. Serientermine solcher Kalender bleiben schreibgeschützt.
+- Die Kalender-Einstellungen haben oben einen großen Schließen-Knopf, der beim Scrollen sichtbar bleibt. Tippen neben das Fenster schließt es ebenfalls.
+
 ## 0.5.99 · Schulstunden während Reflitagen sichtbar (03.11.2026)
 
 - Reflitage blenden reguläre Schulstunden nicht mehr aus, auch bei mehrtägigen oder zeitgebundenen Einträgen. Die Schreibweisen Reflitage, Refli-Tage und Refli Tage werden erkannt.

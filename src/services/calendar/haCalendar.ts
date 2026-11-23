@@ -92,12 +92,23 @@ export interface CalendarBackend {
   remove(event: CalEvent, scope?: RecurrenceScope): Promise<void>;
 }
 
+/**
+ * Whether the board can change this event. Calendars without update support (Google in HA
+ * offers only create and delete) are changed by creating the new version and deleting the
+ * old one; that works for single events only, not for occurrences of a series.
+ */
+export function canEditEvent(info: CalendarInfo | undefined, event: CalEvent): boolean {
+  if (!info || !event.uid) return false;
+  return info.canUpdate || (info.canCreate && info.canDelete && !event.rrule && !event.recurrenceId);
+}
+
 interface HAStateLike { entity_id: string; attributes?: { friendly_name?: string; supported_features?: number } }
 
 function liveBackend(conn: HALike & { subscribe: NonNullable<HALike['subscribe']> }): CalendarBackend {
   const recurrence = (event: CalEvent, scope?: RecurrenceScope) => event.recurrenceId && scope !== 'all'
     ? { recurrence_id: event.recurrenceId, ...(scope === 'future' ? { recurrence_range: 'THISANDFUTURE' } : {}) }
     : {};
+  const featuresOf = new Map<string, number>();
   return {
     live: true,
     async calendars() {
@@ -106,6 +117,7 @@ function liveBackend(conn: HALike & { subscribe: NonNullable<HALike['subscribe']
         .filter(s => s.entity_id.startsWith('calendar.'))
         .map(s => {
           const features = s.attributes?.supported_features ?? 0;
+          featuresOf.set(s.entity_id, features);
           return {
             entityId: s.entity_id,
             name: s.attributes?.friendly_name ?? s.entity_id.slice(9),
@@ -129,6 +141,13 @@ function liveBackend(conn: HALike & { subscribe: NonNullable<HALike['subscribe']
       await conn.request({ type: 'calendar/event/create', entity_id: calendar, event: toHaEvent(draft) });
     },
     async update(event, draft, scope) {
+      const features = featuresOf.get(event.calendar) ?? UPDATE;
+      if (!(features & UPDATE) && features & CREATE && features & DELETE && event.uid && !event.rrule && !event.recurrenceId) {
+        // Create first: if the delete fails, the appointment exists twice instead of not at all
+        await conn.request({ type: 'calendar/event/create', entity_id: event.calendar, event: toHaEvent(draft) });
+        await conn.request({ type: 'calendar/event/delete', entity_id: event.calendar, uid: event.uid });
+        return;
+      }
       await conn.request({ type: 'calendar/event/update', entity_id: event.calendar, uid: event.uid, ...recurrence(event, scope), event: toHaEvent(draft) });
     },
     async remove(event, scope) {

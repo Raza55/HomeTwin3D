@@ -1,5 +1,10 @@
 # Änderungsverlauf
 
+## 0.5.101 · Rollo per langem Druck fahren (23.11.2026)
+
+- Ein langer Druck auf ein Rollo im 3D-Modell fährt es direkt: ein geschlossenes Rollo öffnet, ein offenes oder teilweise offenes schließt, ein fahrendes hält an. Das gilt für Maus und Touch; ein kurzer Tipp öffnet weiterhin das Rollo-Popup, Ziehen dreht wie bisher die Kamera.
+- Der Marker eines Rollos entscheidet beim langen Druck nach derselben Regel, die jetzt die Position vor dem Zustandstext berücksichtigt. Ein Regressionstest (`test:cover`) sichert die Richtungsentscheidung ab.
+
 ## 0.5.100 · Google-Termine sofort sichtbar und bearbeitbar (23.11.2026)
 
 - Nach dem Speichern, Ändern oder Löschen lädt der Kalender die Termine neu, sofort und nach einigen Sekunden noch einmal. Kalender wie Google melden eigene Änderungen nicht an bestehende Abos, neue Termine erschienen dort erst nach dem Neuladen.

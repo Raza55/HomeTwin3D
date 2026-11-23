@@ -9,6 +9,7 @@ import FanMarkers from '../../components/FanMarkers';
 import WaterLeakMarkers from '../../components/WaterLeakMarkers';
 import BatteryWarningMarkers from '../../components/BatteryWarningMarkers';
 import { isBatteryState } from '../../services/batteryWarning';
+import { coverLongPressService } from '../../services/coverLongPress';
 import { affectsHomeStatus, summarizeHomeStatus, setHomeStatusRegistry, type HomeStatus } from '../../services/homeStatus';
 import HomeWarnings from '../../components/HomeWarnings';
 import { isWaterLeakEntity } from '../../services/waterLeak';
@@ -1005,6 +1006,7 @@ export default function Dashboard() {
     void ctxPromise.then(context => enableTouchZoneBatching(context.scene));
 
     let pressTimer: ReturnType<typeof setTimeout> | null = null;
+    let blindPressTimer: ReturnType<typeof setTimeout> | null = null;
     let pressedEntity: string | null = null;
     let pressStartX = 0;
     let pressStartY = 0;
@@ -1307,11 +1309,23 @@ export default function Dashboard() {
           return;
         }
 
-        // Blind click — immediate open, no long-press
+        // Blind: a tap opens its popup, a long press drives it (open when closed, else close).
         if (meta?.blindId) {
           pressedBlindId = meta.blindId;
           pressStartX = evt.clientX;
           pressStartY = evt.clientY;
+          const blindEntityId = meta.entityId;
+          if (blindPressTimer !== null) clearTimeout(blindPressTimer);
+          blindPressTimer = blindEntityId ? setTimeout(() => {
+            blindPressTimer = null;
+            const ha = haRef.current, service = coverLongPressService(lastStatesRef.current[blindEntityId]);
+            if (!pressedBlindId || !ha?.isConnected || !service) return;
+            // The press is used up: releasing it opens no popup.
+            pressedBlindId = null;
+            closeQuick();
+            (navigator as Navigator & { vibrate?: (ms: number) => boolean }).vibrate?.(15);
+            ha.callService('cover', service, blindEntityId).catch((error) => console.warn('[Blind] Long press failed:', error));
+          }, LONG_PRESS_MS) : null;
           return;
         }
 
@@ -1386,6 +1400,7 @@ export default function Dashboard() {
           return;
         }
 
+        if (blindPressTimer !== null) { clearTimeout(blindPressTimer); blindPressTimer = null; }
         // Handle blind tap
         if (pressedBlindId) {
           const dx = _evt.clientX - pressStartX;
@@ -1472,6 +1487,7 @@ export default function Dashboard() {
           const dy = _evt.clientY - pressStartY;
           if (dx * dx + dy * dy > MOVE_THRESHOLD * MOVE_THRESHOLD) {
             pressedBlindId = null;
+            if (blindPressTimer !== null) { clearTimeout(blindPressTimer); blindPressTimer = null; }
           }
         }
         if (pressedTubeId) {

@@ -29,6 +29,7 @@
     "audit:high": "npm audit --audit-level=high",
     "test:battery": "node --test tools/battery-warning.test.mjs",
     "test:tv-dial": "node --test tools/tv-dial.test.mjs",
+    "test:cover": "node --test tools/cover-long-press.test.mjs",
     "test:daydemo": "node --test tools/day-demo.test.mjs",
     "test:energy": "node --test tools/energy-flow.test.mjs",
     "privacy:check": "node tools/check-public-data.mjs",

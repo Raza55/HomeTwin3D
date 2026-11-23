@@ -1,6 +1,7 @@
 import { markerCenterToRef } from '../babylon/MarkerProjection';
 import { useLatest, useMapMarkers } from './useMapMarkers';
 import { getActiveHAConnection } from '../services/haWebSocket';
+import { coverLongPressService } from '../services/coverLongPress';
 import {useRef} from 'react';
 import {Blinds} from 'lucide-react';
 import {Vector3,type Scene} from '@babylonjs/core';
@@ -17,10 +18,9 @@ export default function BlindMarkers({scene,meshes,config,states,onAssign,onOpen
  const latestStates=useLatest(states);
  // Long press: stop a moving blind, open a closed one, otherwise close.
  const toggleBlind=(id:string)=>{
-  const ha=getActiveHAConnection(),state=latestStates.current[id];
-  if(!ha?.isConnected||!state||state.state==='unavailable')return false;
-  const closed=state.state==='closed'||state.attributes.current_position===0;
-  void ha.callService('cover',['opening','closing'].includes(state.state)?'stop_cover':closed?'open_cover':'close_cover',id);
+  const ha=getActiveHAConnection(),service=coverLongPressService(latestStates.current[id]);
+  if(!ha?.isConnected||!service)return false;
+  void ha.callService('cover',service,id);
   return true;
  };
  useMapMarkers(scene,()=>[

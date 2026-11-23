@@ -367,6 +367,7 @@
     "switch.coffee_power",
     "switch.custom_pc",
     "switch.desktop_main_power",
+    "switch.desktop_main_screenshots",
     "switch.desktop_secondary_power",
     "switch.gaming_pc",
     "switch.kaffee",

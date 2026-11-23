@@ -72,6 +72,25 @@ class ScreenTests(unittest.TestCase):
         self.assertEqual(screen.monitor_id(''), '')
         self.assertEqual(screen.monitor_id(None), '')
 
+    def test_switch_defaults_to_off_and_survives_restart(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            data_dir = Path(folder)
+            self.assertFalse(screen.read_enabled(data_dir))
+            screen.write_enabled(data_dir, True)
+            self.assertTrue(screen.read_enabled(data_dir))
+            screen.write_enabled(data_dir, False)
+            self.assertFalse(screen.read_enabled(data_dir))
+
+    def test_switch_shares_device_and_camera_needs_running_helper(self):
+        switch, camera = screen.switch_discovery(), screen.discovery()
+        self.assertEqual(switch['device'], camera['device'])
+        self.assertEqual(switch['command_topic'], switch['state_topic'] + '/set')
+        self.assertNotEqual(switch['unique_id'], camera['unique_id'])
+        self.assertIn({'topic': switch['availability_topic']}, camera['availability'])
+        self.assertEqual(camera['availability_mode'], 'all')
+
 
 if __name__ == '__main__':
     unittest.main()

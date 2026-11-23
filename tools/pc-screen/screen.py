@@ -22,6 +22,10 @@ MAX_BYTES = 200_000
 DEFAULT_INTERVAL = 10  # seconds between frames; config "interval" overrides
 BASE = "hometwin/desktop_main_screen"
 DISCOVERY = "homeassistant/camera/hometwin_desktop_main_screen/config"
+SWITCH_DISCOVERY = "homeassistant/switch/hometwin_desktop_main_screen_enabled/config"
+DEVICE = {"identifiers": ["hometwin_desktop_main_screen_helper"],
+          "name": "DesktopMain Screenshot", "manufacturer": "HomeTwin3D",
+          "model": "JPEG MQTT helper"}
 
 
 def encode_image(image):
@@ -45,11 +49,37 @@ def discovery():
         "topic": BASE + "/image",
         # Keep the default UTF-8 for availability text; camera image topics
         # are decoded as binary by Home Assistant independently.
-        "availability_topic": BASE + "/availability",
-        "device": {"identifiers": ["hometwin_desktop_main_screen_helper"],
-                   "name": "DesktopMain Screenshot", "manufacturer": "HomeTwin3D",
-                   "model": "JPEG MQTT helper"},
+        # The camera needs both: a fresh frame and a running helper (last will).
+        "availability": [{"topic": BASE + "/availability"}, {"topic": BASE + "/helper"}],
+        "availability_mode": "all",
+        "device": DEVICE,
     }
+
+
+def switch_discovery():
+    """Home Assistant switch that pauses and resumes the capture."""
+    return {
+        "name": "Screenshots",
+        "unique_id": "hometwin_desktop_main_screen_enabled",
+        "default_entity_id": "switch.desktop_main_screenshots",
+        "icon": "mdi:monitor-screenshot",
+        "command_topic": BASE + "/enabled/set",
+        "state_topic": BASE + "/enabled",
+        "availability_topic": BASE + "/helper",
+        "device": DEVICE,
+    }
+
+
+def read_enabled(data_dir):
+    """Capture is off until the switch was turned on; the choice survives restarts."""
+    try:
+        return (data_dir / "enabled").read_text(encoding="utf-8").strip() == "ON"
+    except OSError:
+        return False
+
+
+def write_enabled(data_dir, enabled):
+    (data_dir / "enabled").write_text("ON" if enabled else "OFF", encoding="utf-8")
 
 
 class _MonitorInfo(ctypes.Structure):
@@ -166,6 +196,9 @@ def send_frame(client, image):
 def run(config, data_dir):
     ready = threading.Event()
     refresh = threading.Event()
+    enabled = threading.Event()
+    if read_enabled(data_dir):
+        enabled.set()
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                          client_id="hometwin-pc-screen", clean_session=True)
     client.username_pw_set(os.environ.pop("DESKTOP_MQTT_USER"),
@@ -183,17 +216,23 @@ def run(config, data_dir):
         except OSError as exc:
             logging.warning("Broker unreachable; retrying in background (%s)", type(exc).__name__)
         client.tls_set_context(context)
-    client.will_set(BASE + "/availability", "offline", qos=1, retain=True)
+    client.will_set(BASE + "/helper", "offline", qos=1, retain=True)
     client.reconnect_delay_set(min_delay=5, max_delay=60)
     client.max_queued_messages_set(2)
+
+    def announce(c):
+        c.publish(DISCOVERY, json.dumps(discovery()), qos=0, retain=True)
+        c.publish(SWITCH_DISCOVERY, json.dumps(switch_discovery()), qos=0, retain=True)
+        c.publish(BASE + "/helper", "online", qos=0, retain=True)
+        c.publish(BASE + "/enabled", "ON" if enabled.is_set() else "OFF", qos=0, retain=True)
 
     def on_connect(c, userdata, flags, reason, properties):
         if reason.is_failure:
             logging.warning("MQTT refused: %s", reason)
             return
-        c.publish(DISCOVERY, json.dumps(discovery()), qos=0, retain=True)
         c.publish(BASE + "/availability", "offline", qos=0, retain=True)
-        c.subscribe("homeassistant/status")
+        announce(c)
+        c.subscribe([("homeassistant/status", 0), (BASE + "/enabled/set", 1)])
         ready.set()
         refresh.set()
         logging.info("MQTT connected")
@@ -204,8 +243,22 @@ def run(config, data_dir):
 
     def on_message(c, userdata, message):
         if message.topic == "homeassistant/status" and message.payload == b"online":
-            c.publish(DISCOVERY, json.dumps(discovery()), qos=0, retain=True)
+            announce(c)
             refresh.set()
+        elif message.topic == BASE + "/enabled/set" and message.payload in (b"ON", b"OFF"):
+            on = message.payload == b"ON"
+            if on:
+                enabled.set()
+                refresh.set()
+            else:
+                enabled.clear()
+                c.publish(BASE + "/availability", "offline", qos=0, retain=True)
+            try:
+                write_enabled(data_dir, on)
+            except OSError as exc:
+                logging.warning("Switch state not saved: %s", type(exc).__name__)
+            c.publish(BASE + "/enabled", "ON" if on else "OFF", qos=0, retain=True)
+            logging.info("Screenshots switched %s", "on" if on else "off")
 
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
@@ -219,6 +272,7 @@ def run(config, data_dir):
     interval = capture_interval(config)
     next_frame = 0.0
     locked = False
+    paused = False
     source = None
     logging.info("Capture interval: %d s", interval)
     try:
@@ -226,6 +280,15 @@ def run(config, data_dir):
             if not ready.is_set():
                 time.sleep(1)
                 continue
+            if not enabled.is_set():
+                if not paused:
+                    client.publish(BASE + "/availability", "offline", qos=0, retain=True)
+                    logging.info("Screenshots off: capture paused")
+                paused = True
+                next_frame = 0.0
+                time.sleep(1)
+                continue
+            paused = False
             if not desktop_unlocked():
                 if not locked:
                     client.publish(BASE + "/availability", "offline", qos=0, retain=True)
@@ -250,6 +313,8 @@ def run(config, data_dir):
                     shot = capture.grab({k: monitor[k] for k in ("left", "top", "width", "height")})
                     image = Image.frombytes("RGB", shot.size, shot.rgb)
                 # Recheck in case Windows locked during capture.
+                if not enabled.is_set():
+                    continue  # switched off during the capture: drop the frame
                 if desktop_unlocked():
                     if not send_frame(client, image):
                         client.publish(BASE + "/availability", "offline", retain=True)
@@ -262,7 +327,8 @@ def run(config, data_dir):
         pass
     finally:
         if client.is_connected():
-            info = client.publish(BASE + "/availability", "offline", qos=1, retain=True)
+            client.publish(BASE + "/availability", "offline", qos=1, retain=True)
+            info = client.publish(BASE + "/helper", "offline", qos=1, retain=True)
             info.wait_for_publish(timeout=3)
         client.disconnect()
         client.loop_stop()
